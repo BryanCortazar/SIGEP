@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SIGEP | Recuperar Cuenta</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        display: ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased h-screen overflow-hidden">
+
+<div class="flex flex-col lg:flex-row h-full w-full">
+
+    <!-- PANEL IZQUIERDO -->
+    <div class="relative hidden lg:flex lg:w-1/2 flex-col justify-between p-12 overflow-hidden bg-slate-900">
+        <div class="absolute inset-0 z-0">
+            <img src="{% static 'img/bg-recuperar.jpg' %}"
+                 class="h-full w-full object-cover opacity-60">
+            <div class="absolute inset-0 bg-gradient-to-tr from-primary/90 via-primary/70 to-blue-900/80 mix-blend-multiply"></div>
+        </div>
+
+        <div class="relative z-10 flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 text-white">
+                <span class="material-symbols-outlined text-3xl">school</span>
+            </div>
+            <h1 class="text-white text-2xl font-bold tracking-tight">SIGEP</h1>
+        </div>
+
+        <div class="relative z-10 max-w-lg">
+            <h2 class="text-white text-4xl font-bold leading-tight mb-4">
+                Sistema Integral de Gestión de Eventos y Ponencias
+            </h2>
+            <p class="text-blue-50 text-lg font-light leading-relaxed">
+                Conectando a la comunidad académica mediante una gestión eficiente de eventos.
+            </p>
+        </div>
+
+        <div class="relative z-10 flex items-center justify-between text-blue-100 text-sm">
+            <p>© 2024 Sistema Universitario</p>
+            <div class="flex gap-4">
+                <a href="#" class="hover:text-white transition-colors">Contacto</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div class="flex w-full lg:w-1/2 flex-col justify-center items-center p-6 sm:p-12 overflow-y-auto">
+
+        <div class="w-full max-w-md space-y-8">
+
+            <div class="text-left">
+                <h2 class="text-3xl font-bold tracking-tight">Recuperar cuenta</h2>
+                <p class="mt-2 text-slate-600 dark:text-slate-400">
+                    Ingrese su correo electrónico para iniciar el proceso de recuperación.
+                </p>
+            </div>
+
+            <!-- FORM DTL -->
+            <form method="POST" action="{% url 'recuperar' %}" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="space-y-2">
+                    <label for="email" class="text-sm font-medium">Correo electrónico</label>
+                    <div class="relative flex items-center">
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            required
+                            placeholder="nombre@ejemplo.com"
+                            class="w-full h-12 rounded-lg border-slate-300 dark:bg-slate-800 dark:border-slate-700 pl-4 pr-12">
+                        <div class="absolute right-0 flex items-center pr-4 text-slate-400 pointer-events-none">
+                            <span class="material-symbols-outlined text-[20px]">alternate_email</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4 pt-4">
+                    <button type="submit"
+                            class="w-full py-3.5 rounded-lg bg-primary text-white font-bold hover:bg-blue-600 transition-all shadow-lg shadow-primary/25">
+                        Recuperar cuenta
+                    </button>
+
+                    <div class="flex justify-center text-sm">
+                        <a href="{% url 'login' %}"
+                           class="font-medium text-primary hover:text-blue-600 transition-colors">
+                            Volver al login
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            <div class="mt-6 flex justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
+                <a href="#" class="hover:text-slate-900 dark:hover:text-white">Política de Privacidad</a>
+                <span class="w-px h-4 bg-slate-300 dark:bg-slate-700"></span>
+                <a href="#" class="hover:text-slate-900 dark:hover:text-white">Términos de Servicio</a>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
