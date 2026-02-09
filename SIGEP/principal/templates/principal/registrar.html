@@ -1,0 +1,165 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGEP | Registro de Cuenta</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        display: ["Public Sans", "sans-serif"],
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="font-display bg-background-light antialiased h-screen overflow-hidden">
+
+<div class="flex h-full">
+
+    <!-- PANEL IZQUIERDO -->
+    <div class="hidden lg:flex w-1/2 bg-slate-900 relative">
+        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPtSaUGUy1LaRLkT6zyaE-rlx5D1BsZqb-vfaVqHMeo6AhczUBcpi3CpSo6E_-ZQlvkzRm9DY1uWwEP4rv8c4v7lrG0kMdcmgppAI971QbVADg2VzCPqI_d11dvNHJ1ZZY2tNx8SdRnWRfYOHpsWIGEdY8JC3pdRCPJZEFN0y6Gj5-kAXCD8y8AuJ_BHCVPJEAtmVEEezF4JYsVPXhYWuzOxLO6W-xXb3UaA-mnLR50EZRJGDGVFCbWSMmvV7ww-fHX2BJ9ai89g4"
+             class="absolute inset-0 object-cover opacity-60">
+        <div class="absolute inset-0 bg-blue-900/80"></div>
+
+        <div class="relative z-10 p-12 text-white flex flex-col justify-between w-full">
+            <div class="flex items-center gap-3">
+                <div class="h-12 w-12 bg-white/20 rounded-lg flex items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl">school</span>
+                </div>
+                <h1 class="text-2xl font-bold">SIGEP</h1>
+            </div>
+
+            <div>
+                <h2 class="text-4xl font-bold mb-4">
+                    Sistema Integral de Gestión de Eventos y Ponencias
+                </h2>
+                <p class="text-blue-100">
+                    Conectando a la comunidad académica mediante una gestión eficiente.
+                </p>
+            </div>
+
+            <div class="text-sm text-blue-200 flex justify-between">
+                <span>© 2024 Sistema Universitario</span>
+                <span>Sobre nosotros · Contacto</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL DERECHO (CORREGIDO) -->
+    <div class="w-full lg:w-1/2 flex justify-center overflow-y-auto px-6 pt-24 pb-10 relative">
+
+        <!-- Volver -->
+        <div class="absolute top-6 right-6">
+            <a href="{% url 'principal:login' %}"
+               class="flex items-center gap-2 px-4 py-2 rounded-full border text-sm text-slate-700 hover:bg-slate-100">
+                ← Volver al inicio
+            </a>
+        </div>
+
+        <div class="w-full max-w-sm space-y-4">
+
+            <div>
+                <h2 class="text-2xl font-bold">Registro de cuenta</h2>
+                <p class="text-sm text-slate-500">
+                    Complete el formulario para crear su perfil.
+                </p>
+            </div>
+
+            <form method="POST" action="{% url 'principal:registrar' %}" class="space-y-3">
+                {% csrf_token %}
+
+                <div>
+                    <label class="text-sm">Nombre completo</label>
+                    <input type="text" name="fullname" required
+                           class="w-full h-10 rounded-lg border-slate-300">
+                </div>
+
+                <div>
+                    <label class="text-sm">Correo electrónico</label>
+                    <input type="email" name="email" required
+                           class="w-full h-10 rounded-lg border-slate-300">
+                </div>
+
+                <div>
+                    <label class="text-sm">Tipo de usuario</label>
+                    <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+
+                        <label class="border rounded-lg p-2 text-center cursor-pointer">
+                            <input type="radio" name="user_type" value="participante" class="sr-only" required>
+                            Participante
+                        </label>
+
+                        <label class="border rounded-lg p-2 text-center cursor-pointer">
+                            <input type="radio" name="user_type" value="ponente" class="sr-only">
+                            Ponente
+                        </label>
+
+                        <label class="border rounded-lg p-2 text-center cursor-pointer">
+                            <input type="radio" name="user_type" value="evaluador" class="sr-only">
+                            Evaluador / Jurado
+                        </label>
+
+                        <label class="border rounded-lg p-2 text-center cursor-pointer">
+                            <input type="radio" name="user_type" value="administrador" class="sr-only">
+                            Administrador
+                        </label>
+
+                        <label class="border rounded-lg p-2 text-center col-span-2 cursor-pointer">
+                            <input type="radio" name="user_type" value="coordinador" class="sr-only">
+                            Coordinador
+                        </label>
+
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm">Contraseña</label>
+                    <input type="password" name="password" required
+                           class="w-full h-10 rounded-lg border-slate-300">
+                </div>
+
+                <div>
+                    <label class="text-sm">Confirmar contraseña</label>
+                    <input type="password" name="confirm_password" required
+                           class="w-full h-10 rounded-lg border-slate-300">
+                </div>
+
+                <button type="submit"
+                        class="w-full mt-4 py-3 rounded-lg bg-primary text-white font-semibold">
+                    Registrar
+                </button>
+
+                <div class="text-center text-sm">
+                    <a href="{% url 'principal:login' %}" class="text-slate-500">
+                        Cancelar
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

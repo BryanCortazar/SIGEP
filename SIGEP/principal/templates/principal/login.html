@@ -1,0 +1,156 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGEP | Iniciar sesión</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        display: ["Public Sans", "sans-serif"],
+                    },
+                },
+            },
+        }
+    </script>
+
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased h-screen overflow-hidden">
+
+<div class="flex flex-col lg:flex-row h-full w-full">
+
+    <!-- PANEL IZQUIERDO -->
+    <!-- ========== PANEL IZQUIERDO (DISEÑO) ========== -->
+<div class="relative hidden lg:flex lg:w-1/2 flex-col justify-between p-12 overflow-hidden bg-slate-900">
+    <div class="absolute inset-0 z-0">
+        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPtSaUGUy1LaRLkT6zyaE-rlx5D1BsZqb-vfaVqHMeo6AhczUBcpi3CpSo6E_-ZQlvkzRm9DY1uWwEP4rv8c4v7lrG0kMdcmgppAI971QbVADg2VzCPqI_d11dvNHJ1ZZY2tNx8SdRnWRfYOHpsWIGEdY8JC3pdRCPJZEFN0y6Gj5-kAXCD8y8AuJ_BHCVPJEAtmVEEezF4JYsVPXhYWuzOxLO6W-xXb3UaA-mnLR50EZRJGDGVFCbWSMmvV7ww-fHX2BJ9ai89g4"
+             class="h-full w-full object-cover opacity-60"
+             alt="Campus universitario"/>
+        <div class="absolute inset-0 bg-gradient-to-tr from-primary/90 via-primary/70 to-blue-900/80 mix-blend-multiply"></div>
+    </div>
+
+    <div class="relative z-10 flex items-center gap-3">
+        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-white/20 border border-white/30 text-white">
+            <span class="material-symbols-outlined text-3xl">school</span>
+        </div>
+        <h1 class="text-white text-2xl font-bold">SIGEP</h1>
+    </div>
+
+    <div class="relative z-10 max-w-lg">
+        <h2 class="text-white text-4xl font-bold leading-tight mb-4">
+            Sistema Integral de Gestión de Eventos y Ponencias
+        </h2>
+        <p class="text-blue-50 text-lg font-light">
+            Conectando a la comunidad académica mediante una gestión eficiente.
+        </p>
+    </div>
+
+    <div class="relative z-10 flex items-center justify-between text-blue-100 text-sm">
+        <p>© 2024 Sistema Universitario</p>
+        <div class="flex gap-4">
+            <a href="#" class="hover:text-white">Sobre nosotros</a>
+            <a href="#" class="hover:text-white">Contacto</a>
+        </div>
+    </div>
+</div>
+
+<!-- BOTÓN VOLVER AL INICIO -->
+<div class="absolute top-6 right-6 z-20">
+    <a href="{% url 'principal:index' %}"
+       class="flex items-center gap-2 px-5 py-2 rounded-full border border-slate-300 bg-white/90
+              text-sm font-medium text-slate-700 hover:bg-white hover:shadow transition">
+        <span class="material-symbols-outlined text-base">arrow_back</span>
+        Volver al inicio
+    </a>
+</div>
+
+
+    <!-- PANEL DERECHO -->
+    <div class="flex w-full lg:w-1/2 justify-center items-center p-6 sm:p-12 overflow-y-auto">
+        <div class="w-full max-w-md space-y-8">
+
+            <!-- Logo mobile -->
+            <div class="lg:hidden text-center">
+                <div class="mx-auto h-14 w-14 flex items-center justify-center rounded-xl bg-primary text-white mb-4">
+                    <span class="material-symbols-outlined text-3xl">school</span>
+                </div>
+                <h1 class="text-2xl font-bold">SIGEP</h1>
+                <p class="text-sm text-slate-500">Gestión académica</p>
+            </div>
+
+            <!-- Header -->
+            <div>
+                <h2 class="text-3xl font-bold">Ingresar al sistema</h2>
+                <p class="mt-2 text-slate-600 dark:text-slate-400">
+                    Ingrese sus credenciales para continuar
+                </p>
+            </div>
+
+            <!-- FORMULARIO -->
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <div>
+                    <label class="text-sm font-medium">Usuario</label>
+                    <input type="text" name="username" required
+                           class="w-full h-12 rounded-lg border-slate-300 focus:border-primary focus:ring-primary">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium">Contraseña</label>
+                    <input type="password" name="password" required
+                           class="w-full h-12 rounded-lg border-slate-300 focus:border-primary focus:ring-primary">
+                </div>
+
+                <div class="flex justify-end">
+                    <a href="{% url 'principal:recuperar' %}"
+                        class="text-sm text-primary hover:underline">
+                            ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+
+
+                <button type="submit"
+                        class="w-full py-3.5 rounded-lg bg-primary text-white font-bold hover:bg-blue-600 transition shadow-lg">
+                    Iniciar sesión
+                </button>
+
+                <div class="text-center text-sm">
+                    ¿No tienes cuenta?
+                    <a href="{% url 'principal:registrar' %}"
+                       class="text-primary font-semibold hover:underline">
+                        Regístrate
+                    </a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
