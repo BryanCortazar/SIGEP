@@ -1,0 +1,92 @@
+<aside class="w-64 flex-shrink-0 flex flex-col justify-between bg-[#0B1221] text-white z-20 hidden md:flex border-r border-slate-800">
+  <div>
+    <div class="h-16 flex items-center px-6 gap-3 border-b border-slate-800/50">
+      <div class="size-8 flex items-center justify-center bg-primary/20 rounded-lg text-primary">
+        <span class="material-symbols-outlined" style="font-size: 20px;">school</span>
+      </div>
+      <div class="flex flex-col">
+        <h1 class="text-white text-base font-bold leading-tight">SIGEP</h1>
+        <span class="text-[10px] text-slate-400 font-medium tracking-wide">ADMINISTRACIÓN</span>
+      </div>
+    </div>
+
+    <nav class="flex flex-col py-6 px-3 gap-1">
+      <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-all
+                {% if active == 'dashboard' %}
+                  bg-primary text-white shadow-md shadow-blue-900/20 mb-1
+                {% else %}
+                  text-slate-400 hover:text-white hover:bg-white/5 group
+                {% endif %}"
+         href="{% url 'administrador:dashboard' %}">
+        <span class="material-symbols-outlined">grid_view</span>
+        <p class="text-sm font-medium">Panel de Control</p>
+      </a>
+
+      <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-all
+                {% if active == 'usuarios' %}
+                  bg-primary text-white shadow-md shadow-blue-900/20
+                {% else %}
+                  text-slate-400 hover:text-white hover:bg-white/5 group
+                {% endif %}"
+         href="{% url 'administrador:usuarios' %}">
+        <span class="material-symbols-outlined">group</span>
+        <p class="text-sm font-medium">Usuarios</p>
+      </a>
+
+      <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-all
+                {% if active == 'roles' %}
+                  bg-primary text-white shadow-md shadow-blue-900/20
+                {% else %}
+                  text-slate-400 hover:text-white hover:bg-white/5 group
+                {% endif %}"
+         href="{% url 'administrador:roles' %}">
+        <span class="material-symbols-outlined">verified_user</span>
+        <p class="text-sm font-medium">Roles y Permisos</p>
+      </a>
+
+      <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-all
+                {% if active == 'eventos' %}
+                  bg-primary text-white shadow-md shadow-blue-900/20
+                {% else %}
+                  text-slate-400 hover:text-white hover:bg-white/5 group
+                {% endif %}"
+         href="{% url 'administrador:eventos' %}">
+        <span class="material-symbols-outlined">calendar_month</span>
+        <p class="text-sm font-medium">Eventos</p>
+      </a>
+
+      <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-all
+                {% if active == 'auditoria' %}
+                  bg-primary text-white shadow-md shadow-blue-900/20
+                {% else %}
+                  text-slate-400 hover:text-white hover:bg-white/5 group
+                {% endif %}"
+         href="{% url 'administrador:auditoria' %}">
+        <span class="material-symbols-outlined">policy</span>
+        <p class="text-sm font-medium">Auditoría</p>
+      </a>
+
+      <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-all
+                {% if active == 'configuracion' %}
+                  bg-primary text-white shadow-md shadow-blue-900/20
+                {% else %}
+                  text-slate-400 hover:text-white hover:bg-white/5 group
+                {% endif %}"
+         href="{% url 'administrador:configuracion' %}">
+        <span class="material-symbols-outlined">settings</span>
+        <p class="text-sm font-medium">Configuración</p>
+      </a>
+    </nav>
+  </div>
+
+  <div class="p-4 border-t border-slate-800">
+    <form method="post" action="{% url 'principal:logout' %}">
+      {% csrf_token %}
+      <button type="submit"
+              class="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+        <span class="material-symbols-outlined rotate-180">logout</span>
+        <p class="text-sm font-medium">Cerrar sesión</p>
+      </button>
+    </form>
+  </div>
+</aside>

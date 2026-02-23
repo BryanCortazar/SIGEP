@@ -81,7 +81,7 @@ tailwind.config = {
     </div>
 </div>
 
-<!-- ================= PANEL DERECHO (AJUSTADO) ================= -->
+<!-- ================= PANEL DERECHO ================= -->
 <div class="flex w-full lg:w-1/2 items-center justify-center px-6">
 
 <div class="w-full max-w-sm space-y-6">
@@ -93,7 +93,23 @@ tailwind.config = {
     </p>
 </div>
 
-<form method="POST" action="{% url 'principal:login' %}" class="space-y-4">
+<!-- MENSAJES -->
+{% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+      <div class="text-sm rounded-md px-3 py-2
+                  {% if message.tags == 'error' %}
+                    bg-red-50 text-red-700 border border-red-200
+                  {% else %}
+                    bg-green-50 text-green-700 border border-green-200
+                  {% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<form method="POST" action="{% url 'principal:recuperar' %}" class="space-y-4">
 {% csrf_token %}
 
 <div class="space-y-1">

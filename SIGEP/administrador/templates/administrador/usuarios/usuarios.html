@@ -1,0 +1,340 @@
+{% extends "administrador/base_admin.html" %}
+
+{% block title %}Admin: Usuarios - SIGEP{% endblock %}
+
+{% block content %}
+<div class="p-6 lg:p-10 flex flex-col gap-6">
+
+  <div class="w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:p-8">
+
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+      <div class="flex flex-col gap-1">
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Gestión de Usuarios</h1>
+        <p class="text-sm text-slate-500">Administra usuarios, roles y estado de acceso.</p>
+      </div>
+    </div>
+
+    <!-- Filtros (tipo video) -->
+    <form method="get" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end mb-6">
+      <div class="md:col-span-6">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">search</span>
+          <input name="q" value="{{ q }}"
+                 class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-slate-200 transition-colors"
+                 placeholder="Nombre, correo o username">
+        </div>
+      </div>
+
+      <div class="md:col-span-3">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rol</label>
+        <div class="relative">
+          <select name="rol"
+                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200 appearance-none cursor-pointer">
+            <option value="">Todos</option>
+            {% for r in roles %}
+              <option value="{{ r }}" {% if rol_filter == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined text-[20px]">filter_list</span>
+        </div>
+      </div>
+
+      <div class="md:col-span-3">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
+        <div class="relative">
+          <select name="estado"
+                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200 appearance-none cursor-pointer">
+            <option value="">Todos</option>
+            <option value="activos" {% if estado == "activos" %}selected{% endif %}>Activos</option>
+            <option value="inactivos" {% if estado == "inactivos" %}selected{% endif %}>Inactivos</option>
+          </select>
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined text-[20px]">tune</span>
+        </div>
+      </div>
+
+      <div class="md:col-span-12 flex justify-end gap-2">
+        <a href="{% url 'administrador:usuarios' %}"
+           class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50 transition">
+          Limpiar filtros
+        </a>
+        <button type="submit"
+                class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+          Aplicar
+        </button>
+      </div>
+    </form>
+
+    <!-- Tabla -->
+    <div class="w-full overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-400">
+            <th class="px-2 py-4 font-semibold" scope="col">Nombre</th>
+            <th class="px-2 py-4 font-semibold" scope="col">Correo</th>
+            <th class="px-2 py-4 font-semibold" scope="col">Rol</th>
+            <th class="px-2 py-4 font-semibold" scope="col">Estado</th>
+            <th class="px-2 py-4 font-semibold text-right" scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100/60">
+          {% for u in usuarios %}
+            {% with nombre=u.get_full_name|default:u.first_name|default:u.username %}
+            {% with iniciales=nombre|slice:":1"|upper %}
+
+            <tr class="group hover:bg-slate-50/50 transition-colors">
+              <td class="px-2 py-5">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-sm">
+                    {{ iniciales }}
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="font-bold text-slate-900 text-[14px]">{{ nombre }}</span>
+                    <span class="text-xs text-slate-500">@{{ u.username }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <td class="px-2 py-5 text-slate-500">{{ u.email }}</td>
+
+              <td class="px-2 py-5">
+                <form method="post" action="{% url 'administrador:usuarios' %}" class="flex items-center gap-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="accion" value="rol">
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+
+                  <select name="rol" class="h-9 rounded-lg border-slate-200 text-sm bg-white">
+                    <option value="ADMIN" {% if u.rol == 'ADMIN' %}selected{% endif %}>ADMIN</option>
+                    <option value="COOR" {% if u.rol == 'COOR' %}selected{% endif %}>COOR</option>
+                    <option value="EVAL" {% if u.rol == 'EVAL' %}selected{% endif %}>EVAL</option>
+                    <option value="PON"  {% if u.rol == 'PON'  %}selected{% endif %}>PON</option>
+                    <option value="PART" {% if u.rol == 'PART' %}selected{% endif %}>PART</option>
+                  </select>
+
+                  <button type="submit"
+                          class="h-9 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition">
+                    Guardar
+                  </button>
+                </form>
+              </td>
+
+              <td class="px-2 py-5">
+                <div class="flex items-center gap-2">
+                  <span class="h-2 w-2 rounded-full {% if u.is_active %}bg-emerald-500{% else %}bg-red-500{% endif %}"></span>
+                  <span class="font-semibold text-xs {% if u.is_active %}text-emerald-700{% else %}text-red-700{% endif %}">
+                    {% if u.is_active %}Activo{% else %}Inactivo{% endif %}
+                  </span>
+                </div>
+              </td>
+
+              <td class="px-2 py-5 text-right">
+                <div class="inline-flex items-center gap-2 justify-end">
+
+                  <!-- Activar/Desactivar -->
+                  <form method="post" action="{% url 'administrador:usuarios' %}" class="inline-flex">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="toggle">
+                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold
+                                   hover:border-primary hover:text-primary transition"
+                            title="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
+                      <span class="material-symbols-outlined text-[18px]">
+                        {% if u.is_active %}block{% else %}check_circle{% endif %}
+                      </span>
+                    </button>
+                  </form>
+
+                  <!-- Editar (icono) -->
+                  <button type="button"
+                          class="inline-flex items-center px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold
+                                 hover:border-amber-300 hover:text-amber-700 transition"
+                          title="Editar"
+                          onclick="openEditModal(
+                            '{{ u.id }}',
+                            '{{ nombre|escapejs }}',
+                            '{{ u.email|escapejs }}',
+                            '{{ u.username|escapejs }}',
+                            '{{ u.rol|escapejs }}'
+                          )">
+                    <span class="material-symbols-outlined text-[18px]">edit</span>
+                  </button>
+
+                  <!-- Eliminar (icono) -->
+                  <button type="button"
+                          class="inline-flex items-center px-3 py-2 rounded-lg border border-red-200 text-xs font-bold text-red-600
+                                 hover:bg-red-50 transition"
+                          title="Eliminar"
+                          onclick="openDeleteModal('{{ u.id }}', '{{ nombre|escapejs }}')">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+
+                </div>
+              </td>
+            </tr>
+
+            {% endwith %}
+            {% endwith %}
+          {% empty %}
+            <tr>
+              <td colspan="5" class="px-2 py-10 text-center text-slate-500">
+                No hay usuarios registrados con los filtros actuales.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================
+     MODAL EDITAR USUARIO
+     ========================= -->
+<div id="editBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900">Editar usuario</h3>
+        <p class="text-sm text-slate-500">Actualiza datos básicos y rol.</p>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" onclick="closeEditModal()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'administrador:usuarios' %}" class="mt-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="editar">
+      <input type="hidden" name="user_id" id="edit_user_id">
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Nombre completo</label>
+        <input name="nombre" id="edit_nombre" required
+               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Correo</label>
+        <input name="email" id="edit_email" type="email" required
+               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Username</label>
+        <input name="username" id="edit_username" required
+               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Rol</label>
+        <select name="rol" id="edit_rol" required
+                class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
+          <option value="ADMIN">ADMIN</option>
+          <option value="COOR">COOR</option>
+          <option value="EVAL">EVAL</option>
+          <option value="PON">PON</option>
+          <option value="PART">PART</option>
+        </select>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button"
+                onclick="closeEditModal()"
+                class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">
+          Cancelar
+        </button>
+
+        <button type="submit"
+                class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+          Guardar cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL ELIMINAR USUARIO
+     ========================= -->
+<div id="deleteBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900">Eliminar usuario</h3>
+        <p class="text-sm text-slate-500">Esta acción no se puede deshacer.</p>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" onclick="closeDeleteModal()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      ¿Confirmas eliminar a <span class="font-bold" id="delete_nombre"></span>?
+    </div>
+
+    <form method="post" action="{% url 'administrador:usuarios' %}" class="mt-5 flex justify-end gap-3">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="eliminar">
+      <input type="hidden" name="user_id" id="delete_user_id">
+
+      <button type="button"
+              onclick="closeDeleteModal()"
+              class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">
+        Cancelar
+      </button>
+
+      <button type="submit"
+              class="h-10 px-4 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition shadow">
+        Eliminar
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const editBackdrop = document.getElementById("editBackdrop");
+  const deleteBackdrop = document.getElementById("deleteBackdrop");
+
+  function openEditModal(id, nombre, email, username, rol){
+    document.getElementById("edit_user_id").value = id;
+    document.getElementById("edit_nombre").value = nombre;
+    document.getElementById("edit_email").value = email;
+    document.getElementById("edit_username").value = username;
+    document.getElementById("edit_rol").value = rol;
+
+    editBackdrop.classList.remove("hidden");
+    editBackdrop.classList.add("flex");
+  }
+  function closeEditModal(){
+    editBackdrop.classList.add("hidden");
+    editBackdrop.classList.remove("flex");
+  }
+
+  function openDeleteModal(id, nombre){
+    document.getElementById("delete_user_id").value = id;
+    document.getElementById("delete_nombre").textContent = nombre;
+
+    deleteBackdrop.classList.remove("hidden");
+    deleteBackdrop.classList.add("flex");
+  }
+  function closeDeleteModal(){
+    deleteBackdrop.classList.add("hidden");
+    deleteBackdrop.classList.remove("flex");
+  }
+
+  // cerrar al hacer click fuera
+  editBackdrop.addEventListener("click", (e) => { if(e.target === editBackdrop) closeEditModal(); });
+  deleteBackdrop.addEventListener("click", (e) => { if(e.target === deleteBackdrop) closeDeleteModal(); });
+
+  // cerrar con ESC
+  document.addEventListener("keydown", (e) => {
+    if(e.key === "Escape"){
+      closeEditModal();
+      closeDeleteModal();
+    }
+  });
+</script>
+{% endblock %}

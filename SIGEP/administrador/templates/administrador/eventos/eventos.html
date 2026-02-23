@@ -1,0 +1,468 @@
+{% extends "administrador/base_admin.html" %}
+{% block title %}Admin: Gestión de Eventos - SIGEP{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-y-auto bg-[#F8F9FB] p-6 md:p-8">
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 min-h-[calc(100vh-8rem)]">
+
+    <!-- Header -->
+    <div class="p-6 md:px-8 md:pt-8 md:pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div>
+        <h2 class="text-slate-900 text-2xl font-bold mb-2">Gestión de Eventos</h2>
+        <p class="text-slate-500 text-sm max-w-xl">
+          Administra la creación, estado y publicación de eventos académicos.
+        </p>
+      </div>
+
+      <button type="button" onclick="openCreateModal()"
+              class="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors">
+        <span class="material-symbols-outlined text-[20px]">add</span>
+        Crear evento
+      </button>
+    </div>
+
+    <hr class="border-slate-100 mx-8"/>
+
+    <!-- Filtros -->
+    <form method="GET" class="px-6 md:px-8 py-6 grid grid-cols-1 md:grid-cols-12 gap-4">
+      <div class="md:col-span-6 lg:col-span-6">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar Evento</label>
+        <div class="relative group">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">search</span>
+          <input name="q" value="{{ q }}"
+                 class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-slate-200 transition-colors"
+                 placeholder="Nombre, descripción o lugar..." type="text"/>
+        </div>
+      </div>
+
+      <div class="md:col-span-3 lg:col-span-3">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
+        <div class="relative">
+          <select name="estado"
+                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200 appearance-none cursor-pointer">
+            <option value="" {% if not estado %}selected{% endif %}>Todos</option>
+            <option value="PUBLICADO" {% if estado == "PUBLICADO" %}selected{% endif %}>Publicado</option>
+            <option value="BORRADOR" {% if estado == "BORRADOR" %}selected{% endif %}>Borrador</option>
+          </select>
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">expand_more</span>
+        </div>
+      </div>
+
+      <div class="md:col-span-3 lg:col-span-3 flex items-end gap-2">
+        <button class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
+          Aplicar
+        </button>
+        <a href="{% url 'administrador:eventos' %}"
+           class="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-800 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+          Limpiar
+        </a>
+      </div>
+
+      <div class="md:col-span-3">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Desde</label>
+        <input type="date" name="desde" value="{{ desde }}"
+               class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 px-4 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200"/>
+      </div>
+
+      <div class="md:col-span-3">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hasta</label>
+        <input type="date" name="hasta" value="{{ hasta }}"
+               class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 px-4 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200"/>
+      </div>
+    </form>
+
+    <hr class="border-slate-100 mx-8"/>
+
+    <!-- Tabla -->
+    <div class="px-6 md:px-8 py-6">
+      <div class="overflow-x-auto rounded-xl border border-slate-100">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600">
+            <tr>
+              <th class="text-left font-bold px-4 py-3">Título</th>
+              <th class="text-left font-bold px-4 py-3">Fecha</th>
+              <th class="text-left font-bold px-4 py-3">Lugar</th>
+              <th class="text-left font-bold px-4 py-3">Cupo</th>
+              <th class="text-left font-bold px-4 py-3">Estado</th>
+              <th class="text-right font-bold px-4 py-3">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for e in eventos %}
+              <tr class="hover:bg-slate-50/50">
+                <td class="px-4 py-3">
+                  <div class="font-semibold text-slate-900">{{ e.titulo }}</div>
+                  <div class="text-xs text-slate-500 line-clamp-1 max-w-[520px]">{{ e.descripcion }}</div>
+                </td>
+                <td class="px-4 py-3 text-slate-700">
+                  {{ e.fecha|date:"d M Y" }}
+                </td>
+                <td class="px-4 py-3 text-slate-700">{{ e.lugar }}</td>
+                <td class="px-4 py-3 text-slate-700">{{ e.cupo }}</td>
+                <td class="px-4 py-3">
+                  {% if e.estado == "PUBLICADO" %}
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-green-100 text-green-700">PUBLICADO</span>
+                  {% else %}
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-amber-100 text-amber-800">BORRADOR</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex justify-end gap-2">
+
+                    <!-- Publicar / Despublicar -->
+                    <button type="button"
+                            class="h-9 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold text-xs inline-flex items-center gap-1"
+                            onclick="openToggleModal('{{ e.id }}','{{ e.estado }}','{{ e.titulo|escapejs }}')">
+                      <span class="material-symbols-outlined text-[18px]">
+                        {% if e.estado == "PUBLICADO" %}unpublished{% else %}publish{% endif %}
+                      </span>
+                      {% if e.estado == "PUBLICADO" %}Despublicar{% else %}Publicar{% endif %}
+                    </button>
+
+                    <!-- Editar -->
+                    <button type="button"
+                            class="h-9 w-9 rounded-lg border border-slate-200 hover:bg-slate-50 inline-flex items-center justify-center"
+                            title="Editar"
+                            onclick="openEditModal(
+                              '{{ e.id }}',
+                              '{{ e.titulo|escapejs }}',
+                              '{{ e.descripcion|escapejs }}',
+                              '{{ e.fecha|date:'Y-m-d' }}',
+                              '{{ e.lugar|escapejs }}',
+                              '{{ e.cupo }}',
+                              '{{ e.estado }}'
+                            )">
+                      <span class="material-symbols-outlined text-[18px] text-slate-700">edit</span>
+                    </button>
+
+                    <!-- Eliminar -->
+                    <button type="button"
+                            class="h-9 w-9 rounded-lg border border-slate-200 hover:bg-red-50 inline-flex items-center justify-center"
+                            title="Eliminar"
+                            onclick="openDeleteModal('{{ e.id }}','{{ e.titulo|escapejs }}')">
+                      <span class="material-symbols-outlined text-[18px] text-red-600">delete</span>
+                    </button>
+
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="px-6 py-10 text-center text-slate-500">
+                  No hay eventos con los filtros aplicados.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================
+     MODAL: Crear / Editar
+     ========================= -->
+<div id="eventoBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900" id="eventoModalTitle">Crear evento</h3>
+        <p class="text-sm text-slate-500">Completa los datos del evento.</p>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" onclick="closeEventoModal()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form id="eventoForm" method="post" class="mt-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="accion" id="eventoAccion" value="crear"/>
+      <input type="hidden" name="evento_id" id="eventoId"/>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título</label>
+        <input name="titulo" id="evTitulo" type="text" required
+               class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 px-4 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200"/>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción</label>
+        <textarea name="descripcion" id="evDesc" required rows="3"
+                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 px-4 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200"></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha</label>
+          <input name="fecha" id="evFecha" type="date" required
+                 class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 px-4 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200"/>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cupo</label>
+          <input name="cupo" id="evCupo" type="number" min="0" value="0"
+                 class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 px-4 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200"/>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar</label>
+          <input name="lugar" id="evLugar" type="text" required
+                 class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 px-4 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200"/>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
+          <select name="estado" id="evEstado"
+                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200 appearance-none cursor-pointer">
+            <option value="BORRADOR">Borrador</option>
+            <option value="PUBLICADO">Publicado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pt-3 flex justify-end gap-2">
+        <button type="button"
+                class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50 transition"
+                onclick="closeEventoModal()">
+          Cancelar
+        </button>
+        <button type="button"
+                class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-blue-600 transition shadow"
+                onclick="openConfirmSaveEvento()">
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL: Confirmación (Guardar)
+     ========================= -->
+<div id="confirmBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900" id="confirmTitle">Confirmar</h3>
+        <p class="text-sm text-slate-500" id="confirmText">¿Deseas continuar?</p>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" onclick="closeConfirm()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button"
+              class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50"
+              onclick="closeConfirm()">
+        No
+      </button>
+      <button type="button"
+              id="confirmYesBtn"
+              class="h-10 px-4 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow">
+        Sí, continuar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL: Eliminar
+     ========================= -->
+<div id="deleteBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900">Eliminar evento</h3>
+        <p class="text-sm text-slate-500" id="deleteText">¿Confirmas eliminar?</p>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" onclick="closeDeleteModal()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form method="post" class="mt-5 flex justify-end gap-2">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="eliminar"/>
+      <input type="hidden" name="evento_id" id="deleteId"/>
+
+      <button type="button"
+              class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50"
+              onclick="closeDeleteModal()">
+        Cancelar
+      </button>
+      <button type="submit"
+              class="h-10 px-4 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition shadow">
+        Sí, eliminar
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL: Publicar/Despublicar
+     ========================= -->
+<div id="toggleBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900" id="toggleTitle">Cambiar publicación</h3>
+        <p class="text-sm text-slate-500" id="toggleText">¿Confirmas cambiar estado?</p>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" onclick="closeToggleModal()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form method="post" class="mt-5 flex justify-end gap-2">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="toggle_publicacion"/>
+      <input type="hidden" name="evento_id" id="toggleId"/>
+
+      <button type="button"
+              class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50"
+              onclick="closeToggleModal()">
+        Cancelar
+      </button>
+      <button type="submit"
+              class="h-10 px-4 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow"
+              id="toggleBtnText">
+        Confirmar
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // ====== Helpers de modales ======
+  function show(el){ el.classList.remove("hidden"); el.classList.add("flex"); }
+  function hide(el){ el.classList.add("hidden"); el.classList.remove("flex"); }
+
+  // ====== Crear/Editar ======
+  const eventoBackdrop = document.getElementById("eventoBackdrop");
+  const eventoModalTitle = document.getElementById("eventoModalTitle");
+  const eventoAccion = document.getElementById("eventoAccion");
+  const eventoId = document.getElementById("eventoId");
+
+  const evTitulo = document.getElementById("evTitulo");
+  const evDesc = document.getElementById("evDesc");
+  const evFecha = document.getElementById("evFecha");
+  const evLugar = document.getElementById("evLugar");
+  const evCupo = document.getElementById("evCupo");
+  const evEstado = document.getElementById("evEstado");
+
+  function openCreateModal(){
+    eventoModalTitle.textContent = "Crear evento";
+    eventoAccion.value = "crear";
+    eventoId.value = "";
+
+    evTitulo.value = "";
+    evDesc.value = "";
+    evFecha.value = "";
+    evLugar.value = "";
+    evCupo.value = 0;
+    evEstado.value = "BORRADOR";
+    show(eventoBackdrop);
+  }
+
+  function openEditModal(id,titulo,desc,fecha,lugar,cupo,estado){
+    eventoModalTitle.textContent = "Editar evento";
+    eventoAccion.value = "editar";
+    eventoId.value = id;
+
+    evTitulo.value = titulo;
+    evDesc.value = desc;
+    evFecha.value = fecha;
+    evLugar.value = lugar;
+    evCupo.value = cupo;
+    evEstado.value = estado;
+    show(eventoBackdrop);
+  }
+
+  function closeEventoModal(){ hide(eventoBackdrop); }
+
+  eventoBackdrop.addEventListener("click", (e)=>{ if(e.target===eventoBackdrop) closeEventoModal(); });
+
+  // ====== Confirm Guardar (modal único) ======
+  const confirmBackdrop = document.getElementById("confirmBackdrop");
+  const confirmTitle = document.getElementById("confirmTitle");
+  const confirmText = document.getElementById("confirmText");
+  const confirmYesBtn = document.getElementById("confirmYesBtn");
+  let confirmHandler = null;
+
+  function openConfirm(title, text, handler){
+    confirmTitle.textContent = title;
+    confirmText.textContent = text;
+
+    if(confirmHandler) confirmYesBtn.removeEventListener("click", confirmHandler);
+    confirmHandler = handler;
+    confirmYesBtn.addEventListener("click", confirmHandler);
+
+    show(confirmBackdrop);
+  }
+  function closeConfirm(){ hide(confirmBackdrop); }
+
+  confirmBackdrop.addEventListener("click", (e)=>{ if(e.target===confirmBackdrop) closeConfirm(); });
+
+  function openConfirmSaveEvento(){
+    openConfirm(
+      "Guardar evento",
+      "¿Confirmas guardar los cambios del evento?",
+      () => document.getElementById("eventoForm").submit()
+    );
+  }
+
+  // ====== Eliminar ======
+  const deleteBackdrop = document.getElementById("deleteBackdrop");
+  const deleteId = document.getElementById("deleteId");
+  const deleteText = document.getElementById("deleteText");
+
+  function openDeleteModal(id,titulo){
+    deleteId.value = id;
+    deleteText.textContent = `¿Confirmas eliminar el evento: "${titulo}"? Esta acción no se puede deshacer.`;
+    show(deleteBackdrop);
+  }
+  function closeDeleteModal(){ hide(deleteBackdrop); }
+  deleteBackdrop.addEventListener("click",(e)=>{ if(e.target===deleteBackdrop) closeDeleteModal(); });
+
+  // ====== Publicar/Despublicar ======
+  const toggleBackdrop = document.getElementById("toggleBackdrop");
+  const toggleId = document.getElementById("toggleId");
+  const toggleTitle = document.getElementById("toggleTitle");
+  const toggleText = document.getElementById("toggleText");
+  const toggleBtnText = document.getElementById("toggleBtnText");
+
+  function openToggleModal(id,estado,titulo){
+    toggleId.value = id;
+    if(estado === "PUBLICADO"){
+      toggleTitle.textContent = "Despublicar evento";
+      toggleText.textContent = `¿Confirmas despublicar el evento: "${titulo}"?`;
+      toggleBtnText.textContent = "Sí, despublicar";
+    }else{
+      toggleTitle.textContent = "Publicar evento";
+      toggleText.textContent = `¿Confirmas publicar el evento: "${titulo}"?`;
+      toggleBtnText.textContent = "Sí, publicar";
+    }
+    show(toggleBackdrop);
+  }
+  function closeToggleModal(){ hide(toggleBackdrop); }
+  toggleBackdrop.addEventListener("click",(e)=>{ if(e.target===toggleBackdrop) closeToggleModal(); });
+
+  // ESC para todos
+  document.addEventListener("keydown",(e)=>{
+    if(e.key==="Escape"){
+      closeEventoModal();
+      closeConfirm();
+      closeDeleteModal();
+      closeToggleModal();
+    }
+  });
+</script>
+{% endblock %}

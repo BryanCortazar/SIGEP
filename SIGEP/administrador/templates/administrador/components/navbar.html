@@ -1,0 +1,20 @@
+<header class="h-16 flex items-center justify-end px-8 bg-white border-b border-slate-200/60 shadow-sm z-10 flex-shrink-0">
+  <div class="flex items-center gap-4">
+    <div class="flex flex-col items-end">
+      <span class="text-sm font-bold text-slate-900 leading-tight">
+        {{ request.user.get_full_name|default:"Administrador General" }}
+      </span>
+      <span class="text-xs text-slate-500">
+        {{ request.user.groups.first.name|default:"Admin" }}
+      </span>
+    </div>
+
+    <div class="size-10 rounded-full bg-[#0088CC] flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white">
+      {% if request.user.first_name or request.user.last_name %}
+        {{ request.user.first_name|first }}{{ request.user.last_name|first }}
+      {% else %}
+        AG
+      {% endif %}
+    </div>
+  </div>
+</header>

@@ -1,0 +1,183 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+
+  <title>{% block title %}SIGEP | Administración{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#137fec",
+            "primary-dark": "#0f65bd",
+            "sidebar-bg": "#0B1120",
+            "background-light": "#f8f9fa",
+            "background-dark": "#101922",
+          },
+          fontFamily: {
+            "display": ["Public Sans", "sans-serif"],
+            "sans": ["Public Sans", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.375rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    body { font-family: "Public Sans", sans-serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-background-light text-slate-900 overflow-hidden">
+  <div class="flex h-screen w-full">
+
+    {% include "administrador/components/sidebar.html" %}
+
+    <div class="flex-1 flex flex-col h-screen overflow-hidden bg-[#F8F9FB]">
+
+      {% include "administrador/components/navbar.html" %}
+
+      <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+        {% block content %}{% endblock %}
+      </main>
+
+    </div>
+  </div>
+
+  <!-- =========================
+       MODAL DE MENSAJES (Django messages)
+       ========================= -->
+  {% if messages %}
+  <div id="msgModalBackdrop"
+       class="fixed inset-0 z-[999] hidden items-center justify-center p-4 bg-black/50">
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+
+      <div class="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="size-9 rounded-xl bg-slate-50 flex items-center justify-center">
+            <span class="material-symbols-outlined text-slate-700">notifications</span>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 leading-tight">Notificación del sistema</h3>
+            <p class="text-xs text-slate-500">SIGEP • Administración</p>
+          </div>
+        </div>
+
+        <button type="button"
+                class="text-slate-500 hover:text-slate-900"
+                onclick="closeMsgModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="px-5 py-4 space-y-3">
+        {% for message in messages %}
+          <div class="rounded-xl border px-4 py-3 text-sm flex gap-3
+                      {% if message.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-900{% endif %}
+                      {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-900{% endif %}
+                      {% if message.tags == 'warning' %}border-amber-200 bg-amber-50 text-amber-900{% endif %}
+                      {% if message.tags == 'info' %}border-sky-200 bg-sky-50 text-sky-900{% endif %}">
+            <div class="mt-0.5">
+              {% if message.tags == 'success' %}
+                <span class="material-symbols-outlined text-emerald-700">check_circle</span>
+              {% elif message.tags == 'error' %}
+                <span class="material-symbols-outlined text-red-700">error</span>
+              {% elif message.tags == 'warning' %}
+                <span class="material-symbols-outlined text-amber-700">warning</span>
+              {% else %}
+                <span class="material-symbols-outlined text-sky-700">info</span>
+              {% endif %}
+            </div>
+
+            <div class="flex-1">
+              <p class="font-semibold mb-1">
+                {% if message.tags == 'success' %}Acción completada{% endif %}
+                {% if message.tags == 'error' %}Atención{% endif %}
+                {% if message.tags == 'warning' %}Aviso{% endif %}
+                {% if message.tags == 'info' %}Información{% endif %}
+              </p>
+              <p class="text-sm leading-relaxed whitespace-pre-line">{{ message }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
+        <button type="button"
+                class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50 transition"
+                onclick="closeMsgModal()">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const backdrop = document.getElementById("msgModalBackdrop");
+      if (!backdrop) return;
+
+      // Abrir modal automáticamente si hay mensajes
+      backdrop.classList.remove("hidden");
+      backdrop.classList.add("flex");
+
+      // Cerrar haciendo click fuera
+      backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop) closeMsgModal();
+      });
+
+      // Cerrar con ESC
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeMsgModal();
+      });
+
+      // Auto-cierre (OPCIONAL): comenta esto si NO quieres que se cierre solo
+      const AUTO_CLOSE_MS = 3500;
+      setTimeout(() => {
+        closeMsgModal();
+      }, AUTO_CLOSE_MS);
+    })();
+
+    function closeMsgModal() {
+      const backdrop = document.getElementById("msgModalBackdrop");
+      if (!backdrop) return;
+      backdrop.classList.add("hidden");
+      backdrop.classList.remove("flex");
+    }
+  </script>
+  {% endif %}
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

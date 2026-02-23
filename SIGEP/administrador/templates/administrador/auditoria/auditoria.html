@@ -1,0 +1,295 @@
+{% extends "administrador/base_admin.html" %}
+
+{% block title %}Admin: Auditoría del Sistema - SIGEP{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-auto p-8">
+  <div class="max-w-7xl mx-auto space-y-8">
+
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Auditoría del Sistema</h2>
+        <p class="text-slate-500 text-sm max-w-2xl leading-relaxed">
+          Registro de acciones administrativas. Use esta vista para trazabilidad de cambios y control de operaciones.
+        </p>
+      </div>
+
+      <div class="flex gap-3 mt-2 md:mt-0">
+        <a href="{% url 'administrador:dashboard' %}"
+           class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
+          <span class="material-symbols-outlined text-lg">arrow_back</span>
+          Volver
+        </a>
+
+        <a href="{% url 'administrador:auditoria_export' %}?q={{ q|urlencode }}&usuario={{ usuario_id|urlencode }}&desde={{ desde|urlencode }}&hasta={{ hasta|urlencode }}"
+           class="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2">
+          <span class="material-symbols-outlined text-lg">download</span>
+          Exportar Logs
+        </a>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Logs Totales</p>
+            <p class="text-3xl font-bold text-slate-800">{{ total_logs|default:"0" }}</p>
+          </div>
+          <span class="material-symbols-outlined text-blue-500 bg-blue-100 p-2 rounded-lg">list_alt</span>
+        </div>
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-blue-500"></div>
+      </div>
+
+      <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-5 relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1">Logs Hoy</p>
+            <p class="text-3xl font-bold text-emerald-800">{{ logs_hoy|default:"0" }}</p>
+          </div>
+          <span class="material-symbols-outlined text-emerald-600 bg-emerald-100 p-2 rounded-lg">today</span>
+        </div>
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-emerald-500"></div>
+      </div>
+
+      <div class="bg-orange-50 border border-orange-100 rounded-xl p-5 relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-1">Últimas 24h</p>
+            <p class="text-3xl font-bold text-orange-800">{{ logs_24h|default:"0" }}</p>
+          </div>
+          <span class="material-symbols-outlined text-orange-600 bg-orange-100 p-2 rounded-lg">schedule</span>
+        </div>
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-orange-500"></div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-xl p-5 relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Última Acción</p>
+            <p class="text-sm font-bold text-slate-800 mt-1 line-clamp-2">
+              {% if ultimo_log %}{{ ultimo_log.accion }}{% else %}Sin registros{% endif %}
+            </p>
+          </div>
+          <span class="material-symbols-outlined text-slate-700 bg-slate-100 p-2 rounded-lg">history</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <form method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+        <div class="md:col-span-4">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Buscar</label>
+          <input name="q" value="{{ q }}"
+                 class="mt-1 w-full h-11 rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                 placeholder="Ej. USUARIOS | EDITAR, EVENTOS | ELIMINAR..." />
+        </div>
+
+        <div class="md:col-span-3">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Usuario</label>
+          <select name="usuario"
+                  class="mt-1 w-full h-11 rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Todos</option>
+            {% for u in usuarios_filtro %}
+              <option value="{{ u.id }}" {% if usuario_id|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+                {{ u.get_full_name|default:u.username }} — {{ u.email }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Desde</label>
+          <input type="date" name="desde" value="{{ desde }}"
+                 class="mt-1 w-full h-11 rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Hasta</label>
+          <input type="date" name="hasta" value="{{ hasta }}"
+                 class="mt-1 w-full h-11 rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+
+        <div class="md:col-span-1 flex gap-2">
+          <button class="w-full h-11 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
+            Filtrar
+          </button>
+        </div>
+
+        <div class="md:col-span-12">
+          <a href="{% url 'administrador:auditoria' %}" class="text-sm text-slate-500 hover:text-slate-800 inline-flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">refresh</span>
+            Limpiar filtros
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200">
+              <th class="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Usuario</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acción</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Detalle</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for l in logs %}
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="py-4 px-6">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-medium text-slate-900">{{ l.fecha|date:"Y-m-d H:i:s" }}</span>
+                    <span class="text-xs text-slate-400 font-mono mt-0.5">LOG-{{ l.id }}</span>
+                  </div>
+                </td>
+
+                <td class="py-4 px-6">
+                  <div class="flex flex-col">
+                    <span class="text-sm text-slate-700">
+                      {% if l.usuario %}
+                        {{ l.usuario.get_full_name|default:l.usuario.username }}
+                      {% else %}
+                        Sistema
+                      {% endif %}
+                    </span>
+                    <div class="flex items-center text-xs text-slate-400 mt-0.5">
+                      <span class="material-symbols-outlined text-[14px] mr-1">person</span>
+                      {% if l.usuario %}{{ l.usuario.email }}{% else %}—{% endif %}
+                    </div>
+                  </div>
+                </td>
+
+                <td class="py-4 px-6 text-sm text-slate-700">{{ l.accion }}</td>
+
+                <td class="py-4 px-6 text-right">
+                  <button
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm font-semibold text-slate-700"
+                    data-open-log
+                    data-id="LOG-{{ l.id }}"
+                    data-fecha="{{ l.fecha|date:'Y-m-d H:i:s' }}"
+                    data-usuario="{% if l.usuario %}{{ l.usuario.get_full_name|default:l.usuario.username }}{% else %}Sistema{% endif %}"
+                    data-email="{% if l.usuario %}{{ l.usuario.email }}{% else %}{% endif %}"
+                    data-accion="{{ l.accion|escape }}"
+                    data-ip="{% if l.ip_origen %}{{ l.ip_origen }}{% endif %}"
+                    data-agent="{% if l.user_agent %}{{ l.user_agent|escape }}{% endif %}"
+                  >
+                    <span class="material-symbols-outlined text-base">visibility</span>
+                    Ver
+                  </button>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="py-10 px-6 text-center text-slate-500">
+                  Aún no hay logs en el sistema.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal detalle log -->
+<div id="logModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-900/50" data-close-log></div>
+
+  <div class="relative mx-auto mt-20 w-[92%] max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-start justify-between p-6 border-b border-slate-200">
+      <div>
+        <h3 class="text-lg font-bold text-slate-900">Detalle de Auditoría</h3>
+        <p class="text-sm text-slate-500" id="m_id">LOG-</p>
+      </div>
+      <button class="p-2 rounded-lg hover:bg-slate-100" data-close-log>
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900" id="m_fecha">—</p>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Usuario</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900" id="m_usuario">—</p>
+          <p class="text-xs text-slate-500 mt-1" id="m_email"></p>
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-xl p-4">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Acción</p>
+        <p class="mt-2 text-sm text-slate-800 whitespace-pre-wrap" id="m_accion">—</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">IP Origen</p>
+          <p class="mt-1 text-sm text-slate-800" id="m_ip">—</p>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">User-Agent</p>
+          <p class="mt-1 text-xs text-slate-700 whitespace-pre-wrap" id="m_agent">—</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-slate-200 flex justify-end">
+      <button class="px-5 py-2.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800" data-close-log>
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById("logModal");
+    const openButtons = document.querySelectorAll("[data-open-log]");
+    const closeButtons = document.querySelectorAll("[data-close-log]");
+
+    const m_id = document.getElementById("m_id");
+    const m_fecha = document.getElementById("m_fecha");
+    const m_usuario = document.getElementById("m_usuario");
+    const m_email = document.getElementById("m_email");
+    const m_accion = document.getElementById("m_accion");
+    const m_ip = document.getElementById("m_ip");
+    const m_agent = document.getElementById("m_agent");
+
+    function openModal(btn) {
+      m_id.textContent = btn.dataset.id || "LOG-";
+      m_fecha.textContent = btn.dataset.fecha || "—";
+      m_usuario.textContent = btn.dataset.usuario || "—";
+      m_email.textContent = btn.dataset.email ? ("Email: " + btn.dataset.email) : "";
+      m_accion.textContent = btn.dataset.accion || "—";
+      m_ip.textContent = btn.dataset.ip || "—";
+      m_agent.textContent = btn.dataset.agent || "—";
+
+      modal.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+
+    openButtons.forEach(btn => btn.addEventListener("click", () => openModal(btn)));
+    closeButtons.forEach(btn => btn.addEventListener("click", closeModal));
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+  })();
+</script>
+
+{% endblock %}

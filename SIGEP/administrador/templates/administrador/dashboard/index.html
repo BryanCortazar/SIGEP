@@ -1,0 +1,204 @@
+{% extends "administrador/base_admin.html" %}
+{% block title %}Admin: Panel de Control - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto space-y-6">
+
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Bienvenido, Administrador</h1>
+      <p class="text-sm text-slate-500">Panel de control y métricas del sistema.</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <a href="{% url 'administrador:reporte_csv' %}"
+         class="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold text-sm hover:bg-slate-50 transition">
+        Generar Reporte
+      </a>
+
+      <button type="button"
+              onclick="openModal()"
+              class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+        + Nuevo Usuario
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs (clickeables) -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+    <a href="{% url 'administrador:usuarios' %}"
+       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Total de usuarios</p>
+          <p class="text-3xl font-black text-slate-900 mt-2">{{ total_usuarios|default:0 }}</p>
+          <p class="text-xs text-slate-500 mt-1">Usuarios registrados en el sistema</p>
+        </div>
+        <div class="size-10 rounded-xl bg-blue-50 flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary">person</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'administrador:eventos' %}"
+       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Eventos activos</p>
+          <p class="text-3xl font-black text-slate-900 mt-2">{{ eventos_activos|default:0 }}</p>
+          <p class="text-xs text-slate-500 mt-1">Publicados</p>
+        </div>
+        <div class="size-10 rounded-xl bg-violet-50 flex items-center justify-center">
+          <span class="material-symbols-outlined text-violet-600">event</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'administrador:roles' %}"
+       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Roles configurados</p>
+          <p class="text-3xl font-black text-slate-900 mt-2">{{ roles_configurados|default:0 }}</p>
+          <p class="text-xs text-slate-500 mt-1">ADMIN, COOR, EVAL, PON, PART</p>
+        </div>
+        <div class="size-10 rounded-xl bg-amber-50 flex items-center justify-center">
+          <span class="material-symbols-outlined text-amber-600">shield</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'administrador:auditoria' %}"
+       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Solicitudes pendientes</p>
+          <p class="text-3xl font-black text-slate-900 mt-2">{{ solicitudes_pendientes|default:0 }}</p>
+          <p class="text-xs text-slate-500 mt-1">Por atender (fase siguiente)</p>
+        </div>
+        <div class="size-10 rounded-xl bg-rose-50 flex items-center justify-center">
+          <span class="material-symbols-outlined text-rose-600">pending</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- Actividad reciente -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-slate-900">Actividad reciente</h2>
+      <a href="{% url 'administrador:auditoria' %}" class="text-sm font-semibold text-primary hover:underline">
+        Ver auditoría
+      </a>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-slate-500 border-b">
+            <th class="py-2">Fecha</th>
+            <th>Usuario</th>
+            <th>Acción</th>
+            <th>Detalle</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% if actividad %}
+            {% for log in actividad %}
+              <tr class="text-slate-700">
+                <td class="py-2 whitespace-nowrap">{{ log.action_time }}</td>
+                <td class="whitespace-nowrap">{{ log.user }}</td>
+                <td class="whitespace-nowrap">{{ log.get_action_flag_display }}</td>
+                <td class="max-w-[520px] truncate">{{ log.change_message }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="py-4 text-slate-500">Sin actividad registrada.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo Usuario -->
+<div id="modalBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900">Nuevo Usuario</h3>
+        <p class="text-sm text-slate-500">Captura los datos y asigna el rol.</p>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" onclick="closeModal()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'administrador:crear_usuario' %}" class="mt-5 space-y-4">
+      {% csrf_token %}
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Nombre completo</label>
+        <input name="nombre" required
+               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary"
+               placeholder="Ej. Juan Pérez">
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Email institucional</label>
+        <input name="email" type="email" required
+               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary"
+               placeholder="Ej. juan@institucion.edu">
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Rol asignado</label>
+        <select name="rol" required
+                class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
+          <option value="PARTICIPANTE" selected>Participante</option>
+          <option value="PONENTE">Ponente</option>
+          <option value="EVALUADOR">Evaluador / Jurado</option>
+          <option value="COORDINADOR">Coordinador</option>
+          <option value="ADMIN">Administrador</option>
+        </select>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button"
+                onclick="closeModal()"
+                class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">
+          Cancelar
+        </button>
+
+        <button type="submit"
+                class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+          Guardar Usuario
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById("modalBackdrop");
+
+  function openModal(){
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+
+  function closeModal(){
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+
+  // cerrar al hacer click fuera
+  modal.addEventListener("click", (e) => {
+    if(e.target === modal) closeModal();
+  });
+</script>
+{% endblock %}

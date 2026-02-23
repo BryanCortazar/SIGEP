@@ -1,0 +1,431 @@
+{% extends "administrador/base_admin.html" %}
+
+{% block title %}Admin: Configuración del Sistema - SIGEP{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-auto p-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900">Configuración</h2>
+        <p class="mt-1 text-sm text-slate-500 max-w-2xl">
+          Administra parámetros del sistema y tu perfil (foto, usuario y contraseña). Los cambios quedan persistidos y auditados.
+        </p>
+      </div>
+
+      <div class="flex gap-3">
+        <button type="button"
+                id="btnHistorial"
+                class="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold text-sm hover:bg-slate-50 transition flex items-center gap-2">
+          <span class="material-symbols-outlined text-base">history</span>
+          Ver historial
+        </button>
+
+        <button type="button"
+                id="btnCancelar"
+                class="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold text-sm hover:bg-slate-50 transition">
+          Cancelar
+        </button>
+
+        <button type="button"
+                id="btnGuardar"
+                class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+          Guardar cambios
+        </button>
+      </div>
+    </div>
+
+    <!-- =========================
+         MI CUENTA (Perfil)
+         ========================= -->
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-slate-700">manage_accounts</span>
+          <h3 class="text-lg font-bold text-slate-900">Mi cuenta</h3>
+        </div>
+        <span class="text-xs text-slate-500">Perfil del administrador</span>
+      </div>
+
+      <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <!-- Foto -->
+        <div class="md:col-span-1 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+          <p class="text-sm font-semibold text-slate-800">Foto de perfil</p>
+          <div class="mt-3 flex items-center gap-3">
+            {% if request.user.foto %}
+              <img src="{{ request.user.foto.url }}" class="w-14 h-14 rounded-full object-cover border border-slate-200"/>
+            {% else %}
+              <div class="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center">
+                <span class="material-symbols-outlined text-slate-600">person</span>
+              </div>
+            {% endif %}
+            <div class="text-xs text-slate-500">
+              PNG/JPG recomendado.
+            </div>
+          </div>
+
+          <form method="POST" action="{% url 'administrador:perfil_actualizar' %}" enctype="multipart/form-data" class="mt-4 space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="subir_foto"/>
+            <input type="file" name="foto" accept="image/*"
+                   class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-white file:text-slate-700 file:font-semibold border border-slate-200 rounded-xl p-2"/>
+            <button class="w-full h-10 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition">
+              Guardar foto
+            </button>
+          </form>
+
+          <p class="mt-2 text-xs text-slate-500">
+            *Si te marca que no existe el campo <b>foto</b>, hay que agregarlo en tu modelo de usuario y migrar.
+          </p>
+        </div>
+
+        <!-- Username -->
+        <div class="md:col-span-1 bg-white border border-slate-200 rounded-2xl p-4">
+          <p class="text-sm font-semibold text-slate-800">Nombre de usuario</p>
+          <p class="text-xs text-slate-500 mt-1">Este valor se usa para identificarte dentro del sistema.</p>
+
+          <form method="POST" action="{% url 'administrador:perfil_actualizar' %}" class="mt-4 space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="cambiar_username"/>
+            <input name="username" value="{{ request.user.username }}"
+                   class="w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="Nuevo username"/>
+            <button class="w-full h-10 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition">
+              Actualizar username
+            </button>
+          </form>
+        </div>
+
+        <!-- Password -->
+        <div class="md:col-span-1 bg-white border border-slate-200 rounded-2xl p-4">
+          <p class="text-sm font-semibold text-slate-800">Contraseña</p>
+          <p class="text-xs text-slate-500 mt-1">Se valida tu contraseña actual y se mantiene la sesión.</p>
+
+          <form method="POST" action="{% url 'administrador:perfil_password' %}" class="mt-4 space-y-3">
+            {% csrf_token %}
+            <input type="password" name="current_password"
+                   class="w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="Contraseña actual"/>
+            <input type="password" name="new_password"
+                   class="w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="Nueva contraseña"/>
+            <input type="password" name="confirm_password"
+                   class="w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="Confirmar nueva contraseña"/>
+            <button class="w-full h-10 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition">
+              Cambiar contraseña
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =========================
+         FORM CONFIG SISTEMA
+         ========================= -->
+    <form id="configForm" method="POST" class="space-y-6">
+      {% csrf_token %}
+      <input type="hidden" name="accion" id="accionInput" value="guardar"/>
+
+      <!-- Sistema -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-700">settings</span>
+            <h3 class="text-lg font-bold text-slate-900">Parámetros del sistema</h3>
+          </div>
+          <span class="text-xs text-slate-500">Identidad y contacto</span>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Nombre del sistema</label>
+            <input name="sistema_nombre" value="{{ cfg.sistema_nombre }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="SIGEP"/>
+            <p class="mt-1 text-xs text-slate-500">Se muestra en encabezados y reportes.</p>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Correo de soporte</label>
+            <input name="sistema_correo_soporte" value="{{ cfg.sistema_correo_soporte }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="soporte@tu-dominio.com"/>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Teléfono de soporte</label>
+            <input name="sistema_telefono_soporte" value="{{ cfg.sistema_telefono_soporte }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="+52 ..."/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seguridad -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-700">security</span>
+            <h3 class="text-lg font-bold text-slate-900">Seguridad</h3>
+          </div>
+          <span class="text-xs text-slate-500">Acceso y control</span>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Máx. intentos de login</label>
+            <input type="number" min="1" name="seguridad_max_intentos_login" value="{{ cfg.seguridad_max_intentos_login }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Bloqueo (minutos)</label>
+            <input type="number" min="1" name="seguridad_bloqueo_minutos" value="{{ cfg.seguridad_bloqueo_minutos }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+          </div>
+
+          <div class="flex items-start justify-between gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+            <div>
+              <p class="text-sm font-semibold text-slate-800">Requerir 2FA (preparado)</p>
+              <p class="text-xs text-slate-500 mt-1">Solo activa el flag (2FA real se integra después).</p>
+            </div>
+            <label class="inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only" name="seguridad_requiere_2fa" {% if cfg_bool.seguridad_requiere_2fa %}checked{% endif %}>
+              <div class="w-11 h-6 bg-slate-300 rounded-full relative transition">
+                <div class="dot absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition"></div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notificaciones -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-700">mail</span>
+            <h3 class="text-lg font-bold text-slate-900">Notificaciones</h3>
+          </div>
+          <span class="text-xs text-slate-500">Correo electrónico</span>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex items-start justify-between gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+            <div>
+              <p class="text-sm font-semibold text-slate-800">Habilitar emails</p>
+              <p class="text-xs text-slate-500 mt-1">Control general para envío de notificaciones.</p>
+            </div>
+            <label class="inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only" name="notif_email_habilitado" {% if cfg_bool.notif_email_habilitado %}checked{% endif %}>
+              <div class="w-11 h-6 bg-slate-300 rounded-full relative transition">
+                <div class="dot absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition"></div>
+              </div>
+            </label>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Remitente</label>
+            <input name="notif_email_remitente" value="{{ cfg.notif_email_remitente }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="no-reply@tu-dominio.com"/>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Asunto base</label>
+            <input name="notif_email_asunto_base" value="{{ cfg.notif_email_asunto_base }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mantenimiento -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-700">build</span>
+            <h3 class="text-lg font-bold text-slate-900">Mantenimiento</h3>
+          </div>
+          <span class="text-xs text-slate-500">Disponibilidad del sistema</span>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex items-start justify-between gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+            <div>
+              <p class="text-sm font-semibold text-slate-800">Modo mantenimiento</p>
+              <p class="text-xs text-slate-500 mt-1">Flag para integrar vista global posteriormente.</p>
+            </div>
+            <label class="inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only" name="mantenimiento_modo" {% if cfg_bool.mantenimiento_modo %}checked{% endif %}>
+              <div class="w-11 h-6 bg-slate-300 rounded-full relative transition">
+                <div class="dot absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700">Mensaje</label>
+            <input name="mantenimiento_mensaje" value="{{ cfg.mantenimiento_mensaje }}"
+                   class="mt-1 w-full h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+          </div>
+        </div>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<!-- Modal confirm guardar -->
+<div id="modalGuardar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-900/50" data-close-guardar></div>
+  <div class="relative mx-auto mt-24 w-[92%] max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div class="p-6 border-b border-slate-200 flex items-start justify-between">
+      <div>
+        <h3 class="text-lg font-bold text-slate-900">Confirmar cambios</h3>
+        <p class="text-sm text-slate-500 mt-1">¿Deseas guardar la configuración del sistema?</p>
+      </div>
+      <button class="p-2 rounded-lg hover:bg-slate-100" data-close-guardar>
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="p-6 flex justify-end gap-3">
+      <button type="button" class="px-4 py-2 rounded-xl border border-slate-200 bg-white font-semibold hover:bg-slate-50" data-close-guardar>
+        No, volver
+      </button>
+      <button type="button" id="confirmGuardar"
+              class="px-4 py-2 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark">
+        Sí, guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirm cancelar -->
+<div id="modalCancelar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-900/50" data-close-cancelar></div>
+  <div class="relative mx-auto mt-24 w-[92%] max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div class="p-6 border-b border-slate-200 flex items-start justify-between">
+      <div>
+        <h3 class="text-lg font-bold text-slate-900">Cancelar edición</h3>
+        <p class="text-sm text-slate-500 mt-1">Perderás los cambios no guardados. ¿Deseas continuar?</p>
+      </div>
+      <button class="p-2 rounded-lg hover:bg-slate-100" data-close-cancelar>
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="p-6 flex justify-end gap-3">
+      <button type="button" class="px-4 py-2 rounded-xl border border-slate-200 bg-white font-semibold hover:bg-slate-50" data-close-cancelar>
+        No, volver
+      </button>
+      <a href="{% url 'administrador:configuracion' %}"
+         class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800">
+        Sí, cancelar
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal historial -->
+<div id="modalHistorial" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-900/50" data-close-historial></div>
+  <div class="relative mx-auto mt-20 w-[92%] max-w-4xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div class="p-6 border-b border-slate-200 flex items-start justify-between">
+      <div>
+        <h3 class="text-lg font-bold text-slate-900">Historial de cambios</h3>
+        <p class="text-sm text-slate-500 mt-1">Acciones registradas en auditoría para configuración.</p>
+      </div>
+      <button class="p-2 rounded-lg hover:bg-slate-100" data-close-historial>
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="p-6">
+      <div class="border border-slate-200 rounded-xl overflow-hidden">
+        <table class="w-full text-left">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Usuario</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for h in historial %}
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 text-sm text-slate-700">{{ h.fecha|date:"Y-m-d H:i:s" }}</td>
+                <td class="px-4 py-3 text-sm text-slate-700">
+                  {% if h.usuario %}{{ h.usuario.get_full_name|default:h.usuario.username }}{% else %}Sistema{% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-700">{{ h.accion }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="px-4 py-8 text-center text-slate-500">
+                  Aún no hay historial registrado para configuración.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-slate-200 flex justify-end">
+      <button type="button" class="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800" data-close-historial>
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function syncSwitches() {
+    document.querySelectorAll('input[type="checkbox"].sr-only').forEach(cb => {
+      const track = cb.parentElement.querySelector('div.w-11');
+      const dot = track.querySelector('.dot');
+      if (cb.checked) {
+        track.classList.remove('bg-slate-300');
+        track.classList.add('bg-primary');
+        dot.style.transform = 'translateX(20px)';
+      } else {
+        track.classList.add('bg-slate-300');
+        track.classList.remove('bg-primary');
+        dot.style.transform = 'translateX(0px)';
+      }
+      cb.addEventListener('change', () => syncSwitches());
+    });
+  }
+
+  function open(id){ document.getElementById(id).classList.remove('hidden'); document.body.style.overflow='hidden'; }
+  function close(id){ document.getElementById(id).classList.add('hidden'); document.body.style.overflow=''; }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    syncSwitches();
+
+    document.getElementById('btnGuardar')?.addEventListener('click', () => open('modalGuardar'));
+    document.getElementById('btnCancelar')?.addEventListener('click', () => open('modalCancelar'));
+    document.getElementById('btnHistorial')?.addEventListener('click', () => open('modalHistorial'));
+
+    document.querySelectorAll('[data-close-guardar]').forEach(x => x.addEventListener('click', () => close('modalGuardar')));
+    document.querySelectorAll('[data-close-cancelar]').forEach(x => x.addEventListener('click', () => close('modalCancelar')));
+    document.querySelectorAll('[data-close-historial]').forEach(x => x.addEventListener('click', () => close('modalHistorial')));
+
+    document.getElementById('confirmGuardar')?.addEventListener('click', () => {
+      document.getElementById('accionInput').value = 'guardar';
+      document.getElementById('configForm').submit();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        ['modalGuardar','modalCancelar','modalHistorial'].forEach(id => close(id));
+      }
+    });
+  });
+</script>
+
+{% endblock %}

@@ -60,20 +60,20 @@
             </div>
 
             <div class="text-sm text-blue-200 flex justify-between">
-                <span>© 2024 Sistema Universitario</span>
+                <span>© 2026 Sistema Universitario</span>
                 <span>Sobre nosotros · Contacto</span>
             </div>
         </div>
     </div>
 
-    <!-- PANEL DERECHO (CORREGIDO) -->
+    <!-- PANEL DERECHO -->
     <div class="w-full lg:w-1/2 flex justify-center overflow-y-auto px-6 pt-24 pb-10 relative">
 
         <!-- Volver -->
         <div class="absolute top-6 right-6">
             <a href="{% url 'principal:login' %}"
                class="flex items-center gap-2 px-4 py-2 rounded-full border text-sm text-slate-700 hover:bg-slate-100">
-                ← Volver al inicio
+                ← Volver al login
             </a>
         </div>
 
@@ -85,6 +85,22 @@
                     Complete el formulario para crear su perfil.
                 </p>
             </div>
+
+            <!-- MENSAJES -->
+            {% if messages %}
+                <div class="space-y-2">
+                    {% for message in messages %}
+                        <div class="text-sm rounded-md px-3 py-2
+                                    {% if message.tags == 'error' %}
+                                        bg-red-50 text-red-700 border border-red-200
+                                    {% else %}
+                                        bg-green-50 text-green-700 border border-green-200
+                                    {% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
             <form method="POST" action="{% url 'principal:registrar' %}" class="space-y-3">
                 {% csrf_token %}
@@ -106,31 +122,42 @@
                     <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
 
                         <label class="border rounded-lg p-2 text-center cursor-pointer">
-                            <input type="radio" name="user_type" value="participante" class="sr-only" required>
+                            <input type="radio" name="rol" value="PART" class="sr-only" required>
                             Participante
                         </label>
 
                         <label class="border rounded-lg p-2 text-center cursor-pointer">
-                            <input type="radio" name="user_type" value="ponente" class="sr-only">
+                            <input type="radio" name="rol" value="PON" class="sr-only">
                             Ponente
                         </label>
 
                         <label class="border rounded-lg p-2 text-center cursor-pointer">
-                            <input type="radio" name="user_type" value="evaluador" class="sr-only">
+                            <input type="radio" name="rol" value="EVAL" class="sr-only">
                             Evaluador / Jurado
                         </label>
 
                         <label class="border rounded-lg p-2 text-center cursor-pointer">
-                            <input type="radio" name="user_type" value="administrador" class="sr-only">
+                            <input type="radio" name="rol" value="ADMIN" class="sr-only" id="rol_admin">
                             Administrador
                         </label>
 
                         <label class="border rounded-lg p-2 text-center col-span-2 cursor-pointer">
-                            <input type="radio" name="user_type" value="coordinador" class="sr-only">
+                            <input type="radio" name="rol" value="COOR" class="sr-only">
                             Coordinador
                         </label>
 
                     </div>
+                </div>
+
+                <!-- Código maestro (solo ADMIN) -->
+                <div id="admin-code-wrap" class="hidden">
+                    <label class="text-sm">Código de Administrador</label>
+                    <input type="password" name="admin_code" id="admin_code"
+                           class="w-full h-10 rounded-lg border-slate-300"
+                           placeholder="Ingrese el código de autorización">
+                    <p class="text-xs text-slate-500 mt-1">
+                        Requerido únicamente para registros con rol Administrador.
+                    </p>
                 </div>
 
                 <div>
@@ -157,9 +184,35 @@
                 </div>
 
             </form>
+
         </div>
     </div>
 
 </div>
+
+<script>
+  const adminWrap = document.getElementById("admin-code-wrap");
+  const adminCode = document.getElementById("admin_code");
+
+  function toggleAdminCode() {
+    const selected = document.querySelector('input[name="rol"]:checked')?.value;
+    const isAdmin = selected === "ADMIN";
+    adminWrap.classList.toggle("hidden", !isAdmin);
+
+    if (isAdmin) {
+      adminCode.setAttribute("required", "required");
+    } else {
+      adminCode.removeAttribute("required");
+      adminCode.value = "";
+    }
+  }
+
+  document.querySelectorAll('input[name="rol"]').forEach(r => {
+    r.addEventListener("change", toggleAdminCode);
+  });
+
+  toggleAdminCode();
+</script>
+
 </body>
 </html>
