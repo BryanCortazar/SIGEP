@@ -1,0 +1,407 @@
+{% extends "ponente/base_pon.html" %}
+{% block title %}Ponente: Inscripción - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight text-slate-900">Inscripción</h2>
+      <p class="text-slate-500">Selecciona un evento y registra tu ponencia.</p>
+    </div>
+
+    <div class="flex gap-2">
+      <button type="button"
+              class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition inline-flex items-center gap-2"
+              onclick="openModal('modalRegistrar')"
+              {% if not evento_sel %}disabled style="opacity:.6;cursor:not-allowed"{% endif %}>
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        Inscribir ponencia
+      </button>
+    </div>
+  </div>
+
+  <!-- Selector de evento -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+    <form method="POST" class="flex flex-col md:flex-row md:items-end gap-3">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="select_event">
+      <div class="flex-1 space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Evento</label>
+        <select name="evento_id" class="w-full h-11 rounded-lg border-slate-300 focus:border-primary focus:ring-primary">
+          <option value="">-- Selecciona un evento --</option>
+          {% for ev in eventos %}
+            <option value="{{ ev.id }}" {% if evento_sel and ev.id == evento_sel.id %}selected{% endif %}>
+              {{ ev.nombre }}
+            </option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-slate-500">Solo eventos publicados.</p>
+      </div>
+
+      <button type="submit"
+              class="px-4 py-2 h-11 rounded-lg bg-slate-900 text-white font-semibold hover:opacity-90 transition">
+        Cargar
+      </button>
+    </form>
+  </div>
+
+  <!-- Tabla de ponencias -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100">
+      <h3 class="text-lg font-extrabold text-slate-900">
+        Mis ponencias{% if evento_sel %} — {{ evento_sel.nombre }}{% endif %}
+      </h3>
+      <p class="text-sm text-slate-600">Consulta, edita o elimina tus registros según el estado.</p>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr>
+            <th class="px-6 py-3 font-bold">Título</th>
+            <th class="px-6 py-3 font-bold">Tipo</th>
+            <th class="px-6 py-3 font-bold">Estado</th>
+            <th class="px-6 py-3 font-bold text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% if evento_sel and ponencias %}
+            {% for p in ponencias %}
+              <tr class="hover:bg-slate-50 transition"
+                  data-id="{{ p.id }}"
+                  data-titulo="{{ p.titulo|escape }}"
+                  data-tipo="{{ p.tipo|escape }}"
+                  data-area="{{ p.area_tematica|escape }}"
+                  data-resumen="{{ p.resumen|escape }}"
+                  data-autores="{{ p.autores|escape }}"
+                  data-estado="{{ p.estado }}">
+                <td class="px-6 py-4 font-semibold text-slate-900">{{ p.titulo }}</td>
+                <td class="px-6 py-4 text-slate-700">{{ p.tipo|default:"—" }}</td>
+                <td class="px-6 py-4">
+                  {% if p.estado == "ACEPTADA" %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                      <span class="material-symbols-outlined text-[16px]">check_circle</span> Aceptada
+                    </span>
+                  {% elif p.estado == "RECHAZADA" %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 font-bold">
+                      <span class="material-symbols-outlined text-[16px]">cancel</span> Rechazada
+                    </span>
+                  {% elif p.estado == "EN_REVISION" %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-bold">
+                      <span class="material-symbols-outlined text-[16px]">hourglass_top</span> En revisión
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-50 text-slate-700 border border-slate-200 font-bold">
+                      <span class="material-symbols-outlined text-[16px]">pending</span> Registrada
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td class="px-6 py-4">
+                  <div class="flex justify-end gap-2">
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 font-semibold inline-flex items-center gap-2"
+                            onclick="openDetalle(this)">
+                      <span class="material-symbols-outlined text-[18px]">visibility</span>
+                      Ver
+                    </button>
+
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg bg-primary text-white hover:opacity-90 font-semibold inline-flex items-center gap-2"
+                            onclick="openEditar(this)"
+                            {% if p.estado == "ACEPTADA" or p.estado == "RECHAZADA" %}disabled style="opacity:.6;cursor:not-allowed"{% endif %}>
+                      <span class="material-symbols-outlined text-[18px]">edit</span>
+                      Editar
+                    </button>
+
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg bg-white border border-red-200 text-red-700 hover:bg-red-50 font-semibold inline-flex items-center gap-2"
+                            onclick="openEliminar(this)"
+                            {% if p.estado == "ACEPTADA" or p.estado == "RECHAZADA" %}disabled style="opacity:.6;cursor:not-allowed"{% endif %}>
+                      <span class="material-symbols-outlined text-[18px]">delete</span>
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="px-6 py-12 text-center text-slate-600">
+                {% if not evento_sel %}
+                  Selecciona un evento para ver y registrar ponencias.
+                {% else %}
+                  Aún no tienes ponencias registradas en este evento.
+                {% endif %}
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal Registrar -->
+<div id="modalRegistrar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalRegistrar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">Inscribir ponencia</h3>
+        <button type="button" onclick="closeModal('modalRegistrar')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" class="p-5 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="registrar">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Título</label>
+            {{ form_registrar.titulo }}
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Tipo (texto libre)</label>
+            {{ form_registrar.tipo }}
+          </div>
+          <div class="space-y-1 md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700">Área temática (opcional)</label>
+            {{ form_registrar.area_tematica }}
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-sm font-semibold text-slate-700">Resumen (opcional)</label>
+          {{ form_registrar.resumen }}
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-sm font-semibold text-slate-700">Autores (opcional)</label>
+          {{ form_registrar.autores }}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Resumen PDF (opcional)</label>
+            {{ form_registrar.archivo_resumen }}
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Presentación (PDF/PPT/PPTX) (opcional)</label>
+            {{ form_registrar.presentacion }}
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalRegistrar')"
+                  class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+            Registrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalle -->
+<div id="modalDetalle" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalDetalle')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">Detalle de ponencia</h3>
+        <button type="button" onclick="closeModal('modalDetalle')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div class="rounded-lg border border-slate-200 p-4">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Título</p>
+          <p id="dTitulo" class="mt-1 font-extrabold text-slate-900">—</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</p>
+            <p id="dTipo" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Área</p>
+            <p id="dArea" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+        </div>
+        <div class="rounded-lg border border-slate-200 p-4 bg-slate-50">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Resumen</p>
+          <p id="dResumen" class="mt-2 text-sm text-slate-700 whitespace-pre-line">—</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 p-4">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Autores</p>
+          <p id="dAutores" class="mt-2 text-sm text-slate-700 whitespace-pre-line">—</p>
+        </div>
+      </div>
+      <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
+        <button type="button" onclick="closeModal('modalDetalle')"
+                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div id="modalEditar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalEditar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">Editar ponencia</h3>
+        <button type="button" onclick="closeModal('modalEditar')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" class="p-5 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="editar">
+        <input type="hidden" name="ponencia_id" id="eId">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Título</label>
+            <input name="titulo" id="eTitulo" class="w-full h-11 rounded-lg border-slate-300 focus:border-primary focus:ring-primary"/>
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Tipo (texto libre)</label>
+            <input name="tipo" id="eTipo" class="w-full h-11 rounded-lg border-slate-300 focus:border-primary focus:ring-primary"/>
+          </div>
+          <div class="space-y-1 md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700">Área temática</label>
+            <input name="area_tematica" id="eArea" class="w-full h-11 rounded-lg border-slate-300 focus:border-primary focus:ring-primary"/>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-sm font-semibold text-slate-700">Resumen</label>
+          <textarea name="resumen" id="eResumen" rows="5"
+                    class="w-full rounded-lg border-slate-300 focus:border-primary focus:ring-primary"></textarea>
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-sm font-semibold text-slate-700">Autores</label>
+          <textarea name="autores" id="eAutores" rows="3"
+                    class="w-full rounded-lg border-slate-300 focus:border-primary focus:ring-primary"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Resumen PDF (opcional)</label>
+            <input type="file" name="archivo_resumen" accept=".pdf" class="w-full text-sm">
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-semibold text-slate-700">Presentación (PDF/PPT/PPTX) (opcional)</label>
+            <input type="file" name="presentacion" accept=".pdf,.ppt,.pptx" class="w-full text-sm">
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalEditar')"
+                  class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Eliminar -->
+<div id="modalEliminar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalEliminar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">Eliminar ponencia</h3>
+        <button type="button" onclick="closeModal('modalEliminar')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+
+      <form method="POST" class="p-5 space-y-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="eliminar">
+        <input type="hidden" name="ponencia_id" id="xId">
+
+        <p class="text-sm text-slate-700">
+          Esta acción eliminará la ponencia seleccionada. ¿Deseas continuar?
+        </p>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalEliminar')"
+                  class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:opacity-90 transition">
+            Eliminar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function rowFromBtn(btn){ return btn.closest("tr"); }
+
+  function openDetalle(btn){
+    const tr = rowFromBtn(btn);
+    document.getElementById("dTitulo").textContent = tr.dataset.titulo || "—";
+    document.getElementById("dTipo").textContent = tr.dataset.tipo || "—";
+    document.getElementById("dArea").textContent = tr.dataset.area || "—";
+    document.getElementById("dResumen").textContent = tr.dataset.resumen || "—";
+    document.getElementById("dAutores").textContent = tr.dataset.autores || "—";
+    openModal("modalDetalle");
+  }
+
+  function openEditar(btn){
+    const tr = rowFromBtn(btn);
+    document.getElementById("eId").value = tr.dataset.id || "";
+    document.getElementById("eTitulo").value = tr.dataset.titulo || "";
+    document.getElementById("eTipo").value = tr.dataset.tipo || "";
+    document.getElementById("eArea").value = tr.dataset.area || "";
+    document.getElementById("eResumen").value = tr.dataset.resumen || "";
+    document.getElementById("eAutores").value = tr.dataset.autores || "";
+    openModal("modalEditar");
+  }
+
+  function openEliminar(btn){
+    const tr = rowFromBtn(btn);
+    document.getElementById("xId").value = tr.dataset.id || "";
+    openModal("modalEliminar");
+  }
+</script>
+{% endblock %}

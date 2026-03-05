@@ -1,0 +1,311 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}Coordinador: Espacios - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <div class="flex items-start justify-between gap-4">
+    <div class="space-y-2">
+      <h2 class="text-3xl font-bold text-[#0B1221] dark:text-white">Asignación de Espacios</h2>
+      <p class="text-slate-500 dark:text-gray-400">Gestione los espacios físicos y virtuales disponibles para el evento.</p>
+      <p class="text-sm text-slate-500 dark:text-gray-400">Evento: <b>{{ evento.titulo }}</b></p>
+    </div>
+
+    <button type="button"
+            class="px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow inline-flex items-center gap-2"
+            onclick="openEspacioModal()">
+      <span class="material-symbols-outlined">add_location</span>
+      Nuevo Espacio
+    </button>
+  </div>
+
+  <form method="GET" class="w-full">
+    <div class="relative">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+      <input name="q" value="{{ q }}"
+             class="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+             placeholder="Buscar auditorio, sala o ubicación...">
+    </div>
+  </form>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for e in espacios %}
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+      <div class="p-5 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <span class="material-symbols-outlined text-slate-700 dark:text-slate-200">
+              {% if e.tipo == "AUDITORIO" %}theater_comedy{% elif e.tipo == "SALA" %}meeting_room{% elif e.tipo == "LABORATORIO" %}computer{% else %}language{% endif %}
+            </span>
+          </div>
+
+          {% if e.estado == "DISPONIBLE" %}
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200">DISPONIBLE</span>
+          {% elif e.estado == "OCUPADO" %}
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-200">OCUPADO</span>
+          {% else %}
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-200">MANTENIMIENTO</span>
+          {% endif %}
+        </div>
+
+        <div>
+          <div class="text-lg font-extrabold text-slate-900 dark:text-white">{{ e.nombre }}</div>
+          <div class="text-sm text-slate-500 dark:text-gray-400 inline-flex items-center gap-1">
+            <span class="material-symbols-outlined text-base">location_on</span>
+            {{ e.ubicacion|default:"Sin ubicación" }}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+            <div class="text-xs text-slate-500 uppercase font-bold tracking-wider">Capacidad</div>
+            <div class="text-sm font-extrabold text-slate-900 dark:text-white">{{ e.capacidad }} pax</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+            <div class="text-xs text-slate-500 uppercase font-bold tracking-wider">Tipo</div>
+            <div class="text-sm font-extrabold text-slate-900 dark:text-white">{{ e.get_tipo_display }}</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          {% for t in e.tags_list %}
+          <span class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200">{{ t }}</span>
+          {% endfor %}
+          {% if e.proyecto %}
+            <span class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-xs font-semibold text-blue-700 dark:text-blue-200">
+              Proyecto: {{ e.proyecto.titulo }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+        <button type="button"
+                class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                title="Editar"
+                onclick="openEspacioModal({
+                  id:'{{ e.id }}',
+                  nombre:'{{ e.nombre|escapejs }}',
+                  tipo:'{{ e.tipo }}',
+                  capacidad:'{{ e.capacidad }}',
+                  ubicacion:'{{ e.ubicacion|escapejs }}',
+                  estado:'{{ e.estado }}',
+                  proyecto_id:'{% if e.proyecto %}{{ e.proyecto.id }}{% endif %}',
+                  tags:'{{ e.tags|escapejs }}'
+                })">
+          <span class="material-symbols-outlined">edit</span>
+        </button>
+
+        <button type="button"
+                class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                title="Eliminar"
+                onclick="openDeleteModal('{{ e.id }}','{{ e.nombre|escapejs }}')">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
+    </div>
+    {% empty %}
+      <div class="col-span-full text-center text-slate-500 dark:text-gray-400 py-14">
+        No hay espacios registrados para este evento.
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+
+<!-- ================= MODAL CREAR/EDITAR ================= -->
+<div id="modalEspacio" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalEspacio')"></div>
+
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between relative">
+        <h3 id="espacioModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Nuevo Espacio</h3>
+
+        <button type="button"
+                onclick="closeModal('modalEspacio')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors group"
+                aria-label="Cerrar modal">
+          <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400">close</span>
+        </button>
+      </div>
+
+      <form method="POST" action="{% url 'coordinador:espacio_guardar' %}" class="p-5 space-y-4" autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="espacio_id" id="espacio_id" value="">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre del espacio *</label>
+          {{ form_espacio.nombre }}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo</label>
+            {{ form_espacio.tipo }}
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Capacidad (personas)</label>
+            {{ form_espacio.capacidad }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / detalles</label>
+          {{ form_espacio.ubicacion }}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado actual</label>
+            {{ form_espacio.estado }}
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Proyecto (opcional)</label>
+            {{ form_espacio.proyecto }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Etiquetas (opcional)</label>
+          {{ form_espacio.tags }}
+          <p class="text-xs text-slate-500 mt-2">Separadas por coma. Ej: Proyector 4K, Streaming, Pizarra</p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button"
+                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                  onclick="closeModal('modalEspacio')">
+            Cancelar
+          </button>
+
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold inline-flex items-center gap-2">
+            <span class="material-symbols-outlined">save</span>
+            Guardar Espacio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================= MODAL ELIMINAR ================= -->
+<div id="modalDelete" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalDelete')"></div>
+
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-6 text-center space-y-3">
+        <div class="mx-auto w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+          <span class="material-symbols-outlined text-rose-600 dark:text-rose-300">delete</span>
+        </div>
+        <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">¿Eliminar Espacio?</h3>
+        <p class="text-sm text-slate-500 dark:text-gray-400">
+          Esta acción eliminará el espacio del sistema. Verifique que no tenga actividades asignadas.
+        </p>
+
+        <form id="deleteForm" method="POST" action="">
+          {% csrf_token %}
+          <div class="flex items-center justify-center gap-3 pt-2">
+            <button type="button"
+                    class="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold"
+                    onclick="closeModal('modalDelete')">
+              Cancelar
+            </button>
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold">
+              Sí, Eliminar
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // ===== Modal helpers (con bloqueo scroll) =====
+  function openModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove("hidden");
+    document.documentElement.classList.add("overflow-hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add("hidden");
+    document.documentElement.classList.remove("overflow-hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") {
+      ["modalEspacio","modalDelete"].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el && !el.classList.contains("hidden")) closeModal(id);
+      });
+    }
+  });
+
+  function resetEspacioModal(){
+    document.getElementById("espacioModalTitle").innerText = "Nuevo Espacio";
+    document.getElementById("espacio_id").value = "";
+
+    const n = document.querySelector("#modalEspacio [name='nombre']");
+    const t = document.querySelector("#modalEspacio [name='tipo']");
+    const c = document.querySelector("#modalEspacio [name='capacidad']");
+    const u = document.querySelector("#modalEspacio [name='ubicacion']");
+    const e = document.querySelector("#modalEspacio [name='estado']");
+    const p = document.querySelector("#modalEspacio [name='proyecto']");
+    const g = document.querySelector("#modalEspacio [name='tags']");
+
+    if (n) n.value = "";
+    if (t) t.value = "SALA";
+    if (c) c.value = "0";
+    if (u) u.value = "";
+    if (e) e.value = "DISPONIBLE";
+    if (p) p.value = "";
+    if (g) g.value = "";
+  }
+
+  function openEspacioModal(payload){
+    resetEspacioModal();
+
+    if (payload && payload.id){
+      document.getElementById("espacioModalTitle").innerText = "Editar Espacio";
+      document.getElementById("espacio_id").value = payload.id;
+
+      const n = document.querySelector("#modalEspacio [name='nombre']");
+      const t = document.querySelector("#modalEspacio [name='tipo']");
+      const c = document.querySelector("#modalEspacio [name='capacidad']");
+      const u = document.querySelector("#modalEspacio [name='ubicacion']");
+      const e = document.querySelector("#modalEspacio [name='estado']");
+      const p = document.querySelector("#modalEspacio [name='proyecto']");
+      const g = document.querySelector("#modalEspacio [name='tags']");
+
+      if (n) n.value = payload.nombre || "";
+      if (t) t.value = payload.tipo || "SALA";
+      if (c) c.value = payload.capacidad || "0";
+      if (u) u.value = payload.ubicacion || "";
+      if (e) e.value = payload.estado || "DISPONIBLE";
+      if (p) p.value = payload.proyecto_id || "";
+      if (g) g.value = payload.tags || "";
+    }
+
+    openModal("modalEspacio");
+  }
+
+  function openDeleteModal(id, nombre){
+    const form = document.getElementById("deleteForm");
+    form.action = "{% url 'coordinador:espacio_eliminar' 0 %}".replace("/0/", `/${id}/`);
+    openModal("modalDelete");
+  }
+</script>
+{% endblock %}

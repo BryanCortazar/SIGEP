@@ -1,0 +1,267 @@
+{% extends "base_eval.html" %}
+{% block title %}Evaluador: Historial de Evaluaciones - SIGEP{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-7xl mx-auto">
+
+  <header class="w-full px-0 py-6 md:py-8">
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div class="flex flex-col gap-2">
+        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Historial de Evaluaciones</h2>
+        <p class="text-slate-500">Revise el registro completo de sus evaluaciones enviadas y su estado actual.</p>
+      </div>
+
+      <div class="flex items-center gap-3 self-start md:self-center">
+        <div class="flex flex-col text-right mr-3">
+          <span class="text-base font-bold text-slate-900">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </span>
+          <span class="text-sm text-slate-500">Evaluador</span>
+        </div>
+        <div class="size-10 rounded-full bg-pink-500 flex items-center justify-center text-white font-medium shadow-md">
+          {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {# KPI total seguro sin depender de "evaluaciones" #}
+  {% with total_entregas=kpi_total|default_if_none:None %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">Total Evaluaciones</p>
+          <p class="text-3xl font-bold text-slate-900 mt-1">
+            {% if total_entregas is not None %}
+              {{ total_entregas }}
+            {% else %}
+              {{ entregas|length }}
+            {% endif %}
+          </p>
+        </div>
+        <div class="size-12 rounded-full bg-blue-50 text-primary flex items-center justify-center">
+          <span class="material-symbols-outlined">folder_open</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">Promedio Calificación</p>
+          <p class="text-3xl font-bold text-slate-900 mt-1">
+            {% if kpi_promedio is not None %}
+              {{ kpi_promedio }}
+            {% else %}
+              —
+            {% endif %}
+          </p>
+        </div>
+        <div class="size-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <span class="material-symbols-outlined">star</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">Pendientes</p>
+          <p class="text-3xl font-bold text-slate-900 mt-1">{{ kpi_pendientes|default:0 }}</p>
+        </div>
+        <div class="size-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+          <span class="material-symbols-outlined">pending_actions</span>
+        </div>
+      </div>
+    </div>
+  {% endwith %}
+
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500 w-1/2">Proyecto</th>
+            <th class="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Fecha de envío</th>
+            <th class="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500 text-center">Calificación</th>
+            <th class="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500 text-right">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100">
+          {% if entregas %}
+            {% for e in entregas %}
+            <tr class="hover:bg-slate-50 transition-colors group"
+                data-action="detalle"
+                data-proyecto="{{ e.proyecto.titulo|default:e.proyecto.nombre|default:e.titulo|default:'—' }}"
+                data-ponente="{{ e.proyecto.ponente.nombre|default:e.proyecto.ponente|default:e.ponente|default:'—' }}"
+                data-fecha="{% if e.fecha_envio %}{{ e.fecha_envio|date:'d M, Y' }}{% elif e.fecha %}{{ e.fecha|date:'d M, Y' }}{% else %}—{% endif %}"
+                data-hora="{% if e.fecha_envio %}{{ e.fecha_envio|date:'H:i' }}{% elif e.fecha %}{{ e.fecha|date:'H:i' }}{% else %}—{% endif %}"
+                data-calificacion="{{ e.calificacion|default:e.puntaje|default:'—' }}"
+                data-id="{{ e.id|default:e.pk }}">
+              <td class="py-4 px-6">
+                <div class="flex flex-col">
+                  <span class="font-semibold text-slate-900 text-base">
+                    {{ e.proyecto.titulo|default:e.proyecto.nombre|default:e.titulo|default:"—" }}
+                  </span>
+                  <span class="text-sm text-slate-500 mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px] text-slate-400">person</span>
+                    {{ e.proyecto.ponente.nombre|default:e.proyecto.ponente|default:e.ponente|default:"—" }}
+                  </span>
+                </div>
+              </td>
+
+              <td class="py-4 px-6">
+                <span class="text-sm text-slate-600 font-medium">
+                  {% if e.fecha_envio %}{{ e.fecha_envio|date:"d M, Y" }}{% elif e.fecha %}{{ e.fecha|date:"d M, Y" }}{% else %}—{% endif %}
+                </span>
+                <span class="block text-xs text-slate-400 mt-0.5">
+                  {% if e.fecha_envio %}{{ e.fecha_envio|date:"H:i" }}{% elif e.fecha %}{{ e.fecha|date:"H:i" }}{% else %}—{% endif %}
+                </span>
+              </td>
+
+              <td class="py-4 px-6 text-center">
+                {% with cal=e.calificacion|default:e.puntaje|default:0 %}
+                  {% if cal >= 4.5 %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-bold bg-green-50 text-green-700 border border-green-100">
+                      {{ cal }}/5.0
+                    </span>
+                  {% elif cal >= 3.0 %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-bold bg-yellow-50 text-yellow-700 border border-yellow-100">
+                      {{ cal }}/5.0
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-bold bg-red-50 text-red-700 border border-red-100">
+                      {{ cal }}/5.0
+                    </span>
+                  {% endif %}
+                {% endwith %}
+              </td>
+
+              <td class="py-4 px-6 text-right">
+                <button type="button"
+                        class="text-primary hover:text-blue-700 font-medium text-sm inline-flex items-center gap-1 group-hover:underline"
+                        data-open="detalle">
+                  Ver detalle
+                  <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="py-16 px-6 text-center">
+                <div class="max-w-md mx-auto">
+                  <div class="mx-auto size-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-slate-500">history</span>
+                  </div>
+                  <p class="mt-3 font-extrabold text-slate-900">Aún no tienes evaluaciones registradas</p>
+                  <p class="text-sm text-slate-600">Cuando envíes evaluaciones, aparecerán aquí.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white">
+      <p class="text-sm text-slate-500">
+        Mostrando <span class="font-medium text-slate-900">{{ page_start|default:1 }}-{{ page_end|default:5 }}</span>
+        de <span class="font-medium text-slate-900">{{ total|default:entregas|length }}</span> resultados
+      </p>
+
+      <div class="flex gap-2">
+        <button type="button"
+                class="px-3 py-1 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-50"
+                {% if not has_prev %}disabled{% endif %}>
+          Anterior
+        </button>
+        <button type="button" class="px-3 py-1 text-sm font-medium bg-primary text-white rounded">
+          {{ page_current|default:1 }}
+        </button>
+        <button type="button"
+                class="px-3 py-1 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-50"
+                {% if not has_next %}disabled{% endif %}>
+          Siguiente
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block modals %}
+<div id="modalDetalleEvaluacion" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalDetalleEvaluacion')"></div>
+
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">Detalle de evaluación</h3>
+
+        <button type="button"
+                onclick="closeModal('modalDetalleEvaluacion')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group"
+                aria-label="Cerrar modal">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Proyecto</p>
+            <p id="dProyecto" class="mt-1 font-extrabold text-slate-900">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Ponente</p>
+            <p id="dPonente" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Fecha</p>
+            <p id="dFecha" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Hora</p>
+            <p id="dHora" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-4 bg-slate-50">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Calificación</p>
+          <p id="dCalificacion" class="mt-2 text-sm text-slate-700 font-semibold">—</p>
+          <p id="dId" class="mt-1 text-xs text-slate-500">ID: —</p>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
+        <button type="button"
+                onclick="closeModal('modalDetalleEvaluacion')"
+                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("click", function(e){
+    const btn = e.target.closest("[data-open='detalle'], tr[data-action='detalle']");
+    if (!btn) return;
+
+    const row = btn.closest("tr[data-action='detalle']");
+    if (!row) return;
+
+    document.getElementById("dProyecto").textContent = row.dataset.proyecto || "—";
+    document.getElementById("dPonente").textContent = row.dataset.ponente || "—";
+    document.getElementById("dFecha").textContent = row.dataset.fecha || "—";
+    document.getElementById("dHora").textContent = row.dataset.hora || "—";
+    document.getElementById("dCalificacion").textContent = (row.dataset.calificacion || "—") + "/5.0";
+    document.getElementById("dId").textContent = "ID: " + (row.dataset.id || "—");
+
+    openModal("modalDetalleEvaluacion");
+  });
+</script>
+{% endblock %}

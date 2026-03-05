@@ -1,0 +1,437 @@
+{% extends "base_eval.html" %}
+{% block title %}Evaluador: Formulario de Evaluación - SIGEP{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rating-input:checked + .rating-label {
+    background-color: #137fec;
+    color: white;
+    border-color: #137fec;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 w-full py-8 px-4 md:px-8 bg-background-light">
+  <div class="w-full max-w-[960px] mx-auto flex flex-col gap-6">
+
+    <!-- Encabezado -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div class="flex flex-col gap-1">
+        <p class="text-3xl md:text-4xl font-black leading-tight tracking-tight text-slate-900">
+          Evaluación en curso
+        </p>
+        <p class="text-slate-500 text-base font-normal">
+          Complete la rúbrica para el proyecto asignado a continuación.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        {# Estado visual según asignación #}
+        {% if asignacion and asignacion.estado == "enviada" %}
+          <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-full border border-emerald-200">
+            Enviada
+          </span>
+        {% elif asignacion and asignacion.estado == "en_revision" %}
+          <span class="px-3 py-1 bg-amber-50 text-amber-700 text-sm font-semibold rounded-full border border-amber-200">
+            En Progreso
+          </span>
+        {% else %}
+          <span class="px-3 py-1 bg-blue-50 text-primary text-sm font-semibold rounded-full border border-blue-100">
+            En Progreso
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card del proyecto -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="flex flex-col gap-1">
+          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Título del Proyecto</span>
+          <p class="text-slate-900 text-lg font-semibold leading-snug">
+            {{ proyecto.titulo|default:proyecto.nombre|default:"—" }}
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Evento</span>
+          <p class="text-slate-900 text-base font-medium">
+            {{ proyecto.evento.nombre|default:proyecto.evento|default:"—" }}
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ponente</span>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-400 text-lg">person</span>
+            <p class="text-slate-900 text-base font-medium">
+              {{ proyecto.ponente.nombre|default:proyecto.ponente|default:proyecto.autor|default:"—" }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Tipo</span>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-400 text-lg">mic</span>
+            <p class="text-slate-900 text-base font-medium">
+              {{ proyecto.tipo|default:"Ponencia" }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 border-t border-slate-200 px-6 py-3 flex gap-4">
+        <button type="button"
+                class="text-primary text-sm font-medium flex items-center gap-1 hover:underline"
+                onclick="openModal('modalResumen')">
+          <span class="material-symbols-outlined text-lg">visibility</span>
+          Ver resumen
+        </button>
+
+        {% if proyecto.pdf_url %}
+          <a class="text-primary text-sm font-medium flex items-center gap-1 hover:underline"
+             href="{{ proyecto.pdf_url }}" target="_blank" rel="noopener">
+            <span class="material-symbols-outlined text-lg">download</span>
+            Descargar PDF
+          </a>
+        {% else %}
+          <button type="button"
+                  class="text-primary text-sm font-medium flex items-center gap-1 hover:underline"
+                  onclick="openModal('modalPdf')">
+            <span class="material-symbols-outlined text-lg">download</span>
+            Descargar PDF
+          </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Rúbrica -->
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center justify-between px-2 pt-2">
+        <h2 class="text-slate-900 text-[22px] font-bold leading-tight">
+          Rúbrica de Evaluación
+          {% if rubrica and rubrica.nombre %}<span class="text-slate-400 font-medium text-base">— {{ rubrica.nombre }}</span>{% endif %}
+        </h2>
+        <span class="text-slate-500 text-sm">Escala: 1 (Deficiente) - 5 (Excelente)</span>
+      </div>
+
+      <form method="POST" action="" id="formEvaluacion">
+        {% csrf_token %}
+        <input type="hidden" name="accion" id="accionInput" value="guardar">
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
+
+          {% if criterios %}
+            {% for c in criterios %}
+              <div class="p-6 hover:bg-slate-50 transition-colors" data-criterio-row>
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div class="flex-1">
+                    <h3 class="text-slate-900 text-lg font-bold mb-1">
+                      {{ forloop.counter }}. {{ c.titulo|default:c.nombre|default:"Criterio" }}
+                      {% if c.peso %}
+                        <span class="text-xs font-semibold text-slate-400">({{ c.peso }}%)</span>
+                      {% endif %}
+                    </h3>
+                    <p class="text-slate-500 text-sm leading-relaxed">
+                      {{ c.descripcion|default:"" }}
+                    </p>
+                  </div>
+
+                  <div class="flex items-center gap-2 md:gap-3 shrink-0 self-start lg:self-center">
+                    {% for v in "12345" %}
+                      {% with vv=v|stringformat:"s" %}
+                      <label class="cursor-pointer group relative">
+                        <input class="peer sr-only rating-input"
+                               name="criterio_{{ c.id }}"
+                               type="radio"
+                               value="{{ vv }}"
+                               data-rating
+                               {% if valores and valores.c %}
+                               {% endif %}
+                               {% if valores and valores|get_item:c.id == vv %}checked{% endif %} />
+                        <div class="rating-label w-10 h-10 md:w-12 md:h-12 rounded-full border border-slate-300
+                                    flex items-center justify-center text-slate-600 font-bold transition-all
+                                    hover:border-primary hover:text-primary bg-white">
+                          {{ vv }}
+                        </div>
+                      </label>
+                      {% endwith %}
+                    {% endfor %}
+                  </div>
+                </div>
+
+                {# Observación por criterio (opcional pero recomendable) #}
+                <div class="mt-4">
+                  <label class="text-xs font-semibold uppercase tracking-wider text-slate-500">Observación</label>
+                  <textarea name="obs_{{ c.id }}"
+                            rows="2"
+                            class="mt-2 w-full p-3 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-sm
+                                   focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-y
+                                   placeholder:text-slate-400"
+                            placeholder="Comentario breve para este criterio...">{% if observaciones and observaciones|get_item:c.id %}{{ observaciones|get_item:c.id }}{% endif %}</textarea>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="p-10 text-center">
+              <p class="font-extrabold text-slate-900">No hay rúbrica asignada</p>
+              <p class="text-sm text-slate-600 mt-1">
+                El coordinador debe asignar una rúbrica a este proyecto para que puedas evaluar.
+              </p>
+            </div>
+          {% endif %}
+
+        </div>
+
+        <!-- Observaciones generales + acciones -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8 mt-6">
+          <h3 class="text-slate-900 text-lg font-bold mb-4">Observaciones Generales</h3>
+
+          <textarea id="obsGeneral"
+                    name="observaciones_generales"
+                    maxlength="500"
+                    class="w-full min-h-[140px] p-4 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-sm
+                           focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-y
+                           placeholder:text-slate-400"
+                    placeholder="Escriba aquí sus comentarios cualitativos, fortalezas y áreas de mejora para el ponente...">{{ obs_general|default:"" }}</textarea>
+
+          <div class="flex justify-end mt-2">
+            <span id="counter" class="text-xs text-slate-400">0 / 500 caracteres</span>
+          </div>
+
+          <div class="my-6 border-t border-slate-200"></div>
+
+          <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3 bg-blue-50 px-4 py-3 rounded-lg border border-blue-100 w-full md:w-auto">
+              <span class="text-blue-900 text-sm font-semibold">Puntaje Total Provisorio:</span>
+              <span id="totalScore" class="text-primary text-xl font-black">0/20</span>
+            </div>
+
+            <div class="flex items-center gap-3 w-full md:w-auto">
+              <a href="{% url 'evaluador:proyectos' %}"
+                 class="flex-1 md:flex-none px-6 py-3 rounded-lg border border-slate-300 text-slate-700 font-semibold
+                        hover:bg-slate-50 transition-colors text-center">
+                Cancelar
+              </a>
+
+              {% if criterios %}
+              <button type="submit"
+                      onclick="document.getElementById('accionInput').value='guardar';"
+                      class="flex-1 md:flex-none px-6 py-3 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold
+                             hover:bg-slate-50 transition-colors">
+                Guardar borrador
+              </button>
+
+              <button type="button"
+                      onclick="openModal('modalConfirmEnviar')"
+                      class="flex-1 md:flex-none px-8 py-3 rounded-lg bg-primary hover:bg-blue-600 text-white font-semibold
+                             shadow-md shadow-blue-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                <span>Enviar evaluación</span>
+                <span class="material-symbols-outlined text-sm">send</span>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal: Resumen del proyecto -->
+<div id="modalResumen" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalResumen')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">Resumen</h3>
+        <button type="button"
+                onclick="closeModal('modalResumen')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+      <div class="p-5">
+        <p class="text-sm text-slate-700 leading-relaxed">
+          {{ proyecto.resumen|default:proyecto.descripcion|default:"Sin resumen disponible." }}
+        </p>
+      </div>
+      <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
+        <button type="button"
+                onclick="closeModal('modalResumen')"
+                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: PDF no disponible -->
+<div id="modalPdf" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalPdf')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">PDF no disponible</h3>
+        <button type="button"
+                onclick="closeModal('modalPdf')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+      <div class="p-5">
+        <p class="text-sm text-slate-700">Este proyecto aún no tiene un PDF cargado.</p>
+      </div>
+      <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
+        <button type="button"
+                onclick="closeModal('modalPdf')"
+                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirmar Envío -->
+<div id="modalConfirmEnviar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalConfirmEnviar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900">Confirmar envío</h3>
+        <button type="button"
+                onclick="closeModal('modalConfirmEnviar')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3">
+        <p class="text-sm text-slate-700">
+          Al enviar la evaluación, quedará registrada y <span class="font-bold">no podrás editarla</span> (según la regla del sistema).
+        </p>
+        <p class="text-xs text-slate-500">
+          Verifica que hayas calificado todos los criterios antes de enviar.
+        </p>
+      </div>
+
+      <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-2">
+        <button type="button"
+                onclick="closeModal('modalConfirmEnviar')"
+                class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition">
+          Cancelar
+        </button>
+
+        <button type="button"
+                onclick="submitEnviar()"
+                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition inline-flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">send</span>
+          Confirmar envío
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ---- Contador observaciones generales ----
+  const obs = document.getElementById("obsGeneral");
+  const counter = document.getElementById("counter");
+  function updateCounter(){
+    if (!obs || !counter) return;
+    counter.textContent = `${obs.value.length} / 500 caracteres`;
+  }
+  document.addEventListener("DOMContentLoaded", updateCounter);
+  obs && obs.addEventListener("input", updateCounter);
+
+  // ---- Score total provisorio (sumatoria 1-5 por criterio) ----
+  const totalEl = document.getElementById("totalScore");
+  function computeTotal(){
+    if (!totalEl) return;
+    const rows = document.querySelectorAll("[data-criterio-row]");
+    let total = 0;
+    rows.forEach(row => {
+      const checked = row.querySelector("input[data-rating]:checked");
+      if (checked) total += parseInt(checked.value, 10);
+    });
+    // total máximo = criterios * 5
+    const max = rows.length * 5;
+    totalEl.textContent = `${total}/${max || 0}`;
+  }
+  document.addEventListener("change", function(e){
+    if (e.target && e.target.matches("input[data-rating]")) computeTotal();
+  });
+  document.addEventListener("DOMContentLoaded", computeTotal);
+
+  // ---- Enviar evaluación (POST con accion=enviar) ----
+  function submitEnviar(){
+    const form = document.getElementById("formEvaluacion");
+    const accion = document.getElementById("accionInput");
+    if (!form || !accion) return;
+
+    // Validación mínima: asegurar todos los criterios calificados
+    const rows = document.querySelectorAll("[data-criterio-row]");
+    let ok = true;
+    rows.forEach(row => {
+      const checked = row.querySelector("input[data-rating]:checked");
+      if (!checked) ok = false;
+    });
+
+    if (!ok) {
+      // Si quieres, aquí puedes disparar messages desde backend; por ahora modal simple:
+      closeModal("modalConfirmEnviar");
+      openModal("modalFaltan");
+      return;
+    }
+
+    accion.value = "enviar";
+    form.submit();
+  }
+
+  // Modal simple si faltan criterios
+  function ensureModalFaltan(){
+    if (document.getElementById("modalFaltan")) return;
+    const html = `
+      <div id="modalFaltan" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalFaltan')"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+          <div class="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
+              <h3 class="text-lg font-bold text-slate-900">Faltan criterios</h3>
+              <button type="button"
+                      onclick="closeModal('modalFaltan')"
+                      class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                             bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+                <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
+              </button>
+            </div>
+            <div class="p-5">
+              <p class="text-sm text-slate-700">Debes calificar todos los criterios antes de enviar.</p>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
+              <button type="button"
+                      onclick="closeModal('modalFaltan')"
+                      class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+  }
+  document.addEventListener("DOMContentLoaded", ensureModalFaltan);
+</script>
+{% endblock %}

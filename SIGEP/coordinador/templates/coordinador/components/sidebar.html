@@ -1,0 +1,92 @@
+<aside class="w-64 h-full bg-sidebar-bg flex flex-col justify-between flex-shrink-0 z-20 shadow-xl transition-all duration-300">
+  <!-- Logo Area -->
+  <div class="p-6 pb-2">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="bg-white/10 p-2 rounded-lg text-white">
+        <span class="material-symbols-outlined text-3xl">school</span>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-white font-extrabold tracking-wider text-sm">SIGEP</span>
+        <span class="text-slate-400 text-[10px] font-bold tracking-widest uppercase">Coordinación</span>
+      </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="flex flex-col gap-1">
+
+      <a href="{% url 'coordinador:dashboard' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'dashboard' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">dashboard</span>
+        <span class="text-sm font-medium">Panel de coordinación</span>
+      </a>
+
+      {# ✅ Opción 2: Gestión de eventos (cards) #}
+      <a href="{% url 'coordinador:gestion_evento' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'gestion' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">event_note</span>
+        <span class="text-sm font-medium">Gestión de eventos</span>
+      </a>
+
+      <a href="{% url 'coordinador:cronograma' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'cronograma' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">schedule</span>
+        <span class="text-sm font-medium">Cronograma</span>
+      </a>
+
+      <a href="{% url 'coordinador:inscripciones' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'inscripciones' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">group</span>
+        <span class="text-sm font-medium">Inscripciones</span>
+      </a>
+
+      <a href="{% url 'coordinador:evaluadores' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'evaluadores' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">fact_check</span>
+        <span class="text-sm font-medium">Evaluadores</span>
+      </a>
+
+      <a href="{% url 'coordinador:rubricas' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'rubricas' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">assignment</span>
+        <span class="text-sm font-medium">Rúbricas</span>
+      </a>
+
+      <a href="{% url 'coordinador:espacios' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'espacios' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">location_on</span>
+        <span class="text-sm font-medium">Espacios</span>
+      </a>
+
+      <a href="{% url 'coordinador:reportes' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'reportes' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">description</span>
+        <span class="text-sm font-medium">Reportes</span>
+      </a>
+
+      <a href="{% url 'coordinador:configuracion' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group
+                {% if active == 'configuracion' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">settings</span>
+        <span class="text-sm font-medium">Configuración</span>
+      </a>
+
+    </nav>
+  </div>
+
+  <!-- Footer / Logout -->
+  <div class="p-4 border-t border-white/10">
+    <a href="{% url 'principal:logout' %}"
+       class="flex items-center gap-3 w-full px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all">
+      <span class="material-symbols-outlined text-[20px]">logout</span>
+      <span class="text-sm font-medium">Cerrar sesión</span>
+    </a>
+  </div>
+</aside>

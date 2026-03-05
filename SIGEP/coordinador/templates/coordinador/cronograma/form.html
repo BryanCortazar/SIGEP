@@ -1,0 +1,122 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}
+  {% if modo == "editar" %}Editar Actividad{% else %}Agregar Actividad{% endif %} - SIGEP
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+        {% if modo == "editar" %}Editar Actividad{% else %}Agregar Actividad{% endif %}
+      </h1>
+      <p class="text-slate-500 dark:text-slate-400 mt-1">
+        Completa la información para registrar la actividad dentro del cronograma.
+      </p>
+    </div>
+
+    <a href="{% url 'coordinador:cronograma' %}"
+       class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold transition-colors">
+      Volver
+    </a>
+  </div>
+
+  <div class="bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+    <form method="POST" class="p-6 space-y-5">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="p-4 rounded-lg bg-red-50 text-red-700 border border-red-100">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora inicio</label>
+          {{ form.inicio }}
+          {% if form.inicio.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ form.inicio.errors|striptags }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora fin</label>
+          {{ form.fin }}
+          {% if form.fin.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ form.fin.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título / Actividad</label>
+        {{ form.titulo }}
+        {% if form.titulo.errors %}
+          <p class="mt-1 text-xs text-red-600">{{ form.titulo.errors|striptags }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Responsable / Ponente</label>
+        {{ form.responsable }}
+        {% if form.responsable.errors %}
+          <p class="mt-1 text-xs text-red-600">{{ form.responsable.errors|striptags }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar / Espacio</label>
+        {{ form.lugar }}
+        {% if form.lugar.errors %}
+          <p class="mt-1 text-xs text-red-600">{{ form.lugar.errors|striptags }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Orden</label>
+        {{ form.orden }}
+        {% if form.orden.errors %}
+          <p class="mt-1 text-xs text-red-600">{{ form.orden.errors|striptags }}</p>
+        {% endif %}
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <a href="{% url 'coordinador:cronograma' %}"
+           class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold transition-colors">
+          Cancelar
+        </a>
+
+        <button type="submit"
+                class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-colors">
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  // Estilos Tailwind a inputs generados por Django
+  (function(){
+    const els = document.querySelectorAll("input, select, textarea");
+    els.forEach(el => {
+      if (el.type === "hidden") return;
+      el.classList.add(
+        "w-full", "h-11", "px-3", "rounded-lg",
+        "bg-white", "dark:bg-slate-900",
+        "border", "border-border-light", "dark:border-border-dark",
+        "text-slate-900", "dark:text-white",
+        "focus:ring-2", "focus:ring-primary/30", "focus:border-primary",
+        "outline-none"
+      );
+      if (el.tagName.toLowerCase() === "textarea") {
+        el.classList.remove("h-11");
+        el.classList.add("min-h-[96px]", "py-2");
+      }
+    });
+  })();
+</script>
+{% endblock %}

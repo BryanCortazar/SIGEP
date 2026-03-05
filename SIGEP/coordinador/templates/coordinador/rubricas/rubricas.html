@@ -1,0 +1,337 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}Coordinador: Rúbricas - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+  <div class="flex items-start justify-between gap-4">
+    <div class="space-y-2">
+      <h2 class="text-3xl font-bold text-[#0B1221] dark:text-white">Gestión de Rúbricas</h2>
+      <p class="text-slate-500 dark:text-gray-400">Defina los criterios de evaluación que utilizarán los jurados.</p>
+      <p class="text-sm text-slate-500 dark:text-gray-400">Evento: <b>{{ evento.titulo }}</b></p>
+    </div>
+
+    <button type="button"
+            class="px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow inline-flex items-center gap-2"
+            onclick="openRubricaModal()">
+      <span class="material-symbols-outlined">add</span>
+      Nueva Rúbrica
+    </button>
+  </div>
+
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-300">
+          <tr>
+            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Nombre de la rúbrica</th>
+            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Evento asociado</th>
+            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Puntaje máximo</th>
+            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Estado</th>
+            <th class="text-right px-6 py-4 uppercase tracking-wider text-xs font-bold">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          {% for r in rubricas %}
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+            <td class="px-6 py-4">
+              <div class="font-bold text-slate-900 dark:text-white">{{ r.titulo }}</div>
+              <div class="text-xs text-slate-500 dark:text-gray-400">
+                {{ r.criterios.count }} criterio(s)
+                {% if r.proyecto %} • Proyecto: <b>{{ r.proyecto.titulo }}</b>{% endif %}
+                {% if r.adjuntos.count %} • {{ r.adjuntos.count }} adjunto(s){% endif %}
+              </div>
+            </td>
+
+            <td class="px-6 py-4 text-slate-700 dark:text-slate-200">
+              {{ evento.titulo }}
+            </td>
+
+            <td class="px-6 py-4">
+              <span class="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 font-bold text-xs">
+                {{ r.puntaje_maximo }} puntos
+              </span>
+            </td>
+
+            <td class="px-6 py-4">
+              {% if r.estado == "ACTIVA" %}
+                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 font-bold text-xs">
+                  ACTIVA
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs">
+                  BORRADOR
+                </span>
+              {% endif %}
+            </td>
+
+            <td class="px-6 py-4 text-right whitespace-nowrap space-x-2">
+              <button type="button"
+                      class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      title="Editar"
+                      onclick="openRubricaModal({
+                        id: '{{ r.id }}',
+                        titulo: '{{ r.titulo|escapejs }}',
+                        estado: '{{ r.estado }}',
+                        proyecto_id: '{% if r.proyecto %}{{ r.proyecto.id }}{% endif %}',
+                        criterios: [{% for c in r.criterios.all %}{titulo:'{{ c.titulo|escapejs }}',desc:'{{ c.descripcion|escapejs }}',puntos:'{{ c.puntaje_max }}'}{% if not forloop.last %},{% endif %}{% endfor %}]
+                      })">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+
+              <form method="POST" action="{% url 'coordinador:rubrica_eliminar' r.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="p-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white"
+                        title="Eliminar"
+                        onclick="return confirm('¿Eliminar esta rúbrica?')">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-6 py-12 text-center text-slate-500 dark:text-gray-400">
+              No hay rúbricas registradas para este evento.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ========================= MODAL RÚBRICA ========================= -->
+<div id="modalRubrica" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalRubrica')"></div>
+
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+      <!-- HEADER con X -->
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between relative">
+        <h3 id="rubricaModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">
+          Crear Nueva Rúbrica
+        </h3>
+
+        <button type="button"
+                onclick="closeModal('modalRubrica')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/40
+                       transition-colors group"
+                aria-label="Cerrar modal">
+          <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400">
+            close
+          </span>
+        </button>
+      </div>
+
+      <form method="POST"
+            action="{% url 'coordinador:rubrica_guardar' %}"
+            enctype="multipart/form-data"
+            class="p-5 space-y-5"
+            autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="rubrica_id" id="rubrica_id" value="">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la rúbrica *</label>
+            {{ form_rubrica.titulo }}
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
+            {{ form_rubrica.estado }}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Evento</label>
+            <input class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800" value="{{ evento.titulo }}" disabled>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Proyecto / Ponencia (opcional)</label>
+            {{ form_rubrica.proyecto }}
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Criterios de evaluación</div>
+            <div class="text-sm text-slate-500 dark:text-gray-400">Agrega criterios y puntaje máximo.</div>
+          </div>
+          <button type="button" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-1" onclick="addCriterioRow()">
+            <span class="material-symbols-outlined">add</span> Agregar Criterio
+          </button>
+        </div>
+
+        <div id="criteriosWrap" class="space-y-3"></div>
+
+        <div class="flex items-center justify-end">
+          <div class="text-right">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Puntaje total</div>
+            <div class="text-2xl font-extrabold text-slate-900 dark:text-white">
+              <span id="puntajeTotal">0</span> pts
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Adjuntar rúbrica en archivo (opcional) — PDF, XLSX, etc.
+          </label>
+          <input type="file" name="archivos" multiple
+                 class="w-full rounded-lg border-slate-300 dark:bg-slate-800">
+          <p class="text-xs text-slate-500 mt-2">
+            Puedes subir varios archivos. (Límite recomendado por archivo: 15MB).
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button"
+                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                  onclick="closeModal('modalRubrica')">
+            Cancelar
+          </button>
+
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold inline-flex items-center gap-2">
+            <span class="material-symbols-outlined">save</span>
+            Guardar Rúbrica
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // ===== Modal helpers (con bloqueo scroll) =====
+  function openModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove("hidden");
+    document.documentElement.classList.add("overflow-hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add("hidden");
+    document.documentElement.classList.remove("overflow-hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  // Cerrar con ESC (si el modal está abierto)
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") {
+      const el = document.getElementById("modalRubrica");
+      if (el && !el.classList.contains("hidden")) closeModal("modalRubrica");
+    }
+  });
+
+  // ===== Criterios =====
+  function recalcTotal(){
+    let total = 0;
+    document.querySelectorAll("[data-criterio-puntos]").forEach(inp=>{
+      const v = parseInt(inp.value || "0", 10);
+      if (!isNaN(v)) total += v;
+    });
+    document.getElementById("puntajeTotal").innerText = String(total);
+  }
+
+  function criterioRowHTML({titulo="", desc="", puntos=""} = {}){
+    return `
+      <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+          <div class="md:col-span-2">
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Título del criterio *</label>
+            <input name="criterio_titulo" value="${titulo}"
+                   class="mt-2 w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"
+                   placeholder="Ej. Claridad" required>
+            <input name="criterio_desc" value="${desc}"
+                   class="mt-2 w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"
+                   placeholder="Descripción breve...">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Puntaje máx.</label>
+              <button type="button" class="text-slate-400 hover:text-rose-600" onclick="removeCriterioRow(this)" aria-label="Eliminar criterio">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+            <input name="criterio_puntos" data-criterio-puntos value="${puntos}"
+                   class="mt-2 w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"
+                   type="number" min="1" step="1" placeholder="0" oninput="recalcTotal()" required>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function addCriterioRow(data){
+    const wrap = document.getElementById("criteriosWrap");
+    wrap.insertAdjacentHTML("beforeend", criterioRowHTML(data));
+    recalcTotal();
+  }
+
+  function removeCriterioRow(btn){
+    const card = btn.closest(".rounded-lg");
+    if (card) card.remove();
+    recalcTotal();
+  }
+
+  // ===== Modal state =====
+  function resetRubricaModal(){
+    document.getElementById("rubricaModalTitle").innerText = "Crear Nueva Rúbrica";
+    document.getElementById("rubrica_id").value = "";
+
+    const t = document.querySelector("#modalRubrica [name='titulo']");
+    const e = document.querySelector("#modalRubrica [name='estado']");
+    const p = document.querySelector("#modalRubrica [name='proyecto']");
+    if (t) t.value = "";
+    if (e) e.value = "BORRADOR";
+    if (p) p.value = "";
+
+    document.getElementById("criteriosWrap").innerHTML = "";
+    addCriterioRow(); // 1 criterio por defecto
+  }
+
+  function openRubricaModal(payload){
+    resetRubricaModal();
+
+    if (payload && payload.id){
+      document.getElementById("rubricaModalTitle").innerText = "Editar Rúbrica";
+      document.getElementById("rubrica_id").value = payload.id;
+
+      const t = document.querySelector("#modalRubrica [name='titulo']");
+      const e = document.querySelector("#modalRubrica [name='estado']");
+      const p = document.querySelector("#modalRubrica [name='proyecto']");
+      if (t) t.value = payload.titulo || "";
+      if (e) e.value = payload.estado || "BORRADOR";
+      if (p) p.value = payload.proyecto_id || "";
+
+      document.getElementById("criteriosWrap").innerHTML = "";
+      (payload.criterios || []).forEach(c => addCriterioRow(c));
+      if (!(payload.criterios || []).length) addCriterioRow();
+    }
+
+    openModal("modalRubrica");
+  }
+
+  // Inicial: 1 criterio
+  addCriterioRow();
+</script>
+{% endblock %}

@@ -1,0 +1,307 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}Coordinador: Evaluadores - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+  <div class="flex items-start justify-between gap-4">
+    <div class="space-y-2">
+      <h2 class="text-3xl font-bold text-[#0B1221] dark:text-white">Asignación de Evaluadores</h2>
+      <p class="text-slate-500 dark:text-gray-400">Gestione jurados, horarios y proyectos para el proceso de evaluación.</p>
+      {% if evento %}
+        <p class="text-sm text-slate-500">Evento: <b>{{ evento.titulo }}</b></p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+      <h3 class="font-bold text-slate-900 dark:text-white">Proyectos / Ponencias</h3>
+      <p class="text-sm text-slate-500 dark:text-gray-400">
+        Selecciona un proyecto y asigna evaluadores. Un evaluador puede evaluar varios proyectos en diferentes horarios.
+      </p>
+    </div>
+
+    <div class="divide-y divide-slate-100 dark:divide-slate-800">
+      {% for p in proyectos %}
+      <div class="px-6 py-5 flex items-start justify-between gap-6 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <h4 class="font-extrabold text-slate-900 dark:text-white truncate">
+                {{ p.titulo }}
+              </h4>
+              {% if p.descripcion %}
+                <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
+                  {{ p.descripcion }}
+                </p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-sm">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Horario y lugar</div>
+              <div class="mt-1 text-slate-800 dark:text-slate-200">
+                {{ p.inicio|date:"H:i" }} - {{ p.fin|date:"H:i" }}
+              </div>
+              <div class="text-slate-500 dark:text-gray-400 text-xs">
+                {{ p.lugar|default:"Sin lugar" }}
+              </div>
+            </div>
+
+            <div class="text-sm md:col-span-2">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Jurado asignado</div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                {% if p.asignaciones.all|length %}
+                  {% for a in p.asignaciones.all %}
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold">
+                      {{ a.evaluador.get_full_name|default:a.evaluador.email }}
+                    </span>
+                  {% endfor %}
+                {% else %}
+                  <span class="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 text-xs font-bold">
+                    Sin asignar
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="shrink-0 flex items-center gap-2">
+          {# ✅ ARMAMOS CSV CON IDS ASIGNADOS PARA PRESELECCIÓN #}
+          {% with assigned_ids="" %}
+          {% endwith %}
+          <button type="button"
+                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold"
+                  onclick="openGestionarModal(
+                      '{{ p.id }}',
+                      '{{ p.titulo|escapejs }}',
+                      '{{ p.inicio|date:'Y-m-d\\TH:i' }}',
+                      '{{ p.fin|date:'Y-m-d\\TH:i' }}',
+                      '{{ p.lugar|default_if_none:''|escapejs }}',
+                      '{% for a in p.asignaciones.all %}{{ a.evaluador_id }}{% if not forloop.last %},{% endif %}{% endfor %}'
+                  )">
+            Gestionar
+          </button>
+
+          <button type="button"
+                  class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
+                  title="Editar"
+                  onclick="openEditarModal('{{ p.id }}', '{{ p.titulo|escapejs }}', '{{ p.descripcion|default_if_none:''|escapejs }}', '{{ p.inicio|date:'Y-m-d\\TH:i' }}', '{{ p.fin|date:'Y-m-d\\TH:i' }}', '{{ p.lugar|default_if_none:''|escapejs }}')">
+            <span class="material-symbols-outlined">edit</span>
+          </button>
+
+          <form method="POST" action="{% url 'coordinador:eval_proyecto_eliminar' p.id %}" class="inline">
+            {% csrf_token %}
+            <button type="submit"
+                    class="p-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white"
+                    title="Eliminar"
+                    onclick="return confirm('¿Eliminar este proyecto/ponencia?')">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <div class="px-6 py-12 text-center text-slate-500 dark:text-gray-400">
+        No hay proyectos registrados para este evento.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+<!-- =========================================================
+     MODAL: GESTIONAR (HORARIO + EVALUADORES)
+========================================================= -->
+<div id="modalGestionar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalGestionar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <div class="space-y-1">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">Asignar Jurado</h3>
+          <p id="gestionarProyectoNombre" class="text-sm text-slate-500 dark:text-gray-400"></p>
+        </div>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" onclick="closeModal('modalGestionar')">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <form method="POST" action="{% url 'coordinador:eval_gestionar_guardar' %}" class="p-5 space-y-5" autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="proyecto_id" id="gestionar_proyecto_id" value="">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora inicio</label>
+            <input type="datetime-local" name="inicio" id="gestionar_inicio"
+                   class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" required>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora fin</label>
+            <input type="datetime-local" name="fin" id="gestionar_fin"
+                   class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar</label>
+          <input type="text" name="lugar" id="gestionar_lugar"
+                 class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800"
+                 placeholder="Ej. Sala A / Auditorio">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Seleccionar evaluadores (múltiple)</label>
+
+          <div class="max-h-64 overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+            {% for u in evaluadores_disponibles %}
+              <label class="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                <input type="checkbox" name="evaluadores" value="{{ u.id }}"
+                       class="rounded border-slate-300 dark:border-slate-700">
+                <span class="font-semibold text-slate-800 dark:text-slate-200">
+                  {{ u.get_full_name|default:u.email }}
+                </span>
+              </label>
+            {% empty %}
+              <div class="px-4 py-6 text-sm text-slate-500 dark:text-gray-400">
+                No hay evaluadores inscritos en este evento.
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button"
+                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                  onclick="closeModal('modalGestionar')">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+            Guardar asignación
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- =========================================================
+     MODAL: EDITAR (usa tu form_proyecto)
+========================================================= -->
+<div id="modalEditar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalEditar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Editar proyecto/ponencia</h3>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" onclick="closeModal('modalEditar')">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <form method="POST" action="{% url 'coordinador:eval_proyecto_guardar' %}" class="p-5 space-y-4" autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="proyecto_id" id="editar_proyecto_id" value="">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título</label>
+          {{ form_proyecto.titulo }}
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción</label>
+          {{ form_proyecto.descripcion }}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Inicio</label>
+            {{ form_proyecto.inicio }}
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fin</label>
+            {{ form_proyecto.fin }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar</label>
+          {{ form_proyecto.lugar }}
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button"
+                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                  onclick="closeModal('modalEditar')">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+            Guardar cambios
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+  function openModal(id) { document.getElementById(id).classList.remove("hidden"); }
+  function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+  // ✅ PRESELECCIÓN: recibe assignedCsv = "1,5,9"
+  function openGestionarModal(id, titulo, inicio, fin, lugar, assignedCsv) {
+    document.getElementById("gestionar_proyecto_id").value = id;
+    document.getElementById("gestionarProyectoNombre").innerText = titulo || "";
+
+    document.getElementById("gestionar_inicio").value = inicio || "";
+    document.getElementById("gestionar_fin").value = fin || "";
+    document.getElementById("gestionar_lugar").value = lugar || "";
+
+    // Limpia checks
+    const checkboxes = document.querySelectorAll("#modalGestionar input[type='checkbox'][name='evaluadores']");
+    checkboxes.forEach(cb => cb.checked = false);
+
+    // Marca asignados
+    const assigned = new Set(
+      (assignedCsv || "")
+        .split(",")
+        .map(x => x.trim())
+        .filter(Boolean)
+    );
+    checkboxes.forEach(cb => {
+      if (assigned.has(String(cb.value))) cb.checked = true;
+    });
+
+    openModal("modalGestionar");
+  }
+
+  function openEditarModal(id, titulo, descripcion, inicio, fin, lugar) {
+    document.getElementById("editar_proyecto_id").value = id;
+
+    const t = document.querySelector("#modalEditar [name='titulo']");
+    const d = document.querySelector("#modalEditar [name='descripcion']");
+    const i = document.querySelector("#modalEditar [name='inicio']");
+    const f = document.querySelector("#modalEditar [name='fin']");
+    const l = document.querySelector("#modalEditar [name='lugar']");
+
+    if (t) t.value = titulo || "";
+    if (d) d.value = descripcion || "";
+    if (i) i.value = inicio || "";
+    if (f) f.value = fin || "";
+    if (l) l.value = lugar || "";
+
+    openModal("modalEditar");
+  }
+</script>
+{% endblock %}

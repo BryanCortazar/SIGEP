@@ -1,0 +1,358 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}Coordinador: Gestión de Inscripciones - SIGEP{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-[1200px] mx-auto bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-slate-200 dark:border-border-dark p-6 flex flex-col gap-6">
+
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-slate-900 dark:text-white text-2xl font-bold tracking-tight">Gestión de Inscripciones</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-sm">Administre usuarios registrados para el evento seleccionado.</p>
+    </div>
+
+    <button id="btnNueva" type="button"
+            class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
+      <span class="material-symbols-outlined text-[20px]">add</span>
+      Nueva Inscripción
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <form method="GET" class="flex flex-col lg:flex-row gap-4 items-center justify-between">
+    <div class="relative flex-1 w-full lg:max-w-xl">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[20px]">search</span>
+      <input name="q" value="{{ q }}"
+             class="w-full pl-10 pr-4 py-2.5 rounded-md border border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary text-sm placeholder:text-slate-400"
+             placeholder="Buscar por nombre, apellido, correo o rol..." type="text"/>
+    </div>
+
+    <div class="flex gap-3 w-full lg:w-auto">
+      <div class="relative min-w-[200px]">
+        <select name="rol"
+                class="w-full pl-4 pr-10 py-2.5 rounded-md border border-slate-200 dark:border-border-dark bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary text-sm appearance-none cursor-pointer font-medium">
+          <option value="">Todos los roles</option>
+          <option value="ADMINISTRADOR" {% if rol == "ADMINISTRADOR" %}selected{% endif %}>Administrador</option>
+          <option value="USUARIO" {% if rol == "USUARIO" %}selected{% endif %}>Usuario</option>
+          <option value="EVALUADOR" {% if rol == "EVALUADOR" %}selected{% endif %}>Evaluador</option>
+          <option value="PONENTE" {% if rol == "PONENTE" %}selected{% endif %}>Ponente</option>
+          <option value="PARTICIPANTE" {% if rol == "PARTICIPANTE" %}selected{% endif %}>Participante</option>
+        </select>
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-[20px]">expand_more</span>
+      </div>
+
+      <div class="relative min-w-[180px]">
+        <select name="activo"
+                class="w-full pl-4 pr-10 py-2.5 rounded-md border border-slate-200 dark:border-border-dark bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary text-sm appearance-none cursor-pointer font-medium">
+          <option value="">Activos e inactivos</option>
+          <option value="1" {% if activo == "1" %}selected{% endif %}>Solo activos</option>
+          <option value="0" {% if activo == "0" %}selected{% endif %}>Solo inactivos</option>
+        </select>
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-[20px]">expand_more</span>
+      </div>
+
+      <button class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-border-dark hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-white px-4 py-2.5 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
+        <span class="material-symbols-outlined text-[20px]">filter_alt</span>
+        Filtrar
+      </button>
+
+      <a href="{% url 'coordinador:inscripciones_exportar_csv' %}?q={{ q|urlencode }}&rol={{ rol|urlencode }}&activo={{ activo|urlencode }}"
+         class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-border-dark hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-white px-4 py-2.5 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
+        <span class="material-symbols-outlined text-[20px]">download</span>
+        Exportar
+      </a>
+    </div>
+  </form>
+
+  <!-- Tabla -->
+  <div class="overflow-x-auto mt-2">
+    <table class="w-full text-left text-sm whitespace-nowrap">
+      <thead class="text-slate-400 uppercase text-xs font-bold tracking-wider border-b border-slate-100 dark:border-border-dark">
+        <tr>
+          <th class="px-4 py-4 font-bold">Usuario</th>
+          <th class="px-4 py-4 font-bold">Rol</th>
+          <th class="px-4 py-4 font-bold">Activo</th>
+          <th class="px-4 py-4 font-bold text-right">Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-100 dark:divide-border-dark">
+        {% for insc in inscripciones %}
+        <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+            data-user-id="{{ insc.usuario.id }}"
+            data-nombres="{{ insc.usuario.first_name|default:''|escapejs }}"
+            data-apellidos="{{ insc.usuario.last_name|default:''|escapejs }}"
+            data-correo="{{ insc.usuario.email|default:''|escapejs }}"
+            data-rol="{{ insc.rol|default:''|escapejs }}"
+            data-activo="{{ insc.usuario.is_active|yesno:'1,0' }}"
+            data-del-url="{% url 'coordinador:inscripcion_eliminar' insc.usuario.id %}">
+          <td class="px-4 py-4">
+            <div class="flex items-center gap-3">
+              <div class="size-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium shrink-0">
+                {{ insc.usuario.first_name|default:"U"|slice:":1" }}{{ insc.usuario.last_name|default:""|slice:":1" }}
+              </div>
+              <div class="flex flex-col">
+                <span class="text-slate-900 dark:text-white font-bold text-sm">
+                  {{ insc.usuario.first_name }} {{ insc.usuario.last_name }}
+                </span>
+                <span class="text-slate-500 text-xs">{{ insc.usuario.email }}</span>
+              </div>
+            </div>
+          </td>
+
+          <td class="px-4 py-4">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+              {{ insc.rol }}
+            </span>
+          </td>
+
+          <td class="px-4 py-4">
+            {% if insc.usuario.is_active %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-200">
+                Activo
+              </span>
+            {% else %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
+                Inactivo
+              </span>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-4 text-right">
+            <div class="flex items-center justify-end gap-3 text-slate-400">
+              <button type="button" class="hover:text-primary transition-colors btnEditar">
+                <span class="material-symbols-outlined text-[20px]">edit</span>
+              </button>
+              <button type="button" class="hover:text-red-500 transition-colors btnEliminar">
+                <span class="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">
+            No hay inscripciones registradas para este evento.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL Crear/Editar
+========================= -->
+<div id="modalForm" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" data-close="modalForm"></div>
+
+  <div class="absolute inset-0 flex items-start justify-center p-4">
+    <div class="relative mt-16 w-[95%] max-w-xl bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-slate-200 dark:border-border-dark overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-border-dark flex items-center justify-between">
+        <h3 id="modalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Nueva inscripción</h3>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" data-close="modalForm">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <form method="POST" action="{% url 'coordinador:inscripcion_guardar' %}" class="p-5 space-y-4" autocomplete="off">
+        {% csrf_token %}
+        {{ form.user_id }}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombres</label>
+            {{ form.nombres }}
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Apellidos</label>
+            {{ form.apellidos }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo</label>
+          {{ form.correo }}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rol</label>
+            {{ form.rol }}
+          </div>
+          <div class="flex items-center gap-3 pt-8">
+            {{ form.activo }}
+            <span class="text-sm text-slate-700 dark:text-slate-200 font-medium">Cuenta activa</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Contraseña</label>
+          {{ form.password }}
+          <p id="helpPassword" class="text-xs text-slate-500 mt-2">
+            En edición: deja vacío para conservar la contraseña actual.
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" data-close="modalForm"
+                  class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL Confirmar eliminar
+========================= -->
+<div id="modalDelete" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" data-close="modalDelete"></div>
+
+  <div class="absolute inset-0 flex items-start justify-center p-4">
+    <div class="relative mt-24 w-[95%] max-w-lg bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-slate-200 dark:border-border-dark overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-border-dark flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Eliminar inscripción</h3>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" data-close="modalDelete">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3">
+        <div class="p-4 rounded-lg bg-red-50 border border-red-100 text-red-700">
+          <p class="font-semibold">¿Deseas eliminar este usuario del evento?</p>
+          <p class="text-sm mt-1">
+            <span class="font-bold" id="delName">Usuario</span>
+            <span class="ml-1 text-red-600/90" id="delEmail">(correo)</span>
+          </p>
+          <p class="text-xs mt-2 text-red-600/90">Esta acción no se puede deshacer.</p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" data-close="modalDelete"
+                  class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold">
+            No, cancelar
+          </button>
+
+          <form method="POST" id="formDelete" action="">
+            {% csrf_token %}
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">
+              Sí, eliminar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // estilo tailwind a inputs del modal (por si el form no trae clases)
+  function styleInputs(scope){
+    const els = document.querySelectorAll(scope + " input, " + scope + " select");
+    els.forEach(el=>{
+      if (el.type === "hidden" || el.type === "checkbox") return;
+      el.classList.add(
+        "w-full","h-11","px-3","rounded-lg",
+        "bg-white","dark:bg-slate-900",
+        "border","border-slate-200","dark:border-border-dark",
+        "text-slate-900","dark:text-white",
+        "focus:ring-2","focus:ring-primary/30","focus:border-primary","outline-none"
+      );
+    });
+  }
+
+  const modalForm = document.getElementById("modalForm");
+  const modalDelete = document.getElementById("modalDelete");
+
+  const btnNueva = document.getElementById("btnNueva");
+  const modalTitle = document.getElementById("modalTitle");
+
+  const fUserId = document.getElementById("id_user_id");
+  const fNombres = document.getElementById("id_nombres");
+  const fApellidos = document.getElementById("id_apellidos");
+  const fCorreo = document.getElementById("id_correo");
+  const fRol = document.getElementById("id_rol");
+  const fActivo = document.getElementById("id_activo");
+  const fPassword = document.getElementById("id_password");
+
+  const delName = document.getElementById("delName");
+  const delEmail = document.getElementById("delEmail");
+  const formDelete = document.getElementById("formDelete");
+
+  styleInputs("#modalForm");
+
+  function open(m){ m.classList.remove("hidden"); }
+  function close(m){ m.classList.add("hidden"); }
+
+  function resetForm(){
+    modalTitle.textContent = "Nueva inscripción";
+    fUserId.value = "";
+    fNombres.value = "";
+    fApellidos.value = "";
+    fCorreo.value = "";
+    fRol.value = "PARTICIPANTE";
+    fActivo.checked = true;
+    fPassword.value = "";
+  }
+
+  btnNueva?.addEventListener("click", () => {
+    resetForm();
+    open(modalForm);
+  });
+
+  document.querySelectorAll(".btnEditar").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      const row = e.currentTarget.closest("tr");
+      if (!row) return;
+
+      modalTitle.textContent = "Editar inscripción";
+      fUserId.value = row.dataset.userId || "";
+      fNombres.value = row.dataset.nombres || "";
+      fApellidos.value = row.dataset.apellidos || "";
+      fCorreo.value = row.dataset.correo || "";
+      fRol.value = row.dataset.rol || "PARTICIPANTE";
+      fActivo.checked = (row.dataset.activo === "1");
+      fPassword.value = ""; // importante: no mostrar password
+
+      open(modalForm);
+    });
+  });
+
+  document.querySelectorAll(".btnEliminar").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      const row = e.currentTarget.closest("tr");
+      if (!row) return;
+
+      delName.textContent = (row.dataset.nombres || "") + " " + (row.dataset.apellidos || "");
+      delEmail.textContent = "(" + (row.dataset.correo || "") + ")";
+      formDelete.action = row.dataset.delUrl || "";
+
+      open(modalDelete);
+    });
+  });
+
+  document.addEventListener("click", (e)=>{
+    const key = e.target?.getAttribute?.("data-close");
+    if (!key) return;
+    if (key === "modalForm") close(modalForm);
+    if (key === "modalDelete") close(modalDelete);
+  });
+
+  document.addEventListener("keydown", (e)=>{
+    if (e.key !== "Escape") return;
+    close(modalForm);
+    close(modalDelete);
+  });
+})();
+</script>
+
+{% endblock %}

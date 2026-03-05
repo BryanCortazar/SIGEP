@@ -1,0 +1,287 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Evaluador: Configuración</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#1E88E5",
+            "primary-hover": "#1976D2",
+            "sidebar-dark": "#0D1B2A",
+            "background-light": "#F5F7FA",
+            "background-dark": "#121212",
+            "card-dark": "#1E1E1E",
+            "avatar-blue": "#5C6BC0",
+          },
+          fontFamily: { display: ["Inter","sans-serif"], body: ["Inter","sans-serif"] },
+          boxShadow: { 'card': '0 2px 8px rgba(0, 0, 0, 0.05)' }
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 h-screen flex overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-72 bg-sidebar-dark text-white flex flex-col flex-shrink-0 transition-colors duration-300 relative z-20">
+    <div class="h-16 flex items-center px-6 border-b border-gray-700/50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-blue-900/50 flex items-center justify-center border border-blue-700/30">
+          <i class="fa-solid fa-graduation-cap text-blue-400 text-lg"></i>
+        </div>
+        <div class="flex flex-col">
+          <span class="font-bold text-lg leading-tight tracking-wide">SIGEP</span>
+          <span class="text-[10px] text-gray-400 uppercase tracking-wider">Evaluador</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto custom-scrollbar py-6 space-y-1">
+      <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group"
+         href="{% url 'evaluador:panel' %}">
+        <i class="fa-solid fa-gauge-high w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
+        <span class="ml-3 text-sm font-medium">Panel de Evaluación</span>
+      </a>
+
+      <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group"
+         href="{% url 'evaluador:proyectos' %}">
+        <i class="fa-solid fa-folder-open w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
+        <span class="ml-3 text-sm font-medium">Proyectos Asignados</span>
+      </a>
+
+      {# Tu formulario exige proyecto_id; por UX lo mandamos a pendientes #}
+      <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group"
+         href="{% url 'evaluador:proyectos' %}?estado=pendientes">
+        <i class="fa-solid fa-pen-to-square w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
+        <span class="ml-3 text-sm font-medium">Formulario de Evaluación</span>
+      </a>
+
+      <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group"
+         href="{% url 'evaluador:horario' %}">
+        <i class="fa-regular fa-calendar-days w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
+        <span class="ml-3 text-sm font-medium">Mi Horario Asignado</span>
+      </a>
+
+      <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group"
+         href="{% url 'evaluador:historial' %}">
+        <i class="fa-solid fa-clock-rotate-left w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
+        <span class="ml-3 text-sm font-medium">Historial</span>
+      </a>
+
+      <div class="px-3 mt-1">
+        <a class="flex items-center px-4 py-3 bg-primary text-white rounded-lg shadow-lg shadow-blue-900/50 transition-all"
+           href="{% url 'evaluador:configuracion' %}">
+          <i class="fa-solid fa-gear w-6 text-lg"></i>
+          <span class="ml-3 text-sm font-medium">Configuración</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="p-6 border-t border-gray-700/50">
+      <a class="flex items-center text-gray-400 hover:text-white transition-colors gap-3"
+         href="{% url 'principal:logout' %}">
+        <i class="fa-solid fa-arrow-right-from-bracket text-lg transform rotate-180"></i>
+        <span class="text-sm font-medium">Cerrar sesión</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
+    <header class="h-16 bg-white dark:bg-card-dark border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 flex-shrink-0 z-10">
+      <div class="text-gray-500 dark:text-gray-400 text-sm font-medium truncate max-w-xl">
+        {{ evento.titulo|default:"SIGEP" }}
+      </div>
+
+      <div class="flex items-center gap-3 pl-4">
+        <div class="text-right hidden sm:block">
+          <div class="text-sm font-bold text-gray-800 dark:text-gray-200 leading-none mb-1">
+            {{ request.user.get_full_name|default:request.user.email }}
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Evaluator</div>
+        </div>
+        <div class="w-9 h-9 rounded-full bg-avatar-blue flex items-center justify-center text-white text-sm font-medium shadow-sm ring-2 ring-white dark:ring-gray-800">
+          {{ request.user.first_name|default:"U"|slice:":1" }}{{ request.user.last_name|default:""|slice:":1" }}
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-8 bg-background-light dark:bg-background-dark">
+      <div class="max-w-6xl mx-auto">
+        <div class="mb-8">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Configuración del Perfil</h1>
+          <p class="text-gray-500 dark:text-gray-400">Gestione sus datos personales y preferencias de la cuenta.</p>
+        </div>
+
+        {% if messages %}
+          <div class="space-y-2 mb-6">
+            {% for m in messages %}
+              <div class="px-4 py-3 rounded-lg border text-sm
+                {% if m.tags == 'success' %} bg-green-50 border-green-200 text-green-800
+                {% elif m.tags == 'error' %} bg-red-50 border-red-200 text-red-800
+                {% else %} bg-slate-50 border-slate-200 text-slate-800 {% endif %}">
+                {{ m }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Card izquierda -->
+          <div class="lg:col-span-4">
+            <div class="bg-white dark:bg-card-dark rounded-xl shadow-card p-8 flex flex-col items-center text-center h-full border border-gray-100 dark:border-gray-700">
+              {% if perfil.avatar %}
+                <img src="{{ perfil.avatar.url }}" class="w-32 h-32 rounded-full object-cover mb-6 shadow-md ring-2 ring-white dark:ring-gray-800" alt="Avatar"/>
+              {% else %}
+                <div class="w-32 h-32 rounded-full bg-avatar-blue flex items-center justify-center text-white text-4xl font-light mb-6 shadow-md">
+                  {{ request.user.first_name|default:"U"|slice:":1" }}{{ request.user.last_name|default:""|slice:":1" }}
+                </div>
+              {% endif %}
+
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                {{ request.user.get_full_name|default:request.user.email }}
+              </h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4 font-medium">
+                EVALUATOR
+              </p>
+
+              {% if perfil.cv %}
+                <a href="{{ perfil.cv.url }}" class="text-sm font-medium text-primary hover:text-primary-hover transition-colors" target="_blank" rel="noopener">
+                  Ver CV actual (PDF)
+                </a>
+              {% else %}
+                <p class="text-xs text-gray-500 dark:text-gray-400">Sin CV cargado</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Form derecha -->
+          <div class="lg:col-span-8">
+            <div class="bg-white dark:bg-card-dark rounded-xl shadow-card p-8 h-full flex flex-col border border-gray-100 dark:border-gray-700">
+              <div class="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100 dark:border-gray-700">
+                <i class="fa-solid fa-user-gear text-primary dark:text-blue-400 text-xl"></i>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Información General</h3>
+              </div>
+
+              <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+                {% csrf_token %}
+
+                <!-- Cuenta -->
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Nombres</label>
+                  <input name="nombres" value="{{ cuenta_form.nombres.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  {% for e in cuenta_form.nombres.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Apellidos</label>
+                  <input name="apellidos" value="{{ cuenta_form.apellidos.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  {% for e in cuenta_form.apellidos.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Correo</label>
+                  <input name="correo" value="{{ cuenta_form.correo.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  {% for e in cuenta_form.correo.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <!-- Perfil -->
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Institución</label>
+                  <input name="institucion" value="{{ perfil_form.institucion.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  {% for e in perfil_form.institucion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Puesto</label>
+                  <input name="puesto" value="{{ perfil_form.puesto.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  {% for e in perfil_form.puesto.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Teléfono</label>
+                  <input name="telefono" value="{{ perfil_form.telefono.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  {% for e in perfil_form.telefono.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="md:col-span-2 space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Bio / Descripción</label>
+                  <textarea name="bio" rows="3"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">{{ perfil_form.bio.value|default:'' }}</textarea>
+                  {% for e in perfil_form.bio.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Foto (JPG/PNG/WebP, máx 5MB)</label>
+                  <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm">
+                  {% for e in perfil_form.avatar.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">CV (PDF, máx 15MB)</label>
+                  <input type="file" name="cv" accept=".pdf" class="w-full text-sm">
+                  {% for e in perfil_form.cv.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                </div>
+
+                <!-- Password -->
+                <div class="md:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <h4 class="font-bold text-gray-900 dark:text-white mb-3">Cambiar contraseña (opcional)</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="space-y-2">
+                      <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Contraseña actual</label>
+                      <input type="password" name="password_actual" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                      {% for e in cuenta_form.password_actual.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                    </div>
+                    <div class="space-y-2">
+                      <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Nueva contraseña</label>
+                      <input type="password" name="password_nueva" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                      {% for e in cuenta_form.password_nueva.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                    </div>
+                    <div class="space-y-2">
+                      <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Confirmación</label>
+                      <input type="password" name="password_confirmacion" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                      {% for e in cuenta_form.password_confirmacion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="md:col-span-2 flex justify-end mt-2 pt-4">
+                  <button class="bg-primary hover:bg-primary-hover text-white font-medium py-2.5 px-6 rounded-lg shadow-lg shadow-blue-500/30 transition-all hover:shadow-blue-500/50 active:scale-95 text-sm" type="submit">
+                    Guardar Cambios
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>

@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class EvaluadorConfig(AppConfig):
-    name = 'evaluador'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "evaluador"

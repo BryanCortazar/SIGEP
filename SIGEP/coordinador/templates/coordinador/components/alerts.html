@@ -1,0 +1,84 @@
+{% if messages %}
+<div id="sysModalBackdrop"
+     class="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[9999] hidden"></div>
+
+<div id="sysModal"
+     class="fixed inset-0 z-[10000] hidden items-center justify-center p-4">
+
+  <div class="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+
+    <!-- Header -->
+    <div class="flex justify-between px-6 py-4 border-b">
+      <div>
+        <p class="text-sm font-bold">Notificación del sistema</p>
+        <p class="text-xs text-slate-500">SIGEP · Coordinación</p>
+      </div>
+
+      <button onclick="SIGEP_SYS_MODAL.close()">
+        ✕
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="px-6 py-5">
+
+      {% for message in messages %}
+        {% if forloop.first %}
+
+          {% if message.tags == "success" %}
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+              ✅ <b>Acción completada</b><br>{{ message }}
+            </div>
+
+          {% elif message.tags == "error" %}
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-4">
+              ❌ <b>Error</b><br>{{ message }}
+            </div>
+
+          {% elif message.tags == "warning" %}
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              ⚠️ <b>Advertencia</b><br>{{ message }}
+            </div>
+
+          {% else %}
+            <div class="bg-sky-50 border border-sky-200 rounded-xl p-4">
+              ℹ️ <b>Información</b><br>{{ message }}
+            </div>
+          {% endif %}
+
+        {% endif %}
+      {% endfor %}
+
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 pb-5 text-right">
+      <button onclick="SIGEP_SYS_MODAL.close()"
+              class="border px-4 py-2 rounded-lg">
+        Cerrar
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+window.SIGEP_SYS_MODAL = {
+
+  open() {
+    document.getElementById("sysModal").classList.remove("hidden");
+    document.getElementById("sysModalBackdrop").classList.remove("hidden");
+    setTimeout(this.close, 5000);
+  },
+
+  close() {
+    document.getElementById("sysModal").classList.add("hidden");
+    document.getElementById("sysModalBackdrop").classList.add("hidden");
+  }
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  SIGEP_SYS_MODAL.open();
+});
+</script>
+{% endif %}

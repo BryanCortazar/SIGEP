@@ -1,0 +1,358 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}Coordinador: Reportes - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto flex flex-col gap-8">
+
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-slate-900 dark:text-white text-3xl font-bold leading-tight tracking-tight">
+        Reportes del Evento
+      </h1>
+      <p class="text-slate-500 dark:text-slate-400 text-sm md:text-base">
+        Genere y descargue informes detallados sobre inscripciones, evaluaciones y asistencia.
+      </p>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Evento actual: <b>{{ evento.titulo }}</b>
+      </p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+      <!-- Selector de evento -->
+      <form method="POST" action="{% url 'coordinador:evento_seleccionar' %}" class="flex gap-2 items-center">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'coordinador:reportes' %}">
+        <select name="evento_id" class="h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3">
+          {% for ev in eventos %}
+            <option value="{{ ev.id }}" {% if ev.id == evento.id %}selected{% endif %}>{{ ev.titulo }}</option>
+          {% endfor %}
+        </select>
+        <button class="h-11 px-4 rounded-lg bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 font-semibold">
+          Cambiar
+        </button>
+      </form>
+
+      <button type="button"
+              onclick="openGenerarModal()"
+              class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:bg-[#0b5bb0] text-white font-medium text-sm shadow-md shadow-primary/20 active:scale-95">
+        <span class="material-symbols-outlined text-xl">add_box</span>
+        <span>Generar Nuevo Reporte</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Búsqueda -->
+  <form method="GET" class="w-full">
+    <input type="hidden" name="categoria" value="{{ categoria }}">
+    <div class="relative">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+      <input name="q" value="{{ q }}"
+             class="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+             placeholder="Buscar por nombre, proyecto, categoría o formato...">
+    </div>
+  </form>
+
+  <div class="bg-white dark:bg-[#1e2936] rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col min-h-[600px]">
+
+    <!-- Filtros por categoría -->
+    <div class="p-6 border-b border-slate-100 dark:border-slate-700/50 flex flex-wrap gap-3">
+      {% for key,label in form_generar.fields.categoria.choices %}
+        <a href="?categoria={{ key }}&q={{ q|urlencode }}"
+           class="px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm
+           {% if categoria == key %}
+              bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900
+           {% else %}
+              bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900
+              dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700
+           {% endif %}">
+          {{ label|upper }}
+        </a>
+      {% endfor %}
+    </div>
+
+    <!-- Lista -->
+    <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-700/50">
+      {% for r in reportes %}
+      <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+        <div class="flex items-start gap-4 flex-1">
+          <div class="p-3 rounded-lg shrink-0 border
+            {% if r.formato == 'XLSX' %}
+              bg-green-50 text-green-600 border-green-100 dark:bg-green-900/10 dark:text-green-400 dark:border-green-800/30
+            {% else %}
+              bg-red-50 text-red-500 border-red-100 dark:bg-red-900/10 dark:text-red-400 dark:border-red-800/30
+            {% endif %}">
+            <span class="material-symbols-outlined text-2xl">
+              {% if r.formato == 'XLSX' %}table_view{% else %}picture_as_pdf{% endif %}
+            </span>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+              {{ r.nombre }}{% if r.formato %}.{{ r.formato|lower }}{% endif %}
+            </h3>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <span>{{ r.generado_en|date:"d M Y H:i" }}</span>
+              <span class="text-slate-300 dark:text-slate-600">•</span>
+              <span>
+                {% if r.tamano %}{{ r.tamano|filesizeformat }}{% else %}—{% endif %}
+              </span>
+              <span class="text-slate-300 dark:text-slate-600">•</span>
+              <span class="font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                {{ r.categoria }}
+              </span>
+              {% if r.proyecto %}
+                <span class="text-slate-300 dark:text-slate-600">•</span>
+                <span class="font-semibold">Proyecto: {{ r.proyecto.titulo }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+            {% if r.estado == 'LISTO' %}
+              bg-green-50 text-green-700 border border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30
+            {% else %}
+              bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700
+            {% endif %}">
+            {{ r.estado }}
+          </span>
+
+          <div class="flex gap-2">
+            <!-- Editar -->
+            <button type="button"
+                    class="p-2 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                    title="Editar"
+                    onclick="openEditarModal({
+                      id:'{{ r.id }}',
+                      nombre:'{{ r.nombre|escapejs }}',
+                      estado:'{{ r.estado }}',
+                      categoria:'{{ r.categoria }}'
+                    })">
+              <span class="material-symbols-outlined">edit</span>
+            </button>
+
+            <!-- Eliminar -->
+            <button type="button"
+                    class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                    title="Eliminar"
+                    onclick="openDeleteModal('{{ r.id }}','{{ r.nombre|escapejs }}')">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+
+            <!-- Descargar -->
+            <a href="{% url 'coordinador:reporte_descargar' r.id %}"
+               class="p-2 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+               title="Descargar">
+              <span class="material-symbols-outlined">download</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="p-10 text-center text-slate-500 dark:text-slate-400">
+        No hay reportes generados todavía.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL GENERAR ================= -->
+<div id="modalGenerar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalGenerar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Generar Nuevo Reporte</h3>
+        <button type="button"
+                onclick="closeModal('modalGenerar')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors group">
+          <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+
+      <form method="POST" action="{% url 'coordinador:reporte_generar' %}" class="p-5 space-y-4" autocomplete="off">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Categoría</label>
+            {{ form_generar.categoria }}
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Formato</label>
+            {{ form_generar.formato }}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Modo</label>
+            {{ form_generar.modo }}
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Proyecto (opcional)</label>
+            {{ form_generar.proyecto }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre (opcional)</label>
+          {{ form_generar.nombre }}
+          <p class="text-xs text-slate-500 mt-2">Si lo dejas vacío, se genera un nombre automático seguro.</p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button"
+                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                  onclick="closeModal('modalGenerar')">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-primary hover:bg-[#0b5bb0] text-white font-semibold inline-flex items-center gap-2">
+            <span class="material-symbols-outlined">bolt</span>
+            Generar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL EDITAR ================= -->
+<div id="modalEditar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalEditar')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Editar Reporte</h3>
+        <button type="button"
+                onclick="closeModal('modalEditar')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors group">
+          <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 group-hover:text-rose-600">close</span>
+        </button>
+      </div>
+
+      <form id="editarForm" method="POST" action="" class="p-5 space-y-4" autocomplete="off">
+        {% csrf_token %}
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre</label>
+          <input id="edit_nombre" name="nombre" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800" required>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
+            <select id="edit_estado" name="estado" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800">
+              <option value="LISTO">LISTO</option>
+              <option value="ARCHIVADO">ARCHIVADO</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Categoría</label>
+            <select id="edit_categoria" name="categoria" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800">
+              <option value="TODOS">TODOS</option>
+              <option value="INSCRIPCIONES">INSCRIPCIONES</option>
+              <option value="EVALUACIONES">EVALUACIONES</option>
+              <option value="ASISTENCIA">ASISTENCIA</option>
+              <option value="GENERAL">GENERAL</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button"
+                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                  onclick="closeModal('modalEditar')">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-primary hover:bg-[#0b5bb0] text-white font-semibold inline-flex items-center gap-2">
+            <span class="material-symbols-outlined">save</span>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL ELIMINAR ================= -->
+<div id="modalDelete" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalDelete')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-6 text-center space-y-3">
+        <div class="mx-auto w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+          <span class="material-symbols-outlined text-rose-600 dark:text-rose-300">delete</span>
+        </div>
+        <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">¿Eliminar Reporte?</h3>
+        <p class="text-sm text-slate-500 dark:text-gray-400">
+          Esta acción eliminará el reporte y su archivo asociado.
+        </p>
+
+        <form id="deleteForm" method="POST" action="">
+          {% csrf_token %}
+          <div class="flex items-center justify-center gap-3 pt-2">
+            <button type="button"
+                    class="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold"
+                    onclick="closeModal('modalDelete')">
+              Cancelar
+            </button>
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold">
+              Sí, Eliminar
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove("hidden");
+    document.documentElement.classList.add("overflow-hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add("hidden");
+    document.documentElement.classList.remove("overflow-hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") {
+      ["modalGenerar","modalDelete","modalEditar"].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el && !el.classList.contains("hidden")) closeModal(id);
+      });
+    }
+  });
+
+  function openGenerarModal(){ openModal("modalGenerar"); }
+
+  function openDeleteModal(id, nombre){
+    const form = document.getElementById("deleteForm");
+    form.action = "{% url 'coordinador:reporte_eliminar' 0 %}".replace("/0/", `/${id}/`);
+    openModal("modalDelete");
+  }
+
+  function openEditarModal(payload){
+    const form = document.getElementById("editarForm");
+    form.action = "{% url 'coordinador:reporte_editar' 0 %}".replace("/0/", `/${payload.id}/`);
+    document.getElementById("edit_nombre").value = payload.nombre || "";
+    document.getElementById("edit_estado").value = payload.estado || "LISTO";
+    document.getElementById("edit_categoria").value = payload.categoria || "TODOS";
+    openModal("modalEditar");
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,302 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}Coordinador: Cronograma de Actividades - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto flex flex-col gap-8">
+
+  <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Cronograma de Actividades</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-base">Planifique las sesiones del evento seleccionado.</p>
+    </div>
+
+    <button type="button"
+            id="btnAbrirModal"
+            class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-2 h-fit">
+      <span class="material-symbols-outlined text-[20px]">add_circle</span>
+      Agregar Actividad
+    </button>
+  </div>
+
+  <div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-border-light dark:border-border-dark">
+            <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Horario</th>
+            <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/3">Actividad</th>
+            <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Responsable / Ponente</th>
+            <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-border-light dark:divide-border-dark">
+          {% for a in actividades %}
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              data-id="{{ a.id }}"
+              data-inicio="{{ a.inicio|time:'H:i' }}"
+              data-fin="{{ a.fin|time:'H:i' }}"
+              data-titulo="{{ a.titulo|escapejs }}"
+              data-responsable="{{ a.responsable|default:''|escapejs }}"
+              data-delete-url="{% url 'coordinador:cronograma_eliminar' a.id %}">
+            <td class="py-5 px-6 text-sm font-semibold text-slate-900 dark:text-white">
+              {{ a.inicio|time:"H:i" }} - {{ a.fin|time:"H:i" }}
+            </td>
+
+            <td class="py-5 px-6">
+              <div class="flex flex-col gap-1">
+                <span class="text-sm font-bold text-slate-900 dark:text-white">{{ a.titulo }}</span>
+                <span class="text-xs text-slate-500">-</span>
+              </div>
+            </td>
+
+            <td class="py-5 px-6 text-sm text-slate-600 dark:text-slate-300">
+              {{ a.responsable|default:"-" }}
+            </td>
+
+            <td class="py-5 px-6 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button type="button"
+                        class="p-1.5 text-slate-400 hover:text-primary transition-colors btnEditar"
+                        aria-label="Editar">
+                  <span class="material-symbols-outlined text-[20px]">edit</span>
+                </button>
+
+                <button type="button"
+                        class="p-1.5 text-slate-400 hover:text-red-500 transition-colors btnEliminar"
+                        aria-label="Eliminar">
+                  <span class="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="py-10 px-6 text-center text-slate-500 dark:text-slate-400">
+              Aún no hay actividades registradas para este evento.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL (Agregar/Editar)
+     ========================= -->
+<div id="modalActividad" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40" data-close="modalActividad"></div>
+
+  <div class="absolute inset-0 flex items-start justify-center p-4">
+    <div class="relative mt-16 w-full max-w-xl bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden">
+      <div class="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+        <h3 id="modalTitulo" class="text-lg font-bold text-slate-900 dark:text-white">Agregar actividad</h3>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" data-close="modalActividad">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <form method="POST" action="{% url 'coordinador:cronograma_guardar' %}" class="p-5 space-y-4" autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="actividad_id" id="actividad_id" value="">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre de la actividad</label>
+          {{ form.titulo }}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora inicio</label>
+            {{ form.inicio }}
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora fin</label>
+            {{ form.fin }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Responsable</label>
+          {{ form.responsable }}
+        </div>
+
+        {# Si tu ModelForm trae más campos (lugar/orden), los dejamos ocultos para no romper guardado #}
+        {% if form.lugar %}<div class="hidden">{{ form.lugar }}</div>{% endif %}
+        {% if form.orden %}<div class="hidden">{{ form.orden }}</div>{% endif %}
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelar"
+                  class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- =========================
+     MODAL (Confirmar eliminar)
+     ========================= -->
+<div id="modalEliminar" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40" data-close="modalEliminar"></div>
+
+  <div class="absolute inset-0 flex items-start justify-center p-4">
+    <div class="relative mt-24 w-full max-w-lg bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden">
+      <div class="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Eliminar actividad</h3>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" data-close="modalEliminar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3">
+        <div class="p-4 rounded-lg bg-red-50 border border-red-100 text-red-700">
+          <p class="font-semibold">¿Deseas eliminar esta actividad?</p>
+          <p class="text-sm mt-1">
+            <span class="font-bold" id="delTitulo">Actividad</span>
+            <span class="ml-1" id="delHorario">(00:00 - 00:00)</span>
+          </p>
+          <p class="text-xs mt-2 text-red-600/90">Esta acción no se puede deshacer.</p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" data-close="modalEliminar"
+                  class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold transition-colors">
+            No, cancelar
+          </button>
+
+          <form method="POST" id="formEliminar" action="">
+            {% csrf_token %}
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+              Sí, eliminar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---------- helpers ----------
+  function addTailwindToForm(scopeSelector) {
+    const els = document.querySelectorAll(
+      scopeSelector + " input[type='text'], " +
+      scopeSelector + " input[type='time'], " +
+      scopeSelector + " input[type='number'], " +
+      scopeSelector + " textarea, " +
+      scopeSelector + " select"
+    );
+    els.forEach(el => {
+      if (el.type === "hidden") return;
+      el.classList.add(
+        "w-full", "h-11", "px-3", "rounded-lg",
+        "bg-white", "dark:bg-slate-900",
+        "border", "border-border-light", "dark:border-border-dark",
+        "text-slate-900", "dark:text-white",
+        "focus:ring-2", "focus:ring-primary/30", "focus:border-primary",
+        "outline-none"
+      );
+    });
+  }
+
+  function openModal(modalEl) { modalEl.classList.remove("hidden"); }
+  function closeModal(modalEl) { modalEl.classList.add("hidden"); }
+
+  // ---------- Modal Agregar/Editar ----------
+  const modalActividad = document.getElementById("modalActividad");
+  const btnAbrir = document.getElementById("btnAbrirModal");
+  const btnCancelar = document.getElementById("btnCancelar");
+
+  const modalTitulo = document.getElementById("modalTitulo");
+  const actividadId = document.getElementById("actividad_id");
+
+  const fTitulo = document.getElementById("id_titulo");
+  const fInicio = document.getElementById("id_inicio");
+  const fFin = document.getElementById("id_fin");
+  const fResponsable = document.getElementById("id_responsable");
+
+  addTailwindToForm("#modalActividad");
+
+  function abrirNuevo() {
+    modalTitulo.textContent = "Agregar actividad";
+    actividadId.value = "";
+    fTitulo.value = "";
+    fInicio.value = "";
+    fFin.value = "";
+    fResponsable.value = "";
+    openModal(modalActividad);
+  }
+
+  function abrirEditar(row) {
+    modalTitulo.textContent = "Editar actividad";
+    actividadId.value = row.dataset.id || "";
+    fTitulo.value = row.dataset.titulo || "";
+    fInicio.value = row.dataset.inicio || "";
+    fFin.value = row.dataset.fin || "";
+    fResponsable.value = row.dataset.responsable || "";
+    openModal(modalActividad);
+  }
+
+  btnAbrir?.addEventListener("click", abrirNuevo);
+  btnCancelar?.addEventListener("click", () => closeModal(modalActividad));
+
+  document.querySelectorAll(".btnEditar").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const row = e.currentTarget.closest("tr");
+      if (row) abrirEditar(row);
+    });
+  });
+
+  // ---------- Modal Eliminar ----------
+  const modalEliminar = document.getElementById("modalEliminar");
+  const delTitulo = document.getElementById("delTitulo");
+  const delHorario = document.getElementById("delHorario");
+  const formEliminar = document.getElementById("formEliminar");
+
+  document.querySelectorAll(".btnEliminar").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const row = e.currentTarget.closest("tr");
+      if (!row) return;
+
+      delTitulo.textContent = row.dataset.titulo || "Actividad";
+      delHorario.textContent = `(${row.dataset.inicio || "00:00"} - ${row.dataset.fin || "00:00"})`;
+
+      // Acción POST real con CSRF
+      formEliminar.action = row.dataset.deleteUrl || "";
+
+      openModal(modalEliminar);
+    });
+  });
+
+  // ---------- Cierre por overlay / X / ESC ----------
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+    const key = t?.getAttribute?.("data-close");
+    if (!key) return;
+
+    if (key === "modalActividad") closeModal(modalActividad);
+    if (key === "modalEliminar") closeModal(modalEliminar);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    closeModal(modalActividad);
+    closeModal(modalEliminar);
+  });
+
+})();
+</script>
+
+{% endblock %}

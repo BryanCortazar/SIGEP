@@ -1,0 +1,60 @@
+{% comment %}
+  SOLO TOAST DE MENSAJES.
+  No agregar layout, sidebar, ni extends aquí.
+{% endcomment %}
+
+{% if messages %}
+  {# Obtener primer mensaje sin usar |first (messages es FallbackStorage) #}
+  {% for first_message in messages %}
+    {% if forloop.first %}
+
+      <!-- Overlay -->
+      <div id="toastOverlay"
+           class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm hidden"
+           onclick="hideToastMessages()"></div>
+
+      <!-- Toast centrado arriba -->
+      <div id="toastMessages"
+           class="fixed top-8 left-1/2 -translate-x-1/2 z-50 hidden w-[min(720px,calc(100%-2rem))]">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 px-6 py-5">
+          <div class="flex items-start gap-4">
+
+            {% if first_message.tags == 'error' %}
+              <div class="size-12 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-red-600">error</span>
+              </div>
+            {% elif first_message.tags == 'success' %}
+              <div class="size-12 rounded-2xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+              </div>
+            {% else %}
+              <div class="size-12 rounded-2xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-slate-600">info</span>
+              </div>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+              <p class="font-extrabold text-slate-900 leading-tight">
+                {% if first_message.tags == 'error' %}Ocurrió un error{% elif first_message.tags == 'success' %}Operación exitosa{% else %}Aviso{% endif %}
+              </p>
+
+              <div class="mt-1 text-sm text-slate-600 space-y-1">
+                {% for message in messages %}
+                  <p class="truncate">{{ message }}</p>
+                {% endfor %}
+              </div>
+            </div>
+
+            <button type="button"
+                    onclick="hideToastMessages()"
+                    class="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                    aria-label="Cerrar">
+              <span class="material-symbols-outlined text-slate-500">close</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    {% endif %}
+  {% endfor %}
+{% endif %}

@@ -21,8 +21,9 @@ except Exception:
 
 User = get_user_model()
 
-# ⚠️ Cambia este código y NO lo publiques en repositorios
+# ⚠️ Cambia estos códigos y NO los publiques en repositorios
 ADMIN_CODE = "SIGEP-ADMIN-2026"
+COOR_CODE = "SIGEP-COOR-2026"
 
 
 # -----------------------------
@@ -76,7 +77,7 @@ def _redirect_por_rol(user):
 
 
 # -----------------------------
-# ✅ Dashboard principal (ARREGLA TU ERROR)
+# ✅ Dashboard principal (para principal/urls.py)
 # -----------------------------
 def dashboard(request):
     """
@@ -138,6 +139,7 @@ def registrar_view(request):
     - genera username desde email
     - asigna rol (si existe campo rol)
     - ADMIN requiere código maestro (admin_code)
+    - ✅ COOR también requiere código maestro (admin_code)
     """
     if request.method == "GET":
         return render(request, "principal/registrar.html")
@@ -146,7 +148,7 @@ def registrar_view(request):
     email = (request.POST.get("email") or "").strip().lower()
 
     rol = (request.POST.get("rol") or "PART").strip().upper()
-    admin_code = (request.POST.get("admin_code") or "").strip()
+    admin_code = (request.POST.get("admin_code") or "").strip()  # lo reutilizamos
 
     password = request.POST.get("password") or ""
     confirm = request.POST.get("confirm_password") or ""
@@ -164,9 +166,14 @@ def registrar_view(request):
         messages.error(request, "Las contraseñas no coinciden.")
         return render(request, "principal/registrar.html")
 
-    # ADMIN: exigir código maestro
+    # ✅ ADMIN: exigir código maestro
     if rol == "ADMIN" and admin_code != ADMIN_CODE:
         messages.error(request, "Código de administrador inválido. No tienes autorización.")
+        return render(request, "principal/registrar.html")
+
+    # ✅ COOR: exigir código maestro (mismo input)
+    if rol == "COOR" and admin_code != COOR_CODE:
+        messages.error(request, "Código de coordinador inválido. No tienes autorización.")
         return render(request, "principal/registrar.html")
 
     # Evitar duplicado por correo
@@ -184,7 +191,7 @@ def registrar_view(request):
         password=password
     )
 
-    # Guardar nombre completo en first_name (sin inventar campos)
+    # Guardar nombre completo en first_name
     user.first_name = fullname
 
     # Guardar rol si existe el campo
@@ -228,7 +235,6 @@ def recuperar_cuenta_view(request):
                 expira_en=expira_en
             )
         except TypeError:
-            # Si tu modelo no tiene expira_en, no tronamos el flujo
             SolicitudRecuperacionCuenta.objects.create(usuario=user)
 
     # En producción enviarías el correo aquí

@@ -1,0 +1,250 @@
+{% extends "base_eval.html" %}
+{% block title %}Evaluador: Proyectos Asignados - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+  <div class="flex flex-col gap-1">
+    <h2 class="text-3xl font-bold text-slate-900 tracking-tight">Proyectos Asignados</h2>
+    <p class="text-slate-500 text-lg">Listado de proyectos asignados para evaluación en SIGEP.</p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 w-1/3">Título del proyecto</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Ponente</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Evento</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Estado</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-200">
+          {% if proyectos %}
+            {% for p in proyectos %}
+              <tr class="group hover:bg-slate-50 transition-colors"
+                  data-id="{{ p.id|default:p.pk }}"
+                  data-titulo="{{ p.titulo|default:p.nombre|default:'Proyecto' }}"
+                  data-codigo="{{ p.codigo|default:p.folio|default:p.clave|default:p.id|default:p.pk }}"
+                  data-evento="{{ p.evento.nombre|default:p.evento|default:'—' }}"
+                  data-ponente="{{ p.ponente.nombre|default:p.ponente|default:p.autor|default:'—' }}"
+                  data-estado="{{ p.estado|default:'pendiente' }}">
+                <td class="px-6 py-5">
+                  <div class="flex items-start gap-3">
+                    <div class="p-2 bg-blue-50 rounded-lg text-primary shrink-0 mt-0.5">
+                      <span class="material-symbols-outlined text-xl">
+                        {% if forloop.counter|divisibleby:2 %}description{% else %}article{% endif %}
+                      </span>
+                    </div>
+                    <div>
+                      <p class="font-semibold text-slate-900 text-base">
+                        {{ p.titulo|default:p.nombre|default:"Proyecto" }}
+                      </p>
+                      <p class="text-xs text-slate-500 mt-1 font-mono">
+                        ID: #{{ p.codigo|default:p.folio|default:p.clave|default:p.id|default:p.pk }}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="px-6 py-5">
+                  <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                      {{ p.ponente.nombre|default:p.ponente|default:p.autor|default:"—"|slice:":1"|upper }}{{ p.ponente.nombre|default:p.ponente|default:p.autor|default:"—"|slice:"1:2"|upper }}
+                    </div>
+                    <span class="text-sm font-medium text-slate-700">
+                      {{ p.ponente.nombre|default:p.ponente|default:p.autor|default:"—" }}
+                    </span>
+                  </div>
+                </td>
+
+                <td class="px-6 py-5 text-sm text-slate-600">
+                  {{ p.evento.nombre|default:p.evento|default:"—" }}
+                </td>
+
+                <td class="px-6 py-5">
+                  {% if p.estado == "enviada" or p.estado == "evaluado" or p.estado == "completado" %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                      Enviada
+                    </span>
+                  {% elif p.estado == "revision" or p.estado == "en_revision" %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      <span class="size-1.5 rounded-full bg-amber-500"></span>
+                      En revisión
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      <span class="size-1.5 rounded-full bg-amber-500"></span>
+                      Pendiente
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td class="px-6 py-5 text-right">
+                  {% if p.estado == "enviada" or p.estado == "evaluado" or p.estado == "completado" %}
+                    <span class="text-sm text-slate-400 italic">Evaluación completada</span>
+                  {% else %}
+                    <button type="button"
+                            data-action="evaluar"
+                            class="inline-flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95">
+                      <span class="material-symbols-outlined text-[18px]">rate_review</span>
+                      Evaluar
+                    </button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="px-6 py-16 text-center">
+                <div class="max-w-md mx-auto">
+                  <div class="mx-auto size-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-slate-500">inbox</span>
+                  </div>
+                  <p class="mt-3 font-extrabold text-slate-900">Sin proyectos asignados</p>
+                  <p class="text-sm text-slate-600">Cuando te asignen proyectos, aparecerán aquí.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+      <span class="text-sm text-slate-500">
+        Mostrando
+        <span class="font-medium text-slate-900">{{ page_start|default:1 }}</span>
+        a
+        <span class="font-medium text-slate-900">{{ page_end|default:5 }}</span>
+        de
+        <span class="font-medium text-slate-900">{{ total|default:12 }}</span>
+        resultados
+      </span>
+
+      <div class="flex gap-2">
+        <button type="button"
+                class="px-3 py-1 border border-slate-300 rounded text-sm text-slate-500 bg-white hover:bg-slate-50 disabled:opacity-50"
+                {% if not has_prev %}disabled{% endif %}>
+          Anterior
+        </button>
+        <button type="button"
+                class="px-3 py-1 border border-slate-300 rounded text-sm text-slate-700 bg-white hover:bg-slate-50"
+                {% if not has_next %}disabled{% endif %}>
+          Siguiente
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="mt-12 text-center text-xs text-slate-400 pb-8">
+    © 2024 SIGEP. Sistema de Gestión de Eventos y Ponencias.
+  </footer>
+</div>
+{% endblock %}
+
+
+{% block modals %}
+<!-- Modal estándar (Coordinador-style) -->
+<div id="modalEvaluar" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalEvaluar')"></div>
+
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between relative">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Iniciar evaluación</h3>
+
+        <button type="button"
+                onclick="closeModal('modalEvaluar')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
+                       bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/40
+                       transition-colors group"
+                aria-label="Cerrar modal">
+          <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400">
+            close
+          </span>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Proyecto</p>
+            <p id="mTitulo" class="mt-1 font-extrabold text-slate-900">—</p>
+            <p id="mCodigo" class="mt-1 text-xs text-slate-500 font-mono">ID: —</p>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Evento</p>
+            <p id="mEvento" class="mt-1 font-bold text-slate-800">—</p>
+            <p class="mt-1 text-xs text-slate-500">Ponente: <span id="mPonente" class="font-semibold">—</span></p>
+          </div>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-4 bg-slate-50">
+          <p class="text-sm font-semibold text-slate-700">
+            Se abrirá el <span class="font-extrabold">Formulario de Evaluación</span> para capturar la rúbrica.
+          </p>
+          <p class="text-xs text-slate-500 mt-1">
+            *Flujo visual listo. La persistencia se conecta después en la vista del formulario.
+          </p>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+        <button type="button"
+                onclick="closeModal('modalEvaluar')"
+                class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition">
+          Cancelar
+        </button>
+
+        <a id="mIrFormulario"
+           href="#"
+           class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition inline-flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">edit_document</span>
+          Ir a formulario
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+  // URL plantilla: tu ruta exige proyecto_id en la URL.
+  // Django resolverá el patrón con un ID dummy y luego reemplazamos en JS.
+  const FORM_URL_TEMPLATE = "{% url 'evaluador:formulario' proyecto_id=999999 %}";
+
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest("[data-action='evaluar']");
+    if (!btn) return;
+
+    const tr = btn.closest("tr[data-id]");
+    if (!tr) return;
+
+    const payload = {
+      id: tr.dataset.id || "",
+      titulo: tr.dataset.titulo || "—",
+      codigo: tr.dataset.codigo || tr.dataset.id || "—",
+      evento: tr.dataset.evento || "—",
+      ponente: tr.dataset.ponente || "—",
+    };
+
+    document.getElementById("mTitulo").textContent = payload.titulo;
+    document.getElementById("mCodigo").textContent = `ID: #${payload.codigo}`;
+    document.getElementById("mEvento").textContent = payload.evento;
+    document.getElementById("mPonente").textContent = payload.ponente;
+
+    const href = FORM_URL_TEMPLATE.replace("999999", encodeURIComponent(payload.id));
+    document.getElementById("mIrFormulario").setAttribute("href", href);
+
+    openModal("modalEvaluar");
+  });
+</script>
+{% endblock %}

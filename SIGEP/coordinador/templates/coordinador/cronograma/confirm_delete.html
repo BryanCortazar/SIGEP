@@ -1,0 +1,44 @@
+{% extends "coordinador/base_coor.html" %}
+{% block title %}Eliminar Actividad - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <div>
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+      Eliminar actividad
+    </h1>
+    <p class="text-slate-500 dark:text-slate-400 mt-1">
+      Esta acción no se puede deshacer.
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+    <div class="p-6 space-y-4">
+      <div class="p-4 rounded-lg bg-red-50 border border-red-100 text-red-700">
+        <p class="font-semibold">¿Estás seguro de eliminar esta actividad?</p>
+        <p class="text-sm mt-1">
+          <span class="font-bold">{{ actividad.titulo }}</span>
+          ({{ actividad.inicio|time:"H:i" }} - {{ actividad.fin|time:"H:i" }})
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <a href="{% url 'coordinador:cronograma' %}"
+           class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold transition-colors">
+          Cancelar
+        </a>
+
+        <form method="POST" class="inline">
+          {% csrf_token %}
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+            Sí, eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
