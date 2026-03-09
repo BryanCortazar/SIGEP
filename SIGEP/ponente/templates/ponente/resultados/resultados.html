@@ -1,0 +1,201 @@
+{% extends "ponente/base_pon.html" %}
+
+{% block title %}Ponente: Mis Resultados - SIGEP{% endblock %}
+{% block section_label %}Gestión{% endblock %}
+{% block section_title %}Mis Resultados{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto flex flex-col gap-8">
+  <div class="flex flex-col gap-4">
+    <div>
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Mis Resultados</h1>
+      <p class="mt-2 text-slate-500">
+        Consulta el avance en tiempo real de la evaluación de tu ponencia y el resultado final consolidado.
+      </p>
+    </div>
+
+    {% if ponencias %}
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <label for="ponencia_selector" class="block text-sm font-semibold text-slate-800 mb-2">
+          Seleccionar ponencia
+        </label>
+        <select id="ponencia_selector"
+                onchange="if(this.value){ window.location.href='?ponencia=' + this.value; }"
+                class="w-full md:w-[460px] h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary text-sm">
+          {% for item in ponencias %}
+            <option value="{{ item.id }}" {% if ponencia_sel and item.id == ponencia_sel.id %}selected{% endif %}>
+              {{ item.titulo }} — {{ item.evento.nombre|default:item.evento.titulo }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if ponencia_sel %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-1 flex flex-col gap-6">
+        <div class="bg-gradient-to-br from-blue-500 to-primary rounded-3xl p-8 text-white shadow-xl shadow-primary/20">
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-white/80">Calificación general</p>
+          <div class="mt-4 flex items-end gap-2">
+            <span class="text-7xl font-black leading-none">{{ promedio_general|default:"0.0" }}</span>
+            <span class="text-2xl font-bold text-white/80 mb-2">/ 5.0</span>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-1 text-yellow-300">
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+          </div>
+
+          <div class="mt-6 inline-flex items-center px-4 py-2 rounded-full bg-white/15 border border-white/20 text-sm font-medium">
+            Basado en {{ total_evaluaciones }} evaluación{{ total_evaluaciones|pluralize:"es" }} enviada{{ total_evaluaciones|pluralize:"s" }}
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div class="flex items-center gap-3 mb-5">
+            <span class="material-symbols-outlined text-slate-400">analytics</span>
+            <h3 class="text-lg font-bold text-slate-900">Resumen de evaluación</h3>
+          </div>
+
+          <div class="space-y-5">
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-slate-700">Estado</span>
+                <span class="text-sm font-bold text-primary">{{ estado_resultado }}</span>
+              </div>
+              <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-primary rounded-full" style="width: {{ avance_porcentaje }}%;"></div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Asignadas</p>
+                <p class="mt-2 text-3xl font-black text-slate-900">{{ evaluaciones_asignadas }}</p>
+              </div>
+              <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Enviadas</p>
+                <p class="mt-2 text-3xl font-black text-primary">{{ total_evaluaciones }}</p>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Ponencia</p>
+              <p class="mt-2 text-base font-bold text-slate-900">{{ ponencia_sel.titulo }}</p>
+              <p class="mt-1 text-sm text-slate-500">{{ ponencia_sel.evento.nombre|default:ponencia_sel.evento.titulo }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2 flex flex-col gap-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div class="flex items-center gap-3 mb-5">
+            <span class="material-symbols-outlined text-primary">forum</span>
+            <h3 class="text-xl font-bold text-slate-900">Comentarios destacados</h3>
+          </div>
+
+          {% if comentarios %}
+            <div class="space-y-4">
+              {% for comentario in comentarios %}
+                <article class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div class="flex items-start gap-4">
+                      <div class="size-11 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-sm font-bold">
+                        {{ comentario.evaluador|slice:":2"|upper }}
+                      </div>
+
+                      <div>
+                        <p class="text-base font-bold text-slate-900">{{ comentario.evaluador }}</p>
+                        <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">{{ comentario.rol }}</p>
+                      </div>
+                    </div>
+
+                    <div class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-slate-200 text-amber-500">
+                      <span class="material-symbols-outlined text-[18px]">star</span>
+                      <span class="text-sm font-bold">{{ comentario.calificacion }}</span>
+                    </div>
+                  </div>
+
+                  <p class="mt-4 text-slate-600 leading-relaxed">
+                    "{{ comentario.comentario }}"
+                  </p>
+
+                  <p class="mt-3 text-xs text-slate-400">
+                    {{ comentario.fecha|date:"d/m/Y H:i" }}
+                  </p>
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+              <h4 class="text-lg font-bold text-slate-900">Aún no hay comentarios visibles</h4>
+              <p class="mt-2 text-sm text-slate-500">
+                Los comentarios aparecerán conforme los evaluadores envíen sus resultados.
+              </p>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div class="flex items-center gap-3 mb-5">
+            <span class="material-symbols-outlined text-slate-400">groups</span>
+            <h3 class="text-xl font-bold text-slate-900">Estado por evaluador</h3>
+          </div>
+
+          {% if evaluadores_estado %}
+            <div class="space-y-3">
+              {% for item in evaluadores_estado %}
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p class="font-semibold text-slate-900">{{ item.nombre }}</p>
+                    <p class="text-sm text-slate-500">
+                      {% if item.calificacion %}
+                        Calificación enviada: {{ item.calificacion }}
+                      {% else %}
+                        Sin calificación registrada aún
+                      {% endif %}
+                    </p>
+                  </div>
+
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                    {% if item.estado == 'Enviada' %}
+                      bg-emerald-100 text-emerald-700
+                    {% else %}
+                      bg-amber-100 text-amber-700
+                    {% endif %}">
+                    {{ item.estado }}
+                  </span>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+              <h4 class="text-lg font-bold text-slate-900">No hay evaluadores asignados</h4>
+              <p class="mt-2 text-sm text-slate-500">
+                Cuando coordinación vincule esta ponencia al proceso de evaluación, aquí podrás consultar el avance.
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+      <h3 class="text-lg font-bold text-slate-900">Aún no tienes ponencias registradas</h3>
+      <p class="mt-2 text-sm text-slate-500">
+        Primero registra una ponencia para poder consultar sus resultados de evaluación.
+      </p>
+      <a href="{% url 'ponente:inscripcion' %}"
+         class="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
+        <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+        Ir a inscripción
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

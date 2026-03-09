@@ -6,14 +6,12 @@ app_name = "ponente"
 urlpatterns = [
     path("", views.panel, name="dashboard"),
     path("panel/", views.panel, name="panel"),
-
-    # ✅ nueva opción
     path("inscripcion/", views.inscripcion, name="inscripcion"),
-
     path("participacion/", views.gestionar_participacion, name="participacion"),
     path("horario/", views.mi_horario, name="horario"),
     path("resultados/", views.mis_resultados, name="resultados"),
     path("historial/", views.historial, name="historial"),
     path("constancia/", views.generar_constancia, name="constancia"),
+    path("constancia/pdf/<int:ponencia_id>/", views.descargar_constancia_pdf, name="descargar_constancia_pdf"),
     path("configuracion/", views.configuracion, name="configuracion"),
 ]

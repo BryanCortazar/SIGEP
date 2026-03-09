@@ -1,0 +1,232 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>{% block title %}Participante: Panel de Gestión - SIGEP{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#137fec",
+            "primary-dark": "#0f65bd",
+            "sidebar-bg": "#0B1120",
+            "background-light": "#f6f7f8",
+            "background-dark": "#101922",
+          },
+          fontFamily: {
+            "display": ["Public Sans", "sans-serif"],
+            "sans": ["Public Sans", "sans-serif"],
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Public Sans', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 h-screen overflow-hidden flex flex-row">
+
+  <aside class="w-72 bg-sidebar-bg border-r border-slate-800 hidden lg:flex flex-col h-screen">
+    <div class="px-6 py-6 border-b border-slate-800">
+      <div class="flex items-center gap-4">
+        <div class="h-11 w-11 rounded-xl bg-primary/20 flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary">school</span>
+        </div>
+        <div>
+          <h1 class="text-white text-xl font-bold leading-none">SIGEP</h1>
+          <p class="text-[11px] tracking-[0.2em] uppercase mt-1 text-slate-400">Panel Participante</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-4 py-5 overflow-y-auto no-scrollbar">
+      <ul class="space-y-2">
+        <li>
+          <a href="{% url 'participante:panel' %}"
+             class="flex items-center gap-3 px-4 py-3 rounded-xl transition
+             {% if active == 'panel' %}bg-primary text-white{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="text-sm font-medium">Panel principal</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="{% url 'participante:elegir_evento' %}"
+             class="flex items-center gap-3 px-4 py-3 rounded-xl transition
+             {% if active == 'elegir_evento' %}bg-primary text-white{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined">event_available</span>
+            <span class="text-sm font-medium">Elegir evento</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="{% url 'participante:programa' %}"
+             class="flex items-center gap-3 px-4 py-3 rounded-xl transition
+             {% if active == 'programa' %}bg-primary text-white{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined">calendar_month</span>
+            <span class="text-sm font-medium">Programa</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="{% url 'participante:mi_pase' %}"
+             class="flex items-center gap-3 px-4 py-3 rounded-xl transition
+             {% if active == 'mi_pase' %}bg-primary text-white{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined">badge</span>
+            <span class="text-sm font-medium">Mi pase</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="{% url 'participante:constancia' %}"
+             class="flex items-center gap-3 px-4 py-3 rounded-xl transition
+             {% if active == 'constancia' %}bg-primary text-white{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined">verified</span>
+            <span class="text-sm font-medium">Descargar constancia</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="{% url 'participante:configuracion' %}"
+             class="flex items-center gap-3 px-4 py-3 rounded-xl transition
+             {% if active == 'configuracion' %}bg-primary text-white{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="text-sm font-medium">Configuración</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="p-4 border-t border-slate-800">
+      <button type="button"
+              onclick="openModal('modalLogout')"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-red-500/10 hover:text-red-300 transition">
+        <span class="material-symbols-outlined">logout</span>
+        <span class="text-sm font-medium">Cerrar sesión</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="flex-1 flex flex-col h-full bg-[#f6f7f8] dark:bg-background-dark overflow-hidden relative">
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 md:px-8 py-4 flex items-center justify-between">
+      <div>
+        <p class="text-sm text-slate-500">{% block section_label %}Módulo{% endblock %}</p>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">{% block section_title %}Participante{% endblock %}</h2>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="text-right hidden sm:block">
+          <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </p>
+          <p class="text-xs text-slate-500">Participante</p>
+        </div>
+
+        <div class="size-10 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold shadow-sm">
+          {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
+        </div>
+      </div>
+    </header>
+
+    {% include "coordinador/components/modal_messages.html" %}
+
+    <div class="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 scroll-smooth no-scrollbar">
+      <div class="max-w-7xl mx-auto space-y-8">
+        {% block content %}{% endblock %}
+
+        {% block footer %}
+        <div class="mt-8 text-center">
+          <p class="text-xs text-slate-400 font-medium">© 2026 SIGEP - Sistema de Gestión de Eventos. Todos los derechos reservados.</p>
+        </div>
+        {% endblock %}
+      </div>
+    </div>
+  </main>
+
+  <div id="modalLogout" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-950/50" onclick="closeModal('modalLogout')"></div>
+    <div class="relative min-h-full flex items-center justify-center p-4">
+      <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Cerrar sesión</h3>
+            <p class="text-sm text-slate-500 mt-1">Confirma esta acción para salir del módulo.</p>
+          </div>
+          <button type="button" onclick="closeModal('modalLogout')" class="text-slate-400 hover:text-slate-700">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="px-6 py-5">
+          <p class="text-sm text-slate-600">¿Deseas cerrar tu sesión actual?</p>
+        </div>
+
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+          <button type="button"
+                  onclick="closeModal('modalLogout')"
+                  class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium">
+            Cancelar
+          </button>
+          <a href="{% url 'principal:logout' %}"
+             class="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 text-sm font-medium">
+            Sí, cerrar sesión
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% block modals %}{% endblock %}
+
+  <script>
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        document.querySelectorAll('.fixed.inset-0.z-50').forEach(modal => {
+          modal.classList.add('hidden');
+        });
+        document.body.classList.remove('overflow-hidden');
+      }
+    });
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

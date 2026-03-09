@@ -1,0 +1,146 @@
+{% extends "ponente/base_pon.html" %}
+{% block title %}Ponente: Dashboard - SIGEP{% endblock %}
+
+{% block content %}
+<div class="max-w-[1200px] mx-auto flex flex-col gap-8">
+
+  <div class="flex flex-wrap justify-between items-end gap-4">
+    <div>
+      <h1 class="text-slate-900 text-3xl md:text-4xl font-black tracking-tight mb-2">
+        Hola, {{ request.user.first_name|default:request.user.username }} 👋
+      </h1>
+      <p class="text-slate-500 text-base font-normal">
+        Aquí está el resumen general de tu actividad como ponente.
+      </p>
+    </div>
+
+    <div class="px-4 py-2 bg-white border border-slate-200 rounded-lg flex items-center gap-2 shadow-sm">
+      <span class="material-symbols-outlined text-primary text-xl">calendar_today</span>
+      <span class="text-slate-700 text-sm font-medium">{{ fecha_larga }}</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+      <div class="flex justify-between items-start mb-4">
+        <div class="bg-blue-50 p-2 rounded-lg">
+          <span class="material-symbols-outlined text-primary">mic</span>
+        </div>
+        <span class="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
+          {{ kpi_delta }}
+        </span>
+      </div>
+      <div>
+        <p class="text-slate-500 text-sm font-medium mb-1">Ponencias Activas</p>
+        <h3 class="text-slate-900 text-3xl font-bold">{{ kpi_ponencias_activas }}</h3>
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+      <div class="flex justify-between items-start mb-4">
+        <div class="bg-orange-50 p-2 rounded-lg">
+          <span class="material-symbols-outlined text-orange-500">folder_open</span>
+        </div>
+
+        {% if kpi_archivos_pendientes|add:0 > 0 %}
+          <span class="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700">Requiere acción</span>
+        {% else %}
+          <span class="px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">Completo</span>
+        {% endif %}
+      </div>
+
+      <div>
+        <p class="text-slate-500 text-sm font-medium mb-1">Documentación Pendiente</p>
+        <h3 class="text-slate-900 text-3xl font-bold">{{ kpi_archivos_pendientes }}</h3>
+      </div>
+    </div>
+
+    <div class="bg-primary rounded-xl p-6 text-white shadow-lg shadow-primary/20">
+      <div class="flex justify-between items-start mb-6">
+        <span class="px-3 py-1 bg-white/20 rounded-full text-xs font-bold uppercase tracking-wider">
+          Último registro
+        </span>
+        <span class="material-symbols-outlined">event</span>
+      </div>
+
+      {% if proximo %}
+        <h3 class="text-2xl font-bold leading-tight mb-2">{{ proximo.titulo }}</h3>
+        <p class="text-white/90 text-sm mb-2">
+          Evento: {{ proximo.evento.nombre|default:proximo.evento.titulo }}
+        </p>
+        <p class="text-white/90 text-sm">
+          Estado: {{ proximo.get_estado_display }}
+        </p>
+
+        <a href="{% url 'ponente:participacion' %}?ponencia={{ proximo.id }}"
+           class="mt-6 block w-full text-center py-2 bg-white text-primary rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">
+          Gestionar material
+        </a>
+      {% else %}
+        <h3 class="text-2xl font-bold leading-tight mb-2">Sin registros aún</h3>
+        <p class="text-white/90 text-sm">
+          Registra tu primera ponencia en un evento disponible.
+        </p>
+
+        <a href="{% url 'ponente:inscripcion' %}"
+           class="mt-6 block w-full text-center py-2 bg-white text-primary rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">
+          Ir a inscripción
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="md:col-span-2 xl:col-span-3 flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-slate-800 text-lg font-bold">Ponencias recientes</h3>
+        <a class="text-primary text-sm font-medium hover:text-blue-600" href="{% url 'ponente:historial' %}">
+          Ver todo
+        </a>
+      </div>
+
+      {% if recientes %}
+        {% for r in recientes %}
+          <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm">
+            <div class="size-16 min-w-[64px] rounded-lg bg-slate-100 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary">mic</span>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-600 uppercase border border-blue-200">
+                  {{ r.tipo }}
+                </span>
+                <p class="text-slate-400 text-xs">{{ r.fecha }}</p>
+              </div>
+
+              <h4 class="text-slate-900 font-medium text-base truncate">{{ r.titulo }}</h4>
+              <p class="text-slate-500 text-sm truncate mt-0.5">
+                {{ r.evento_nombre }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+              <span class="px-3 py-1 rounded-full text-xs font-medium border
+                {% if r.estado == 'ACEPTADA' %}bg-green-100 text-green-700 border-green-200
+                {% elif r.estado == 'RECHAZADA' %}bg-red-100 text-red-700 border-red-200
+                {% elif r.estado == 'EN_REVISION' %}bg-yellow-100 text-yellow-700 border-yellow-200
+                {% else %}bg-slate-100 text-slate-700 border-slate-200{% endif %}">
+                {{ r.estado_label }}
+              </span>
+
+              <a class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                 href="{% url 'ponente:participacion' %}?ponencia={{ r.id }}">
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="bg-white border border-slate-200 rounded-xl p-6 text-slate-600">
+          Aún no tienes ponencias registradas.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

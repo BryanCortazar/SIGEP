@@ -1,0 +1,275 @@
+{% extends "ponente/base_pon.html" %}
+{% load static %}
+
+{% block title %}Ponente: Configuración - SIGEP{% endblock %}
+{% block section_label %}Configuración{% endblock %}
+{% block section_title %}Perfil del Ponente{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+<style>
+  .ponente-config-wrap,
+  .ponente-config-wrap * {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .ponente-config-wrap .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .ponente-config-wrap .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .ponente-config-wrap .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.16);
+    border-radius: 3px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ponente-config-wrap max-w-6xl mx-auto">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Configuración del Perfil</h1>
+    <p class="text-gray-500">Gestione sus datos personales y preferencias de la cuenta.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-4">
+      <div class="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center text-center h-full border border-gray-100">
+        {% if perfil.avatar %}
+          <img
+            src="{{ perfil.avatar.url }}"
+            class="w-32 h-32 rounded-full object-cover mb-6 shadow-md ring-2 ring-white"
+            alt="Avatar del ponente"
+          />
+        {% else %}
+          <div class="w-32 h-32 rounded-full bg-amber-500 flex items-center justify-center text-white text-4xl font-light mb-6 shadow-md">
+            {{ request.user.first_name|default:"U"|slice:":1"|upper }}{{ request.user.last_name|default:""|slice:":1"|upper }}
+          </div>
+        {% endif %}
+
+        <h2 class="text-xl font-bold text-gray-900 mb-1">
+          {{ request.user.get_full_name|default:request.user.email }}
+        </h2>
+
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-4 font-medium">
+          PONENTE
+        </p>
+
+        <div class="w-full space-y-3 text-left mt-2">
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Correo</p>
+            <p class="mt-1 text-sm font-medium text-slate-800 break-all">{{ request.user.email|default:"No capturado" }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Institución</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.institucion|default:"No capturada" }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Especialidad</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.especialidad|default:"No capturada" }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Teléfono</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.telefono|default:"No capturado" }}</p>
+          </div>
+
+          {% if perfil.cv %}
+            <a href="{{ perfil.cv.url }}" target="_blank" rel="noopener"
+               class="block text-center text-sm font-medium text-primary hover:text-blue-700 transition-colors pt-2">
+              Ver CV actual (PDF)
+            </a>
+          {% else %}
+            <p class="text-xs text-gray-500 text-center pt-2">Sin CV cargado</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-8">
+      <div class="bg-white rounded-xl shadow-sm p-8 h-full flex flex-col border border-gray-100">
+        <div class="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
+          <i class="fa-solid fa-user-gear text-primary text-xl"></i>
+          <h3 class="text-lg font-bold text-gray-900">Información General</h3>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+          {% csrf_token %}
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nombres</label>
+            <input
+              type="text"
+              name="nombres"
+              value="{{ cuenta_form.nombres.value|default:'' }}"
+              class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+            {% for e in cuenta_form.nombres.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Apellidos</label>
+            <input
+              type="text"
+              name="apellidos"
+              value="{{ cuenta_form.apellidos.value|default:'' }}"
+              class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+            {% for e in cuenta_form.apellidos.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Correo</label>
+            <input
+              type="email"
+              name="correo"
+              value="{{ cuenta_form.correo.value|default:'' }}"
+              class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+            {% for e in cuenta_form.correo.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Institución</label>
+            <input
+              type="text"
+              name="institucion"
+              value="{{ perfil_form.institucion.value|default:'' }}"
+              class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+            {% for e in perfil_form.institucion.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Especialidad</label>
+            <input
+              type="text"
+              name="especialidad"
+              value="{{ perfil_form.especialidad.value|default:'' }}"
+              class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+            {% for e in perfil_form.especialidad.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Teléfono</label>
+            <input
+              type="text"
+              name="telefono"
+              value="{{ perfil_form.telefono.value|default:'' }}"
+              class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+            {% for e in perfil_form.telefono.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="md:col-span-2 space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Bio / Descripción</label>
+            <textarea
+              name="bio"
+              rows="3"
+              class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >{{ perfil_form.bio.value|default:'' }}</textarea>
+            {% for e in perfil_form.bio.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Foto (JPG/PNG/WebP, máx 5MB)</label>
+            <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm text-slate-700">
+            {% for e in perfil_form.avatar.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">CV (PDF, máx 15MB)</label>
+            <input type="file" name="cv" accept=".pdf" class="w-full text-sm text-slate-700">
+            {% for e in perfil_form.cv.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="md:col-span-2 pt-4 border-t border-gray-100">
+            <h4 class="font-bold text-gray-900 mb-3">Cambiar contraseña (opcional)</h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Contraseña actual</label>
+                <input
+                  type="password"
+                  name="password_actual"
+                  class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                {% for e in cuenta_form.password_actual.errors %}
+                  <p class="text-xs text-red-500">{{ e }}</p>
+                {% endfor %}
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nueva contraseña</label>
+                <input
+                  type="password"
+                  name="password_nueva1"
+                  class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                {% for e in cuenta_form.password_nueva1.errors %}
+                  <p class="text-xs text-red-500">{{ e }}</p>
+                {% endfor %}
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confirmación</label>
+                <input
+                  type="password"
+                  name="password_nueva2"
+                  class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                {% for e in cuenta_form.password_nueva2.errors %}
+                  <p class="text-xs text-red-500">{{ e }}</p>
+                {% endfor %}
+              </div>
+            </div>
+
+            {% if cuenta_form.non_field_errors %}
+              <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+                {% for e in cuenta_form.non_field_errors %}
+                  <p class="text-sm text-red-700">{{ e }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="md:col-span-2 flex justify-end pt-4">
+            <button
+              class="bg-primary hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg shadow-lg shadow-blue-500/30 transition-all text-sm"
+              type="submit"
+            >
+              Guardar Cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
