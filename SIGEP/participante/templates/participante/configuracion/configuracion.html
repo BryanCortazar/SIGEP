@@ -1,107 +1,240 @@
 {% extends "participante/base_part.html" %}
+{% load static %}
 
 {% block title %}Participante: Configuración - SIGEP{% endblock %}
-{% block section_label %}Perfil{% endblock %}
-{% block section_title %}Configuración de cuenta{% endblock %}
+{% block section_label %}Configuración{% endblock %}
+{% block section_title %}Perfil del Participante{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+<style>
+  .participante-config-wrap,
+  .participante-config-wrap * {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .participante-config-wrap .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .participante-config-wrap .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .participante-config-wrap .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.16);
+    border-radius: 3px;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-  <section class="xl:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <form method="post" enctype="multipart/form-data" class="space-y-8">
-      {% csrf_token %}
-      <div>
-        <h3 class="text-lg font-bold text-slate-900">Datos de la cuenta</h3>
-        <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Nombres</label>
-            {{ cuenta_form.nombres }}
-            {% for error in cuenta_form.nombres.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+<div class="participante-config-wrap max-w-6xl mx-auto">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Configuración del Perfil</h1>
+    <p class="text-gray-500">Gestione sus datos personales y de acceso sin afectar el resto de sus opciones del módulo.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-4">
+      <div class="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center text-center h-full border border-gray-100">
+        {% if perfil.avatar %}
+          <img
+            src="{{ perfil.avatar.url }}"
+            class="w-32 h-32 rounded-full object-cover mb-6 shadow-md ring-2 ring-white"
+            alt="Avatar del participante"
+          />
+        {% else %}
+          <div class="w-32 h-32 rounded-full bg-emerald-500 flex items-center justify-center text-white text-4xl font-light mb-6 shadow-md">
+            {% if request.user.first_name %}
+              {{ request.user.first_name|slice:":1"|upper }}
+            {% else %}
+              U
+            {% endif %}
+            {% if request.user.last_name %}
+              {{ request.user.last_name|slice:":1"|upper }}
+            {% endif %}
           </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Apellidos</label>
-            {{ cuenta_form.apellidos }}
-            {% for error in cuenta_form.apellidos.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+        {% endif %}
+
+        <h2 class="text-xl font-bold text-gray-900 mb-1">
+          {% if request.user.get_full_name %}
+            {{ request.user.get_full_name }}
+          {% elif request.user.username %}
+            {{ request.user.username }}
+          {% else %}
+            Usuario participante
+          {% endif %}
+        </h2>
+
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-4 font-medium">
+          PARTICIPANTE
+        </p>
+
+        <div class="w-full space-y-3 text-left mt-2">
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Correo</p>
+            <p class="mt-1 text-sm font-medium text-slate-800 break-all">{{ request.user.email|default:"No capturado" }}</p>
           </div>
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 mb-2">Correo</label>
-            {{ cuenta_form.correo }}
-            {% for error in cuenta_form.correo.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Institución</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.institucion|default:"No capturada" }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Teléfono</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.telefono|default:"No capturado" }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Biografía</p>
+            <p class="mt-1 text-sm font-medium text-slate-800 whitespace-pre-line">{{ perfil.biografia|default:"Sin información registrada" }}</p>
           </div>
         </div>
       </div>
-
-      <div>
-        <h3 class="text-lg font-bold text-slate-900">Perfil participante</h3>
-        <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Teléfono</label>
-            {{ perfil_form.telefono }}
-            {% for error in perfil_form.telefono.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Institución</label>
-            {{ perfil_form.institucion }}
-            {% for error in perfil_form.institucion.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 mb-2">Biografía</label>
-            {{ perfil_form.biografia }}
-            {% for error in perfil_form.biografia.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 mb-2">Avatar</label>
-            {{ perfil_form.avatar }}
-            {% for error in perfil_form.avatar.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 class="text-lg font-bold text-slate-900">Cambiar contraseña</h3>
-        <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Contraseña actual</label>
-            {{ cuenta_form.password_actual }}
-            {% for error in cuenta_form.password_actual.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Nueva contraseña</label>
-            {{ cuenta_form.password_nueva }}
-            {% for error in cuenta_form.password_nueva.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Confirmación</label>
-            {{ cuenta_form.password_confirmacion }}
-            {% for error in cuenta_form.password_confirmacion.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-          </div>
-        </div>
-      </div>
-
-      {% if cuenta_form.non_field_errors or perfil_form.non_field_errors %}
-      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        {{ cuenta_form.non_field_errors }} {{ perfil_form.non_field_errors }}
-      </div>
-      {% endif %}
-
-      <div class="flex justify-end gap-3">
-        <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-medium">Guardar cambios</button>
-      </div>
-    </form>
-  </section>
-
-  <aside class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <h3 class="text-lg font-bold text-slate-900">Perfil actual</h3>
-    <div class="mt-5 flex flex-col items-center text-center">
-      {% if perfil.avatar %}
-      <img src="{{ perfil.avatar.url }}" alt="Avatar" class="w-24 h-24 rounded-full object-cover border border-slate-200" />
-      {% else %}
-      <div class="w-24 h-24 rounded-full bg-emerald-500 text-white flex items-center justify-center text-2xl font-bold">
-        {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
-      </div>
-      {% endif %}
-      <p class="mt-4 font-bold text-slate-900">{{ request.user.get_full_name|default:request.user.username }}</p>
-      <p class="text-sm text-slate-500">Participante</p>
     </div>
-  </aside>
+
+    <div class="lg:col-span-8">
+      <div class="bg-white rounded-xl shadow-sm p-8 h-full flex flex-col border border-gray-100">
+        <div class="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
+          <i class="fa-solid fa-user-gear text-primary text-xl"></i>
+          <h3 class="text-lg font-bold text-gray-900">Información General</h3>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+          {% csrf_token %}
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nombres</label>
+            {{ cuenta_form.nombres }}
+            {% for e in cuenta_form.nombres.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Apellidos</label>
+            {{ cuenta_form.apellidos }}
+            {% for e in cuenta_form.apellidos.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="md:col-span-2 space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Correo</label>
+            {{ cuenta_form.correo }}
+            {% for e in cuenta_form.correo.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Teléfono</label>
+            {{ perfil_form.telefono }}
+            {% for e in perfil_form.telefono.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Institución</label>
+            {{ perfil_form.institucion }}
+            {% for e in perfil_form.institucion.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="md:col-span-2 space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Biografía</label>
+            {{ perfil_form.biografia }}
+            {% for e in perfil_form.biografia.errors %}
+              <p class="text-xs text-red-500">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Foto de perfil</label>
+              {{ perfil_form.avatar }}
+              {% for e in perfil_form.avatar.errors %}
+                <p class="text-xs text-red-500">{{ e }}</p>
+              {% endfor %}
+              <p class="text-xs text-slate-500">Formatos sugeridos: JPG, PNG o WebP.</p>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Currículum vitae (CV)</label>
+              {{ perfil_form.cv }}
+              {% for e in perfil_form.cv.errors %}
+                <p class="text-xs text-red-500">{{ e }}</p>
+              {% endfor %}
+              <p class="text-xs text-slate-500">Formatos permitidos: PDF, DOC o DOCX. Tamaño máximo: 10 MB.</p>
+              {% if perfil.cv %}
+                <a href="{{ perfil.cv.url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                  <i class="fa-solid fa-file-lines"></i>
+                  Ver CV actual
+                </a>
+              {% else %}
+                <p class="text-xs text-slate-400">Aún no has cargado un CV.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="md:col-span-2 pt-4 border-t border-gray-100">
+            <h4 class="font-bold text-gray-900 mb-3">Cambiar contraseña (opcional)</h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Contraseña actual</label>
+                {{ cuenta_form.password_actual }}
+                {% for e in cuenta_form.password_actual.errors %}
+                  <p class="text-xs text-red-500">{{ e }}</p>
+                {% endfor %}
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nueva contraseña</label>
+                {{ cuenta_form.password_nueva }}
+                {% for e in cuenta_form.password_nueva.errors %}
+                  <p class="text-xs text-red-500">{{ e }}</p>
+                {% endfor %}
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confirmación</label>
+                {{ cuenta_form.password_confirmacion }}
+                {% for e in cuenta_form.password_confirmacion.errors %}
+                  <p class="text-xs text-red-500">{{ e }}</p>
+                {% endfor %}
+              </div>
+            </div>
+
+            {% if cuenta_form.non_field_errors or perfil_form.non_field_errors %}
+              <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+                {% for e in cuenta_form.non_field_errors %}
+                  <p class="text-sm text-red-700">{{ e }}</p>
+                {% endfor %}
+                {% for e in perfil_form.non_field_errors %}
+                  <p class="text-sm text-red-700">{{ e }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="md:col-span-2 flex justify-end pt-4">
+            <button
+              class="bg-primary hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg shadow-lg shadow-blue-500/30 transition-all text-sm"
+              type="submit"
+            >
+              Guardar Cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

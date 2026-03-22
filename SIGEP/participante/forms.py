@@ -84,6 +84,38 @@ class ProyectoParticipanteForm(forms.ModelForm):
         return cleaned
 
 
+class GestionParticipacionForm(forms.ModelForm):
+    class Meta:
+        model = ProyectoParticipante
+        fields = ["presentacion", "informe", "requerimientos_tecnicos"]
+        widgets = {
+            "requerimientos_tecnicos": forms.Textarea(
+                attrs={
+                    "rows": 5,
+                    "placeholder": "Ejemplo: proyector HDMI, extensión eléctrica, bocinas, mesa de apoyo, internet estable...",
+                }
+            ),
+        }
+        labels = {
+            "presentacion": "Presentación del proyecto",
+            "informe": "Documentación / informe",
+            "requerimientos_tecnicos": "Requerimientos técnicos",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            css = getattr(field.widget, "attrs", {})
+            if field_name in {"presentacion", "informe"}:
+                css.setdefault(
+                    "class",
+                    "block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700",
+                )
+            else:
+                css.setdefault("class", "w-full rounded-xl border-slate-300 focus:border-primary focus:ring-primary")
+            field.widget.attrs = css
+
+
 class ParticipanteCuentaForm(forms.Form):
     nombres = forms.CharField(max_length=150, required=True)
     apellidos = forms.CharField(max_length=150, required=True)
@@ -95,10 +127,22 @@ class ParticipanteCuentaForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
+
         for field in self.fields.values():
             css = getattr(field.widget, "attrs", {})
             css.setdefault("class", "w-full rounded-xl border-slate-300 focus:border-primary focus:ring-primary")
             field.widget.attrs = css
+
+        if self.user and not self.is_bound:
+            self.fields["nombres"].initial = getattr(self.user, "first_name", "")
+            self.fields["apellidos"].initial = getattr(self.user, "last_name", "")
+            self.fields["correo"].initial = getattr(self.user, "email", "")
+
+    def clean_nombres(self):
+        return (self.cleaned_data.get("nombres") or "").strip()
+
+    def clean_apellidos(self):
+        return (self.cleaned_data.get("apellidos") or "").strip()
 
     def clean_correo(self):
         correo = (self.cleaned_data.get("correo") or "").strip().lower()
@@ -127,11 +171,23 @@ class ParticipanteCuentaForm(forms.Form):
                     self.add_error("password_nueva", exc.messages)
         return cleaned
 
+    def save(self, commit: bool = True):
+        if self.user is None:
+            raise ValueError("ParticipanteCuentaForm requiere un usuario asociado para guardar.")
+
+        self.user.first_name = self.cleaned_data["nombres"]
+        self.user.last_name = self.cleaned_data["apellidos"]
+        self.user.email = self.cleaned_data["correo"]
+
+        if commit:
+            self.user.save(update_fields=["first_name", "last_name", "email"])
+        return self.user
+
 
 class ParticipantePerfilForm(forms.ModelForm):
     class Meta:
         model = PerfilParticipante
-        fields = ["telefono", "institucion", "biografia", "avatar"]
+        fields = ["telefono", "institucion", "biografia", "avatar", "cv"]
         widgets = {
             "biografia": forms.Textarea(attrs={"rows": 4}),
         }

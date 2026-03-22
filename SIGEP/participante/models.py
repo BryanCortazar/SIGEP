@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 EVENTO_MODEL = "administrador.Evento"
@@ -25,6 +28,10 @@ def validate_informe_size(file):
     _validate_file_size(file, 15, "El informe del proyecto")
 
 
+def validate_cv_size(file):
+    _validate_file_size(file, 10, "El CV del participante")
+
+
 def upload_presentacion(instance, filename: str) -> str:
     return f"participante/presentaciones/evento_{instance.evento_id}/user_{instance.participante_id}/{filename}"
 
@@ -35,6 +42,14 @@ def upload_informe(instance, filename: str) -> str:
 
 def upload_avatar(instance, filename: str) -> str:
     return f"participante/perfil/user_{instance.usuario_id}/{filename}"
+
+
+def upload_cv(instance, filename: str) -> str:
+    return f"participante/cv/user_{instance.usuario_id}/{filename}"
+
+
+def generar_folio_constancia() -> str:
+    return f"SIGEP-CP-{timezone.now():%Y%m%d}-{uuid.uuid4().hex[:8].upper()}"
 
 
 class TimeStampedModel(models.Model):
@@ -55,6 +70,12 @@ class PerfilParticipante(TimeStampedModel):
     institucion = models.CharField(max_length=180, blank=True, default="")
     biografia = models.TextField(blank=True, default="")
     avatar = models.ImageField(upload_to=upload_avatar, blank=True, null=True)
+    cv = models.FileField(
+        upload_to=upload_cv,
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(["pdf", "doc", "docx"]), validate_cv_size],
+    )
 
     class Meta:
         verbose_name = "Perfil de participante"
@@ -193,3 +214,53 @@ class ProyectoParticipante(TimeStampedModel):
 
     def puede_editar(self) -> bool:
         return self.estado in {self.ESTADO_REGISTRADO, self.ESTADO_EN_REVISION}
+
+
+class PaseAccesoParticipante(TimeStampedModel):
+    proyecto = models.OneToOneField(
+        ProyectoParticipante,
+        on_delete=models.CASCADE,
+        related_name="pase_acceso",
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    activo = models.BooleanField(default=True)
+    total_escaneos = models.PositiveIntegerField(default=0)
+    ultimo_escaneo = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Pase de acceso de participante"
+        verbose_name_plural = "Pases de acceso de participantes"
+        ordering = ["-actualizado_en", "-id"]
+
+    def __str__(self) -> str:
+        return f"Pase QR · {self.proyecto.nombre_proyecto}"
+
+    def url_validacion(self) -> str:
+        return reverse("participante:validar_pase_qr", kwargs={"token": str(self.token)})
+
+    def registrar_escaneo(self) -> None:
+        self.total_escaneos += 1
+        self.ultimo_escaneo = timezone.now()
+        self.save(update_fields=["total_escaneos", "ultimo_escaneo", "actualizado_en"])
+
+    def regenerar_token(self) -> None:
+        self.token = uuid.uuid4()
+        self.save(update_fields=["token", "actualizado_en"])
+
+
+class ConstanciaParticipante(TimeStampedModel):
+    proyecto = models.OneToOneField(
+        ProyectoParticipante,
+        on_delete=models.CASCADE,
+        related_name="constancia_generada",
+    )
+    folio = models.CharField(max_length=40, unique=True, editable=False, db_index=True, default=generar_folio_constancia)
+    emitida_en = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Constancia de participante"
+        verbose_name_plural = "Constancias de participantes"
+        ordering = ["-emitida_en", "-id"]
+
+    def __str__(self) -> str:
+        return f"Constancia {self.folio} · {self.proyecto.nombre_proyecto}"

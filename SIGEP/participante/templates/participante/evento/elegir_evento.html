@@ -5,256 +5,316 @@
 {% block section_title %}Elegir evento{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-  <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-    <div class="xl:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6">
+  <section class="space-y-6">
+    {% if messages %}
+      <div class="space-y-3">
+        {% for message in messages %}
+          <div class="rounded-2xl border px-4 py-3 text-sm {% if message.tags == 'success' %}border-green-200 bg-green-50 text-green-700{% elif message.tags == 'error' %}border-red-200 bg-red-50 text-red-700{% else %}border-blue-200 bg-blue-50 text-blue-700{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 class="text-lg font-bold text-slate-900">Eventos disponibles</h3>
+          <h3 class="text-xl font-bold text-slate-900">Eventos disponibles</h3>
           <p class="text-sm text-slate-500 mt-1">Selecciona un evento publicado para registrar tu proyecto.</p>
         </div>
-        {% if evento_sel %}
-        <a href="#mis-proyectos" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-medium">
-          <span class="material-symbols-outlined text-[18px]">inventory_2</span>
-          Mis proyectos
-        </a>
-        {% endif %}
+        <div class="text-xs text-slate-500">
+          {{ eventos|length }} evento{{ eventos|length|pluralize }} disponible{{ eventos|length|pluralize }}
+        </div>
       </div>
 
-      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
         {% for evento in eventos %}
-        <article class="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm hover:shadow-lg transition">
-          <div class="h-44 bg-slate-100 bg-cover bg-center" {% if evento.imagen_resuelta %}style="background-image:url('{{ evento.imagen_resuelta }}');"{% endif %}></div>
-          <div class="p-5 space-y-3">
-            <div class="flex items-start justify-between gap-3">
-              <h4 class="font-bold text-slate-900 leading-tight">{{ evento.titulo|default:evento.nombre }}</h4>
-              <span class="text-[11px] font-semibold px-2 py-1 rounded-full {% if evento.estado == 'PUBLICADO' %}bg-green-100 text-green-700{% else %}bg-slate-100 text-slate-600{% endif %}">
-                {{ evento.estado|default:'PUBLICADO' }}
-              </span>
+          <article class="group flex flex-col rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition">
+            <div class="h-40 bg-gradient-to-br from-blue-50 to-slate-100 border-b border-slate-200 flex items-center justify-center px-6 text-center">
+              <div>
+                <div class="mx-auto mb-3 h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span class="material-symbols-outlined">event</span>
+                </div>
+                <h4 class="text-lg font-bold text-slate-900 leading-tight">{% firstof evento.titulo evento.nombre_evento evento %}</h4>
+              </div>
             </div>
-            <div class="text-sm text-slate-500 space-y-1">
-              <p class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">calendar_month</span>{{ evento.fecha_inicio|default:evento.fecha|date:"d/m/Y" }}</p>
-              <p class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">location_on</span>{{ evento.lugar|default:'Por definir' }}</p>
+
+            <div class="flex-1 p-5 space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold {% if evento.estado == 'PUBLICADO' %}bg-green-100 text-green-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                  {{ evento.estado }}
+                </span>
+                {% if evento.id == evento_sel.id %}
+                  <span class="text-xs font-semibold text-primary">Seleccionado</span>
+                {% endif %}
+              </div>
+
+              <div class="space-y-2 text-sm text-slate-600">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[18px] text-primary">calendar_month</span>
+                  <span>{% firstof evento.fecha evento.fecha_inicio "Fecha por confirmar" %}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[18px] text-primary">location_on</span>
+                  <span>{% firstof evento.lugar "Lugar por confirmar" %}</span>
+                </div>
+              </div>
+
+              <p class="text-sm text-slate-500 leading-relaxed min-h-[44px]">
+                {% firstof evento.resena "Sin descripción disponible." %}
+              </p>
             </div>
-            <p class="text-sm text-slate-600 line-clamp-3">{{ evento.resena|default:evento.descripcion|default:'Evento disponible para registro de proyectos.' }}</p>
-            <div class="pt-2">
+
+            <div class="p-5 pt-0 flex flex-col sm:flex-row gap-3">
+              <a href="{% url 'participante:elegir_evento' %}?evento={{ evento.id }}"
+                 class="flex-1 h-11 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium flex items-center justify-center">
+                Seleccionar
+              </a>
+
               {% if evento.id in eventos_ya_inscritos %}
-              <button type="button" class="w-full px-4 py-2.5 rounded-xl bg-slate-100 text-slate-500 text-sm font-medium cursor-not-allowed" disabled>
-                Ya registraste un proyecto
-              </button>
+                <button type="button" disabled class="flex-1 h-11 rounded-xl bg-slate-100 text-slate-400 text-sm font-medium cursor-not-allowed">
+                  Ya inscrito
+                </button>
               {% else %}
-              <button type="button" class="w-full px-4 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-medium open-register-modal"
-                data-evento-id="{{ evento.id }}"
-                data-evento-titulo="{{ evento.titulo|default:evento.nombre }}"
-                data-evento-fecha="{{ evento.fecha_inicio|default:evento.fecha|date:'d/m/Y' }}"
-                data-evento-lugar="{{ evento.lugar|default:'Por definir' }}"
-                data-evento-resena="{{ evento.resena|default:evento.descripcion|default:'Evento disponible para registro de proyectos.'|escape }}"
-                data-evento-imagen="{{ evento.imagen_resuelta }}">
-                Registrar proyecto
-              </button>
+                <button
+                  type="button"
+                  class="openRegisterModal flex-1 h-11 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-medium"
+                  data-evento-id="{{ evento.id }}"
+                  data-evento-label="{% firstof evento.titulo evento.nombre_evento evento %}"
+                  data-evento-fecha="{% firstof evento.fecha evento.fecha_inicio "Fecha por confirmar" %}"
+                  data-evento-lugar="{% firstof evento.lugar "Lugar por confirmar" %}"
+                  data-evento-resena="{% firstof evento.resena "Sin descripción disponible." %}"
+                >
+                  Registrar proyecto
+                </button>
               {% endif %}
             </div>
-          </div>
-        </article>
+          </article>
         {% empty %}
-        <div class="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
-          No hay eventos publicados disponibles en este momento.
-        </div>
+          <div class="md:col-span-2 2xl:col-span-3 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+            No hay eventos públicos disponibles en este momento.
+          </div>
         {% endfor %}
       </div>
     </div>
 
-    <aside class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-      <div>
-        <h3 class="text-lg font-bold text-slate-900">Resumen del flujo</h3>
-        <p class="text-sm text-slate-500 mt-1">Así funciona el registro para participantes.</p>
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h3 class="text-xl font-bold text-slate-900">Mis proyectos</h3>
+          <p class="text-sm text-slate-500 mt-1">Consulta o actualiza tus registros dentro de los eventos en los que participas.</p>
+        </div>
       </div>
-      <ol class="space-y-4 text-sm text-slate-600">
-        <li class="flex gap-3"><span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">1</span><span>Selecciona un evento publicado.</span></li>
-        <li class="flex gap-3"><span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">2</span><span>Registra tu proyecto con información general y archivos.</span></li>
-        <li class="flex gap-3"><span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">3</span><span>El sistema vincula tu participación al evento.</span></li>
-        <li class="flex gap-3"><span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">4</span><span>Después podrás consultar programa, pase y constancia.</span></li>
-      </ol>
-      {% if evento_sel %}
-      <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-        <p class="text-xs uppercase tracking-wide text-blue-700 font-semibold">Evento seleccionado</p>
-        <p class="mt-2 font-bold text-slate-900">{{ evento_sel.titulo|default:evento_sel.nombre }}</p>
-        <p class="mt-1 text-sm text-slate-600">{{ evento_sel.fecha_inicio|default:evento_sel.fecha|date:"d/m/Y" }} · {{ evento_sel.lugar|default:'Por definir' }}</p>
-      </div>
-      {% endif %}
-    </aside>
-  </section>
 
-  <section id="mis-proyectos" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <h3 class="text-lg font-bold text-slate-900">Mis proyectos registrados</h3>
-        <p class="text-sm text-slate-500 mt-1">Consulta y administra tus proyectos por evento.</p>
-      </div>
-    </div>
-
-    <div class="mt-6 overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="border-b border-slate-200 text-left text-slate-500 uppercase tracking-wide text-xs">
-            <th class="py-3 pr-4">Evento</th>
-            <th class="py-3 pr-4">Proyecto</th>
-            <th class="py-3 pr-4">Categoría</th>
-            <th class="py-3 pr-4">Estado</th>
-            <th class="py-3 pr-4">Programación</th>
-            <th class="py-3 text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          {% for proyecto in proyectos_usuario %}
-          <tr>
-            <td class="py-4 pr-4 font-medium text-slate-900">{{ proyecto.nombre_evento }}</td>
-            <td class="py-4 pr-4">{{ proyecto.nombre_proyecto }}</td>
-            <td class="py-4 pr-4">{{ proyecto.get_categoria_display }}</td>
-            <td class="py-4 pr-4">{{ proyecto.get_estado_display }}</td>
-            <td class="py-4 pr-4">{{ proyecto.get_estado_programacion_display }}</td>
-            <td class="py-4 text-right">
-              <div class="inline-flex items-center gap-2">
-                {% if proyecto.puede_editar %}
-                <button type="button" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 open-edit-modal"
+      <div class="mt-6 overflow-x-auto">
+        <table class="w-full min-w-[760px] text-sm">
+          <thead>
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+              <th class="py-3 pr-4 font-semibold">Proyecto</th>
+              <th class="py-3 pr-4 font-semibold">Evento</th>
+              <th class="py-3 pr-4 font-semibold">Estado</th>
+              <th class="py-3 pr-4 font-semibold">Programación</th>
+              <th class="py-3 pr-4 font-semibold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for proyecto in proyectos_usuario %}
+              <tr class="border-b border-slate-100 align-top">
+                <td class="py-4 pr-4 font-medium text-slate-900">{{ proyecto.nombre_proyecto }}</td>
+                <td class="py-4 pr-4 text-slate-600">{{ proyecto.evento }}</td>
+                <td class="py-4 pr-4 text-slate-600">{{ proyecto.get_estado_display }}</td>
+                <td class="py-4 pr-4 text-slate-600">{{ proyecto.get_estado_programacion_display }}</td>
+                <td class="py-4 pr-4">
+                  <div class="flex gap-2 flex-wrap">
+                    {% if proyecto.puede_editar %}
+                      <button
+                        type="button"
+                        class="openEditModal px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
                         data-proyecto-id="{{ proyecto.id }}"
-                        data-evento-id="{{ proyecto.evento_id }}"
-                        data-evento-titulo="{{ proyecto.nombre_evento }}"
-                        data-nombre-participante="{{ proyecto.nombre_participante }}"
-                        data-correo="{{ proyecto.correo }}"
-                        data-telefono="{{ proyecto.telefono }}"
-                        data-institucion="{{ proyecto.institucion_empresa }}"
-                        data-nombre-proyecto="{{ proyecto.nombre_proyecto }}"
-                        data-categoria="{{ proyecto.categoria }}"
-                        data-integrantes="{{ proyecto.numero_integrantes }}"
+                        data-evento-id="{{ proyecto.evento.id }}"
+                        data-evento-label="{{ proyecto.evento }}"
+                        data-evento-fecha="{% firstof proyecto.evento.fecha proyecto.evento.fecha_inicio "Fecha por confirmar" %}"
+                        data-evento-lugar="{% firstof proyecto.evento.lugar "Lugar por confirmar" %}"
+                        data-evento-resena="{% firstof proyecto.evento.resena "Sin descripción disponible." %}"
+                        data-nombre-participante="{{ proyecto.nombre_participante|escape }}"
+                        data-correo="{{ proyecto.correo|escape }}"
+                        data-telefono="{{ proyecto.telefono|escape }}"
+                        data-institucion="{{ proyecto.institucion_empresa|escape }}"
+                        data-nombre-proyecto="{{ proyecto.nombre_proyecto|escape }}"
+                        data-categoria="{{ proyecto.categoria|escape }}"
+                        data-numero-integrantes="{{ proyecto.numero_integrantes }}"
                         data-resumen="{{ proyecto.resumen|escape }}"
-                        data-requerimientos="{{ proyecto.requerimientos_tecnicos|escape }}">
-                  Editar
-                </button>
-                {% endif %}
-                <form method="post" action="{% url 'participante:eliminar_proyecto' proyecto.id %}" class="inline" onsubmit="return confirm('¿Deseas eliminar este proyecto?');">
-                  {% csrf_token %}
-                  <button type="submit" class="px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">Eliminar</button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="py-8 text-center text-slate-500">Aún no has registrado proyectos.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                        data-requerimientos="{{ proyecto.requerimientos_tecnicos|default_if_none:''|escape }}"
+                      >
+                        Editar
+                      </button>
+                    {% endif %}
+                    <form method="post" action="{% url 'participante:eliminar_proyecto' proyecto.id %}" onsubmit="return confirm('¿Deseas eliminar este proyecto?');">
+                      {% csrf_token %}
+                      <button type="submit" class="px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100">Eliminar</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="py-8 text-center text-slate-500">Aún no tienes proyectos registrados.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
+
+  <aside class="space-y-6">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <h3 class="text-lg font-bold text-slate-900">Evento seleccionado</h3>
+      {% if evento_sel %}
+        <div class="mt-4 space-y-3 text-sm text-slate-600">
+          <p class="text-base font-semibold text-slate-900">{{ evento_sel }}</p>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">calendar_month</span>
+            <span>{% firstof evento_sel.fecha evento_sel.fecha_inicio "Fecha por confirmar" %}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">location_on</span>
+            <span>{% firstof evento_sel.lugar "Lugar por confirmar" %}</span>
+          </div>
+        </div>
+      {% else %}
+        <p class="mt-4 text-sm text-slate-500">Selecciona un evento desde las tarjetas para enfocar el registro y la edición.</p>
+      {% endif %}
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <h3 class="text-lg font-bold text-slate-900">Resumen del flujo</h3>
+      <ol class="mt-4 space-y-3 text-sm text-slate-600 list-decimal list-inside">
+        <li>Selecciona un evento público.</li>
+        <li>Registra un único proyecto por evento.</li>
+        <li>Completa tu documentación para avanzar en el proceso.</li>
+        <li>Consulta programa, pase y constancia desde el menú lateral.</li>
+      </ol>
+    </div>
+  </aside>
 </div>
 {% endblock %}
 
 {% block modals %}
-<div id="modalRegistroProyecto" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-950/60" onclick="closeModal('modalRegistroProyecto')"></div>
-  <div class="relative min-h-full flex items-center justify-center p-4">
-    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-      <div class="flex flex-col lg:flex-row max-h-[90vh]">
-        <div class="lg:w-2/5 bg-slate-50 border-r border-slate-200 p-6 overflow-y-auto">
-          <div id="modalEventoImagen" class="h-48 rounded-2xl bg-slate-200 bg-cover bg-center"></div>
-          <div class="mt-5 space-y-3">
-            <p class="text-xs uppercase tracking-wide text-primary font-semibold">Evento seleccionado</p>
-            <h3 id="modalEventoTitulo" class="text-2xl font-bold text-slate-900"></h3>
-            <p id="modalEventoFecha" class="text-sm text-slate-600"></p>
-            <p id="modalEventoLugar" class="text-sm text-slate-600"></p>
-            <div class="rounded-xl border border-slate-200 bg-white p-4">
-              <h4 class="text-sm font-bold text-slate-800 mb-2">Reseña del evento</h4>
-              <p id="modalEventoResena" class="text-sm text-slate-600 leading-relaxed"></p>
-            </div>
-          </div>
+<div id="registroModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" data-close-modal="registroModal"></div>
+  <div class="relative min-h-full flex items-center justify-center p-4 lg:p-6">
+    <div class="w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+      <div class="flex items-start justify-between gap-4 px-6 py-5 border-b border-slate-200 shrink-0">
+        <div>
+          <h2 id="modalTitle" class="text-2xl font-bold text-slate-900">Registro de proyecto al evento</h2>
+          <p class="text-sm text-slate-500 mt-1">Completa la información requerida para formalizar tu participación.</p>
         </div>
-        <div class="lg:w-3/5 flex flex-col max-h-[90vh]">
-          <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h3 id="modalTituloFormulario" class="text-lg font-bold text-slate-900">Registrar proyecto</h3>
-              <p class="text-sm text-slate-500 mt-1">Captura la información principal de tu participación.</p>
-            </div>
-            <button type="button" onclick="closeModal('modalRegistroProyecto')" class="text-slate-400 hover:text-slate-700">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <form method="post" enctype="multipart/form-data" id="registroForm" class="flex-1 flex flex-col overflow-hidden">
-            {% csrf_token %}
-            <input type="hidden" name="action" id="modalAction" value="registrar">
-            <input type="hidden" name="proyecto_id" id="modalProyectoId" value="">
-            <input type="hidden" name="evento_id" id="eventoSeleccionado" value="{% if evento_modal %}{{ evento_modal.id }}{% endif %}">
+        <button type="button" class="h-10 w-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 shrink-0" data-close-modal="registroModal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
 
-            <div class="flex-1 overflow-y-auto p-6 space-y-5">
+      <div class="flex-1 overflow-y-auto">
+        <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] min-h-full">
+          <aside class="bg-slate-50 border-b xl:border-b-0 xl:border-r border-slate-200 p-6 space-y-5">
+            <div class="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-primary font-medium">
+              Debes registrar un solo proyecto por evento.
+            </div>
+
+            <div class="space-y-4 text-sm text-slate-600">
+              <h3 id="modalEventLabel" class="text-xl font-bold text-slate-900">{% if evento_modal %}{{ evento_modal }}{% else %}Evento no seleccionado{% endif %}</h3>
+              <div class="flex items-center gap-3"><span class="material-symbols-outlined text-primary">calendar_month</span><span id="modalEventDate">{% firstof evento_modal.fecha evento_modal.fecha_inicio "Fecha por confirmar" %}</span></div>
+              <div class="flex items-center gap-3"><span class="material-symbols-outlined text-primary">location_on</span><span id="modalEventLocation">{% firstof evento_modal.lugar "Lugar por confirmar" %}</span></div>
+            </div>
+
+            <div class="rounded-xl bg-white border border-slate-200 p-4">
+              <h4 class="text-sm font-bold text-slate-800 mb-2">Reseña</h4>
+              <p id="modalEventSummary" class="text-sm text-slate-600 leading-relaxed">{% firstof evento_modal.resena "Sin descripción disponible." %}</p>
+            </div>
+          </aside>
+
+          <section class="p-6">
+            <form method="post" enctype="multipart/form-data" id="registroForm" class="space-y-6">
+              {% csrf_token %}
+              <input type="hidden" name="action" id="actionField" value="registrar">
+              <input type="hidden" name="evento_id" id="eventoSeleccionado" value="{% if evento_modal %}{{ evento_modal.id }}{% endif %}">
+              <input type="hidden" name="proyecto_id" id="proyectoIdField" value="">
+
               {% if form.non_field_errors %}
-              <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {{ form.non_field_errors }}
+                </div>
               {% endif %}
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Nombre del participante</label>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre del participante</label>
                   {{ form.nombre_participante }}
-                  {% for error in form.nombre_participante.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+                  {% if form.nombre_participante.errors %}<p class="mt-1 text-xs text-red-600">{{ form.nombre_participante.errors|join:', ' }}</p>{% endif %}
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Correo</label>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Correo electrónico</label>
                   {{ form.correo }}
-                  {% for error in form.correo.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+                  {% if form.correo.errors %}<p class="mt-1 text-xs text-red-600">{{ form.correo.errors|join:', ' }}</p>{% endif %}
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Teléfono</label>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Teléfono</label>
                   {{ form.telefono }}
-                  {% for error in form.telefono.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+                  {% if form.telefono.errors %}<p class="mt-1 text-xs text-red-600">{{ form.telefono.errors|join:', ' }}</p>{% endif %}
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Institución o empresa</label>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Institución / Empresa</label>
                   {{ form.institucion_empresa }}
-                  {% for error in form.institucion_empresa.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-                </div>
-                <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Nombre del proyecto</label>
-                  {{ form.nombre_proyecto }}
-                  {% for error in form.nombre_proyecto.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Categoría</label>
-                  {{ form.categoria }}
-                  {% for error in form.categoria.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Número de integrantes</label>
-                  {{ form.numero_integrantes }}
-                  {% for error in form.numero_integrantes.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-                </div>
-                <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Resumen</label>
-                  {{ form.resumen }}
-                  {% for error in form.resumen.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Presentación</label>
-                  {{ form.presentacion }}
-                  {% for error in form.presentacion.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Informe</label>
-                  {{ form.informe }}
-                  {% for error in form.informe.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-                </div>
-                <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Requerimientos técnicos</label>
-                  {{ form.requerimientos_tecnicos }}
-                  {% for error in form.requerimientos_tecnicos.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+                  {% if form.institucion_empresa.errors %}<p class="mt-1 text-xs text-red-600">{{ form.institucion_empresa.errors|join:', ' }}</p>{% endif %}
                 </div>
               </div>
-            </div>
 
-            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-              <button type="button" onclick="closeModal('modalRegistroProyecto')" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium">Cancelar</button>
-              <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-medium">Guardar proyecto</button>
-            </div>
-          </form>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre del proyecto</label>
+                  {{ form.nombre_proyecto }}
+                  {% if form.nombre_proyecto.errors %}<p class="mt-1 text-xs text-red-600">{{ form.nombre_proyecto.errors|join:', ' }}</p>{% endif %}
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Categoría</label>
+                  {{ form.categoria }}
+                  {% if form.categoria.errors %}<p class="mt-1 text-xs text-red-600">{{ form.categoria.errors|join:', ' }}</p>{% endif %}
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Número de integrantes</label>
+                  {{ form.numero_integrantes }}
+                  {% if form.numero_integrantes.errors %}<p class="mt-1 text-xs text-red-600">{{ form.numero_integrantes.errors|join:', ' }}</p>{% endif %}
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Descripción breve del proyecto</label>
+                  {{ form.resumen }}
+                  {% if form.resumen.errors %}<p class="mt-1 text-xs text-red-600">{{ form.resumen.errors|join:', ' }}</p>{% endif %}
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Presentación</label>
+                  {{ form.presentacion }}
+                  {% if form.presentacion.errors %}<p class="mt-1 text-xs text-red-600">{{ form.presentacion.errors|join:', ' }}</p>{% endif %}
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Informe</label>
+                  {{ form.informe }}
+                  {% if form.informe.errors %}<p class="mt-1 text-xs text-red-600">{{ form.informe.errors|join:', ' }}</p>{% endif %}
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Requerimientos técnicos</label>
+                  {{ form.requerimientos_tecnicos }}
+                  {% if form.requerimientos_tecnicos.errors %}<p class="mt-1 text-xs text-red-600">{{ form.requerimientos_tecnicos.errors|join:', ' }}</p>{% endif %}
+                </div>
+              </div>
+
+              <div class="sticky bottom-0 bg-white pt-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+                <button type="button" class="h-11 px-5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50" data-close-modal="registroModal">Cancelar</button>
+                <button type="submit" class="h-11 px-5 rounded-xl bg-primary text-white hover:bg-primary-dark font-medium">Guardar proyecto</button>
+              </div>
+            </form>
+          </section>
         </div>
       </div>
     </div>
@@ -264,67 +324,81 @@
 
 {% block extra_js %}
 <script>
-  (function() {
-    const modalId = 'modalRegistroProyecto';
-    const form = document.getElementById('registroForm');
-    const modalImage = document.getElementById('modalEventoImagen');
-    const modalTitle = document.getElementById('modalEventoTitulo');
-    const modalFecha = document.getElementById('modalEventoFecha');
-    const modalLugar = document.getElementById('modalEventoLugar');
-    const modalResena = document.getElementById('modalEventoResena');
-    const modalAction = document.getElementById('modalAction');
-    const modalProyectoId = document.getElementById('modalProyectoId');
-    const eventoSeleccionado = document.getElementById('eventoSeleccionado');
-    const modalTituloFormulario = document.getElementById('modalTituloFormulario');
+  (function () {
+    const modal = document.getElementById('registroModal');
+    if (!modal) return;
 
-    function setModalEventData(button) {
-      modalImage.style.backgroundImage = button.dataset.eventoImagen ? `url('${button.dataset.eventoImagen}')` : 'none';
-      modalTitle.textContent = button.dataset.eventoTitulo || '';
-      modalFecha.textContent = button.dataset.eventoFecha || '';
-      modalLugar.textContent = button.dataset.eventoLugar || '';
-      modalResena.textContent = button.dataset.eventoResena || '';
-      eventoSeleccionado.value = button.dataset.eventoId || '';
+    const actionField = document.getElementById('actionField');
+    const proyectoIdField = document.getElementById('proyectoIdField');
+    const eventoInput = document.getElementById('eventoSeleccionado');
+    const title = document.getElementById('modalTitle');
+    const eventLabel = document.getElementById('modalEventLabel');
+    const eventDate = document.getElementById('modalEventDate');
+    const eventLocation = document.getElementById('modalEventLocation');
+    const eventSummary = document.getElementById('modalEventSummary');
+    const form = document.getElementById('registroForm');
+
+    function openRegistro() {
+      modal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
     }
 
-    document.querySelectorAll('.open-register-modal').forEach(function(button) {
-      button.addEventListener('click', function() {
+    function closeRegistro() {
+      modal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    modal.querySelectorAll('[data-close-modal="registroModal"]').forEach(btn => {
+      btn.addEventListener('click', closeRegistro);
+    });
+
+    document.querySelectorAll('.openRegisterModal').forEach(button => {
+      button.addEventListener('click', function () {
+        if (actionField) actionField.value = 'registrar';
+        if (proyectoIdField) proyectoIdField.value = '';
+        if (title) title.textContent = 'Registro de proyecto al evento';
+        if (eventoInput) eventoInput.value = this.dataset.eventoId || '';
+        if (eventLabel) eventLabel.textContent = this.dataset.eventoLabel || 'Evento no seleccionado';
+        if (eventDate) eventDate.textContent = this.dataset.eventoFecha || 'Fecha por confirmar';
+        if (eventLocation) eventLocation.textContent = this.dataset.eventoLugar || 'Lugar por confirmar';
+        if (eventSummary) eventSummary.textContent = this.dataset.eventoResena || 'Sin descripción disponible.';
         if (form) form.reset();
-        setModalEventData(button);
-        modalAction.value = 'registrar';
-        modalProyectoId.value = '';
-        modalTituloFormulario.textContent = 'Registrar proyecto';
-        openModal(modalId);
+        if (eventoInput) eventoInput.value = this.dataset.eventoId || '';
+        openRegistro();
       });
     });
 
-    document.querySelectorAll('.open-edit-modal').forEach(function(button) {
-      button.addEventListener('click', function() {
-        modalTitle.textContent = button.dataset.eventoTitulo || '';
-        eventoSeleccionado.value = button.dataset.eventoId || '';
-        modalAction.value = 'editar';
-        modalProyectoId.value = button.dataset.proyectoId || '';
-        modalTituloFormulario.textContent = 'Editar proyecto';
+    document.querySelectorAll('.openEditModal').forEach(button => {
+      button.addEventListener('click', function () {
+        if (actionField) actionField.value = 'editar';
+        if (proyectoIdField) proyectoIdField.value = this.dataset.proyectoId || '';
+        if (title) title.textContent = 'Editar proyecto registrado';
+        if (eventoInput) eventoInput.value = this.dataset.eventoId || '';
+        if (eventLabel) eventLabel.textContent = this.dataset.eventoLabel || 'Evento no seleccionado';
+        if (eventDate) eventDate.textContent = this.dataset.eventoFecha || 'Fecha por confirmar';
+        if (eventLocation) eventLocation.textContent = this.dataset.eventoLugar || 'Lugar por confirmar';
+        if (eventSummary) eventSummary.textContent = this.dataset.eventoResena || 'Sin descripción disponible.';
 
         const setValue = (name, value) => {
-          const field = form.querySelector(`[name="${name}"]`);
+          const field = form ? form.querySelector(`[name="${name}"]`) : null;
           if (field) field.value = value || '';
         };
 
-        setValue('nombre_participante', button.dataset.nombreParticipante);
-        setValue('correo', button.dataset.correo);
-        setValue('telefono', button.dataset.telefono);
-        setValue('institucion_empresa', button.dataset.institucion);
-        setValue('nombre_proyecto', button.dataset.nombreProyecto);
-        setValue('categoria', button.dataset.categoria);
-        setValue('numero_integrantes', button.dataset.integrantes);
-        setValue('resumen', button.dataset.resumen);
-        setValue('requerimientos_tecnicos', button.dataset.requerimientos);
-        openModal(modalId);
+        setValue('nombre_participante', this.dataset.nombreParticipante);
+        setValue('correo', this.dataset.correo);
+        setValue('telefono', this.dataset.telefono);
+        setValue('institucion_empresa', this.dataset.institucion);
+        setValue('nombre_proyecto', this.dataset.nombreProyecto);
+        setValue('categoria', this.dataset.categoria);
+        setValue('numero_integrantes', this.dataset.numeroIntegrantes);
+        setValue('resumen', this.dataset.resumen);
+        setValue('requerimientos_tecnicos', this.dataset.requerimientos);
+        openRegistro();
       });
     });
 
     {% if abrir_modal %}
-      openModal(modalId);
+      openRegistro();
     {% endif %}
   })();
 </script>

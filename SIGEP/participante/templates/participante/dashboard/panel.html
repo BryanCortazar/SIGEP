@@ -80,8 +80,8 @@
       <div class="mt-4 space-y-3">
         <p class="text-sm text-slate-500">Proyecto o programación más cercana.</p>
         <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <p class="font-bold text-slate-900">{{ proximo.nombre_proyecto|default:proximo.nombre }}</p>
-          <p class="text-sm text-slate-600 mt-1">{{ proximo.nombre_evento|default:proximo.evento.titulo }}</p>
+          <p class="font-bold text-slate-900">{{ proximo.nombre_proyecto }}</p>
+          <p class="text-sm text-slate-600 mt-1">{{ proximo.nombre_evento }}</p>
           <div class="mt-3 space-y-1 text-sm text-slate-600">
             <p>{{ proximo.fecha_programada|date:"d/m/Y"|default:"Pendiente de fecha" }}</p>
             <p>{{ proximo.hora_inicio|time:"H:i"|default:"--:--" }}{% if proximo.hora_fin %} - {{ proximo.hora_fin|time:"H:i" }}{% endif %}</p>

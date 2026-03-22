@@ -1,0 +1,276 @@
+{% extends "participante/base_part.html" %}
+
+{% block title %}Participante: Gestión de Participación - SIGEP{% endblock %}
+{% block section_label %}Gestión{% endblock %}
+{% block section_title %}Gestión de Participación{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Gestión de Participación</h1>
+      <p class="text-slate-500 mt-2 max-w-3xl">
+        Administra la presentación, la documentación del proyecto y los requerimientos técnicos de tu participación registrada.
+      </p>
+    </div>
+    {% if resumen %}
+      <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm min-w-[250px]">
+        <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Avance documental</p>
+        <p class="text-3xl font-black text-slate-900 mt-1">{{ resumen.avance }}%</p>
+        <div class="mt-3 h-2 rounded-full bg-slate-200 overflow-hidden">
+          <div class="h-full bg-primary rounded-full" style="width: {{ resumen.avance }}%;"></div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if proyectos %}
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <label for="proyecto_selector" class="block text-sm font-semibold text-slate-800 mb-2">Seleccionar proyecto</label>
+          <select id="proyecto_selector"
+                  onchange="if(this.value){ window.location.href='?proyecto=' + this.value; }"
+                  class="w-full md:w-[520px] h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary text-sm">
+            {% for item in proyectos %}
+              <option value="{{ item.id }}" {% if proyecto_sel and item.id == proyecto_sel.id %}selected{% endif %}>
+                {{ item.nombre_proyecto }} — {{ item.nombre_evento }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {% if proyecto_sel %}
+          <div class="flex flex-wrap gap-3 text-sm">
+            <span class="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-2 font-semibold">
+              Estado: {{ proyecto_sel.get_estado_display }}
+            </span>
+            <span class="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-3 py-2 font-semibold">
+              Programación: {{ proyecto_sel.get_estado_programacion_display }}
+            </span>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if proyecto_sel %}
+      <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {% csrf_token %}
+        <input type="hidden" name="proyecto_id" value="{{ proyecto_sel.id }}">
+
+        <section class="xl:col-span-2 space-y-6">
+          {% if form.errors %}
+            <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p class="font-semibold mb-2">Corrige los siguientes campos:</p>
+              <ul class="list-disc pl-5 space-y-1">
+                {% for field in form %}
+                  {% for error in field.errors %}
+                    <li><span class="font-medium">{{ field.label }}:</span> {{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-200">
+              <div class="flex items-center gap-3">
+                <div class="h-11 w-11 rounded-xl bg-orange-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-orange-500">folder_open</span>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-slate-900">Documentación de participación</h2>
+                  <p class="text-sm text-slate-500">Actualiza únicamente los archivos y requerimientos de este proyecto sin modificar el registro principal.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-6 space-y-4">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div class="flex items-start gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+                      <span class="material-symbols-outlined text-indigo-600">slideshow</span>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-bold text-slate-900">Presentación del proyecto</h3>
+                      <p class="text-sm text-slate-500">
+                        {% if proyecto_sel.presentacion %}
+                          <a href="{{ proyecto_sel.presentacion.url }}" target="_blank" class="hover:text-primary break-all">
+                            {{ proyecto_sel.presentacion.name }}
+                          </a>
+                        {% else %}
+                          Sin archivo cargado.
+                        {% endif %}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span class="px-3 py-1 rounded-full text-xs font-semibold {% if proyecto_sel.presentacion %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-700{% endif %}">
+                    {% if proyecto_sel.presentacion %}Cargada{% else %}Pendiente{% endif %}
+                  </span>
+                </div>
+
+                <div class="mt-4">
+                  <label class="block text-sm font-medium text-slate-700 mb-2">Subir presentación (PDF, PPT o PPTX)</label>
+                  {{ form.presentacion }}
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div class="flex items-start gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                      <span class="material-symbols-outlined text-blue-600">description</span>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-bold text-slate-900">Documentación / informe</h3>
+                      <p class="text-sm text-slate-500">
+                        {% if proyecto_sel.informe %}
+                          <a href="{{ proyecto_sel.informe.url }}" target="_blank" class="hover:text-primary break-all">
+                            {{ proyecto_sel.informe.name }}
+                          </a>
+                        {% else %}
+                          Sin archivo cargado.
+                        {% endif %}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span class="px-3 py-1 rounded-full text-xs font-semibold {% if proyecto_sel.informe %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-700{% endif %}">
+                    {% if proyecto_sel.informe %}Cargado{% else %}Pendiente{% endif %}
+                  </span>
+                </div>
+
+                <div class="mt-4">
+                  <label class="block text-sm font-medium text-slate-700 mb-2">Subir informe (PDF, DOC o DOCX)</label>
+                  {{ form.informe }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-200">
+              <div class="flex items-center gap-3">
+                <div class="h-11 w-11 rounded-xl bg-purple-100 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-purple-600">construction</span>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-slate-900">Requerimientos técnicos</h2>
+                  <p class="text-sm text-slate-500">Detalla el equipo, material o soporte adicional que necesitas para tu participación.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-6">
+              <label class="block text-sm font-medium text-slate-700 mb-2">Detalle de requerimientos</label>
+              {{ form.requerimientos_tecnicos }}
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row justify-end gap-3">
+            <a href="{% url 'participante:elegir_evento' %}{% if proyecto_sel.evento_id %}?evento={{ proyecto_sel.evento_id }}{% endif %}"
+               class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold">
+              <span class="material-symbols-outlined text-[20px]">open_in_new</span>
+              Ver registro completo
+            </a>
+            <button type="submit"
+                    {% if not resumen.edicion_habilitada %}disabled{% endif %}
+                    class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-[20px]">save</span>
+              Guardar documentación
+            </button>
+          </div>
+          {% if not resumen.edicion_habilitada %}
+            <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              Este proyecto ya no permite edición documental desde esta opción porque su estado actual es <strong>{{ proyecto_sel.get_estado_display }}</strong>.
+            </p>
+          {% endif %}
+        </section>
+
+        <aside class="xl:col-span-1 space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-200">
+              <h2 class="text-lg font-bold text-slate-900">Resumen de participación</h2>
+            </div>
+
+            <div class="p-6 space-y-5">
+              <div class="flex items-start gap-4">
+                <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-primary">event</span>
+                </div>
+                <div>
+                  <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Evento</p>
+                  <p class="text-sm font-semibold text-slate-900">{{ resumen.evento }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-4">
+                <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-primary">apps</span>
+                </div>
+                <div>
+                  <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Proyecto</p>
+                  <p class="text-sm font-semibold text-slate-900">{{ resumen.proyecto }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-4">
+                <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-primary">category</span>
+                </div>
+                <div>
+                  <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Categoría</p>
+                  <p class="text-sm font-semibold text-slate-900">{{ resumen.categoria }}</p>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-slate-600">Presentación</span>
+                  <span class="font-semibold {% if resumen.presentacion_cargada %}text-emerald-700{% else %}text-slate-500{% endif %}">
+                    {% if resumen.presentacion_cargada %}Cargada{% else %}Pendiente{% endif %}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-slate-600">Informe</span>
+                  <span class="font-semibold {% if resumen.informe_cargado %}text-emerald-700{% else %}text-slate-500{% endif %}">
+                    {% if resumen.informe_cargado %}Cargado{% else %}Pendiente{% endif %}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-slate-600">Requerimientos técnicos</span>
+                  <span class="font-semibold {% if resumen.requiere_apoyo %}text-emerald-700{% else %}text-slate-500{% endif %}">
+                    {% if resumen.requiere_apoyo %}Registrados{% else %}Sin captura{% endif %}
+                  </span>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Sugerencia</p>
+                <p class="text-sm text-slate-700 mt-1">Mantén tus archivos actualizados para facilitar la revisión y la programación de tu proyecto dentro del evento.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </form>
+    {% endif %}
+  {% else %}
+    <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+      <h3 class="text-lg font-bold text-slate-900">Aún no tienes proyectos registrados</h3>
+      <p class="mt-2 text-sm text-slate-500">
+        Primero registra tu participación en un evento y después podrás gestionar la documentación desde esta opción.
+      </p>
+      <a href="{% url 'participante:elegir_evento' %}"
+         class="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
+        <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+        Ir a elegir evento
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

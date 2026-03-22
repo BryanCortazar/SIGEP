@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vista previa de constancia - SIGEP</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #eef2f7;
+      color: #0f172a;
+    }
+    .toolbar {
+      width: 100%;
+      max-width: 1100px;
+      margin: 24px auto 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 0 16px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: #137fec;
+      border-color: #137fec;
+      color: #ffffff;
+    }
+    .sheet-wrap {
+      width: 100%;
+      padding: 0 16px 24px;
+    }
+    .sheet {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: 0 12px 36px rgba(15, 23, 42, 0.10);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .certificate {
+      position: relative;
+      min-height: 1120px;
+      padding: 56px 64px;
+      background:
+        radial-gradient(circle at top right, rgba(19,127,236,0.10), transparent 22%),
+        radial-gradient(circle at bottom left, rgba(14,165,233,0.08), transparent 20%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 14px solid #dbeafe;
+    }
+    .watermark {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0.05;
+      font-size: 120px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 10px;
+      transform: rotate(-24deg);
+    }
+    .header {
+      position: relative;
+      text-align: center;
+      border-bottom: 2px solid #dbeafe;
+      padding-bottom: 22px;
+      margin-bottom: 34px;
+    }
+    .eyebrow {
+      font-size: 13px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #2563eb;
+      font-weight: 700;
+    }
+    .title {
+      margin: 14px 0 8px;
+      font-size: 42px;
+      line-height: 1.1;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .subtitle {
+      margin: 0;
+      font-size: 16px;
+      color: #475569;
+    }
+    .body-copy {
+      margin-top: 34px;
+      text-align: center;
+      font-size: 20px;
+      line-height: 1.8;
+      color: #334155;
+    }
+    .recipient {
+      margin: 24px 0 10px;
+      text-align: center;
+      font-size: 38px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .highlight {
+      color: #137fec;
+      font-weight: 800;
+    }
+    .meta-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 36px;
+    }
+    .meta-card {
+      border: 1px solid #dbeafe;
+      border-radius: 14px;
+      background: #f8fbff;
+      padding: 16px 18px;
+    }
+    .meta-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .meta-value {
+      font-size: 18px;
+      color: #0f172a;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .footer {
+      position: relative;
+      margin-top: 48px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      align-items: end;
+    }
+    .signature {
+      padding-top: 48px;
+      text-align: center;
+    }
+    .signature-line {
+      border-top: 2px solid #94a3b8;
+      padding-top: 10px;
+      font-size: 14px;
+      color: #475569;
+      font-weight: 700;
+    }
+    .details {
+      text-align: right;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.8;
+    }
+    .badge {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 12px;
+    }
+
+    @media print {
+      body { background: #ffffff; }
+      .toolbar { display: none !important; }
+      .sheet-wrap { padding: 0; }
+      .sheet { box-shadow: none; border-radius: 0; max-width: none; }
+      .certificate { min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="{% url 'participante:constancia' %}" class="btn">Volver</a>
+    <button type="button" class="btn primary" onclick="window.print()">Descargar / Imprimir PDF</button>
+  </div>
+
+  <div class="sheet-wrap">
+    <div class="sheet">
+      <section class="certificate">
+        <div class="watermark">SIGEP</div>
+
+        <header class="header">
+          <div class="eyebrow">Sistema de Gestión de Eventos</div>
+          <h1 class="title">Constancia de participación</h1>
+          <p class="subtitle">Documento emitido una vez concluido el proceso completo de evaluación del proyecto registrado.</p>
+          <div class="badge">Folio {{ constancia.folio }}</div>
+        </header>
+
+        <div class="body-copy">
+          Se hace constar que
+        </div>
+
+        <div class="recipient">{{ nombre_participante }}</div>
+
+        <div class="body-copy">
+          participó en el evento <span class="highlight">{{ evento_nombre }}</span>
+          con el proyecto <span class="highlight">{{ proyecto.nombre_proyecto }}</span>,
+          dentro de la categoría <span class="highlight">{{ proyecto.get_categoria_display }}</span>,
+          habiendo concluido satisfactoriamente el proceso de evaluación correspondiente.
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-card">
+            <div class="meta-label">Institución / empresa</div>
+            <div class="meta-value">{{ institucion }}</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Promedio final</div>
+            <div class="meta-value">{% if promedio %}{{ promedio }}{% else %}No disponible{% endif %}</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Evaluaciones concluidas</div>
+            <div class="meta-value">{{ evaluaciones_enviadas }} de {{ total_evaluadores }}</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Fecha de emisión</div>
+            <div class="meta-value">{{ constancia.emitida_en|date:"d/m/Y H:i" }}</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Correo de contacto</div>
+            <div class="meta-value">{{ correo_contacto }}</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Teléfono de contacto</div>
+            <div class="meta-value">{{ telefono_contacto }}</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="signature">
+            <div class="signature-line">Coordinación general del evento</div>
+          </div>
+          <div class="details">
+            <div><strong>Proyecto:</strong> {{ proyecto.nombre_proyecto }}</div>
+            <div><strong>Evento:</strong> {{ evento_nombre }}</div>
+            {% if fecha_evento %}<div><strong>Fecha del evento:</strong> {{ fecha_evento|date:"d/m/Y" }}</div>{% endif %}
+            <div><strong>Integrantes declarados:</strong> {{ proyecto.numero_integrantes }}</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {% if auto_print %}
+  <script>
+    window.addEventListener('load', function () {
+      window.print();
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

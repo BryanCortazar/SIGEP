@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validación de pase | SIGEP</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+  <main class="max-w-5xl mx-auto px-4 py-8">
+    <div class="rounded-3xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+      <div class="px-6 py-5 {% if es_valido %}bg-emerald-600{% else %}bg-rose-600{% endif %} text-white">
+        <p class="text-sm opacity-90">SIGEP · Validación de acceso</p>
+        <div class="mt-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 class="text-2xl font-bold">{{ proyecto.nombre_participante }}</h1>
+            <p class="text-sm opacity-90 mt-1">{{ proyecto.nombre_proyecto }}</p>
+          </div>
+          <span class="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-semibold {% if es_valido %}bg-white/15{% else %}bg-white/15{% endif %}">
+            {% if es_valido %}Pase válido{% else %}Pase no válido{% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="p-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <section class="xl:col-span-2 space-y-6">
+          <div class="rounded-2xl border border-slate-200 p-5">
+            <h2 class="text-lg font-bold text-slate-900">Datos generales del participante</h2>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-slate-500">Nombre</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.nombre_participante }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Correo</p>
+                <p class="font-semibold text-slate-900 mt-1 break-all">{{ proyecto.correo }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Teléfono</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.telefono }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Institución / empresa</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.institucion_empresa }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 p-5">
+            <h2 class="text-lg font-bold text-slate-900">Datos del proyecto</h2>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-slate-500">Proyecto</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.nombre_proyecto }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Categoría</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.get_categoria_display }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Evento</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.nombre_evento }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Integrantes</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.numero_integrantes }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Estado del proyecto</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.get_estado_display }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Programación</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.get_estado_programacion_display }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Fecha programada</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.fecha_programada|date:"d/m/Y"|default:"Pendiente" }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Horario</p>
+                <p class="font-semibold text-slate-900 mt-1">
+                  {{ proyecto.hora_inicio|time:"H:i"|default:"--:--" }}
+                  {% if proyecto.hora_fin %} - {{ proyecto.hora_fin|time:"H:i" }}{% endif %}
+                </p>
+              </div>
+              <div class="md:col-span-2">
+                <p class="text-slate-500">Espacio asignado</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ proyecto.espacio_asignado|default:"Por definir" }}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="space-y-6">
+          <div class="rounded-2xl border border-slate-200 p-5 bg-slate-50">
+            <h2 class="text-lg font-bold text-slate-900">Control de escaneo</h2>
+            <div class="mt-4 space-y-4 text-sm">
+              <div>
+                <p class="text-slate-500">Estado del QR</p>
+                <p class="font-semibold mt-1 {% if pase.activo %}text-emerald-700{% else %}text-rose-700{% endif %}">
+                  {% if pase.activo %}Activo{% else %}Inactivo{% endif %}
+                </p>
+              </div>
+              <div>
+                <p class="text-slate-500">Escaneos acumulados</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ pase.total_escaneos }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Último escaneo</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ pase.ultimo_escaneo|date:"d/m/Y H:i"|default:"Sin registros" }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Token</p>
+                <p class="font-mono text-xs text-slate-700 mt-1 break-all">{{ pase.token }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border {% if es_valido %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-rose-200 bg-rose-50 text-rose-800{% endif %} p-5 text-sm">
+            {% if es_valido %}
+            El pase fue validado correctamente. Puedes usar esta ficha para cotejar la identidad del participante y la información de su proyecto.
+            {% else %}
+            El pase no está habilitado para acceso. Verifica el estado del QR o del proyecto antes de permitir el ingreso.
+            {% endif %}
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
