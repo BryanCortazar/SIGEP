@@ -1,385 +1,289 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from types import SimpleNamespace
 
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
+from django.db.models import Avg, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from administrador.models import Evento
-from .models import InscripcionParticipante, PerfilParticipante
+from coordinador.models import Inscripcion
+from evaluador.models import EvaluacionAsignacion, EvaluacionEntrega
+
+from .forms import (
+    ParticipanteCuentaForm,
+    ParticipantePerfilForm,
+    ProyectoParticipanteForm,
+    SeleccionEventoForm,
+)
+from .models import PerfilParticipante, ProyectoParticipante
+
+try:
+    from administrador.utils_auditoria import registrar_auditoria
+except Exception:  # pragma: no cover
+    def registrar_auditoria(**kwargs):
+        return None
 
 
-def _resolve_participante_profile(user):
-    try:
-        return user.perfilparticipante
-    except Exception:
-        return SimpleNamespace(
-            institucion=getattr(user, "institucion", ""),
-            carrera=getattr(user, "carrera", ""),
-            telefono=getattr(user, "telefono", ""),
-            bio=getattr(user, "bio", ""),
-            avatar=getattr(user, "avatar", None),
-        )
+def _resolve_profile(user):
+    perfil, _ = PerfilParticipante.objects.get_or_create(usuario=user)
+    return perfil
 
 
-def _get_event_name(evento):
-    if hasattr(evento, "nombre") and evento.nombre:
-        return evento.nombre
-    if hasattr(evento, "titulo") and evento.titulo:
-        return evento.titulo
-    return "Evento"
+def _asegurar_inscripcion_participante(evento: Evento, usuario) -> Inscripcion:
+    inscripcion, _ = Inscripcion.objects.get_or_create(
+        evento=evento,
+        usuario=usuario,
+        defaults={"rol": Inscripcion.ROL_PARTICIPANTE},
+    )
+    if inscripcion.rol != Inscripcion.ROL_PARTICIPANTE:
+        inscripcion.rol = Inscripcion.ROL_PARTICIPANTE
+        inscripcion.save(update_fields=["rol", "actualizado_en"])
+    return inscripcion
 
 
-def _get_event_place(evento):
-    if hasattr(evento, "lugar") and evento.lugar:
-        return evento.lugar
-    if hasattr(evento, "ubicacion") and evento.ubicacion:
-        return evento.ubicacion
-    if hasattr(evento, "sede") and evento.sede:
-        return evento.sede
-    return "Por definir"
-
-
-def _get_event_start(evento):
-    if hasattr(evento, "fecha_inicio") and evento.fecha_inicio:
-        return evento.fecha_inicio
-    if hasattr(evento, "fecha") and evento.fecha:
-        return evento.fecha
-    return None
-
-
-def _get_event_end(evento):
-    if hasattr(evento, "fecha_fin") and evento.fecha_fin:
-        return evento.fecha_fin
-    if hasattr(evento, "fecha") and evento.fecha:
-        return evento.fecha
-    if hasattr(evento, "fecha_inicio") and evento.fecha_inicio:
-        return evento.fecha_inicio
-    return None
-
-
-def _generar_folio_inscripcion(inscripcion_id: int) -> str:
-    fecha = timezone.localdate().strftime("%Y%m%d")
-    return f"INS-PAR-{fecha}-{inscripcion_id:06d}"
-
-
-def _generar_codigo_pase(inscripcion_id: int) -> str:
-    fecha = timezone.localdate().strftime("%Y%m%d")
-    return f"PASE-PAR-{fecha}-{inscripcion_id:06d}"
-
-
-def _generar_folio_constancia(inscripcion_id: int) -> str:
-    fecha = timezone.localdate().strftime("%Y%m%d")
-    return f"CONST-PAR-{fecha}-{inscripcion_id:06d}"
+def _limpiar_inscripcion_si_corresponde(evento: Evento, usuario) -> None:
+    if ProyectoParticipante.objects.filter(evento=evento, participante=usuario).exists():
+        return
+    Inscripcion.objects.filter(
+        evento=evento,
+        usuario=usuario,
+        rol=Inscripcion.ROL_PARTICIPANTE,
+    ).delete()
 
 
 @login_required
-def panel(request):
-    inscripciones = (
-        InscripcionParticipante.objects.select_related("evento")
-        .filter(participante=request.user)
-        .order_by("-actualizado_en", "-id")
-    )
-
-    total_inscripciones = inscripciones.count()
-    total_confirmadas = inscripciones.filter(
-        estado_inscripcion=InscripcionParticipante.ESTADO_CONFIRMADO
-    ).count()
-    total_constancias = sum(1 for i in inscripciones if i.puede_descargar_constancia())
-    total_pases = sum(1 for i in inscripciones if i.puede_descargar_pase())
-
+def panel_participante(request):
+    qs = ProyectoParticipante.objects.select_related("evento", "evaluacion_proyecto").filter(participante=request.user)
     hoy = timezone.localdate()
-    proximo_evento = None
-    for item in inscripciones:
-        fecha_inicio = item.fecha_evento()
-        if fecha_inicio and fecha_inicio >= hoy and item.estado_inscripcion != InscripcionParticipante.ESTADO_CANCELADO:
-            proximo_evento = item
-            break
+    proximo = (
+        qs.filter(fecha_programada__gte=hoy, hora_inicio__isnull=False)
+        .exclude(estado_programacion=ProyectoParticipante.PROG_CANCELADO)
+        .order_by("fecha_programada", "hora_inicio", "id")
+        .first()
+    ) or qs.order_by("-actualizado_en").first()
 
-    recientes = list(inscripciones[:4])
+    kpis = {
+        "proyectos_activos": qs.exclude(estado=ProyectoParticipante.ESTADO_RECHAZADO).count(),
+        "pendientes_programacion": qs.filter(estado_programacion=ProyectoParticipante.PROG_PENDIENTE).count(),
+        "documentacion_incompleta": sum(1 for p in qs if p.porcentaje_documentacion() < 100),
+        "evaluaciones_completadas": EvaluacionEntrega.objects.filter(
+            asignacion__proyecto__proyecto_real__participante=request.user,
+            estado=EvaluacionEntrega.ESTADO_ENVIADA,
+        ).count(),
+    }
+
+    proyectos = []
+    for p in qs.order_by("-actualizado_en")[:5]:
+        proyectos.append({
+            "id": p.id,
+            "nombre": p.nombre_proyecto,
+            "evento": p.nombre_evento(),
+            "estado": p.get_estado_display(),
+            "programacion": p.get_estado_programacion_display(),
+            "progreso": p.porcentaje_documentacion(),
+        })
 
     return render(request, "participante/dashboard/panel.html", {
         "active": "panel",
-        "inscripciones": inscripciones,
-        "total_inscripciones": total_inscripciones,
-        "total_confirmadas": total_confirmadas,
-        "total_constancias": total_constancias,
-        "total_pases": total_pases,
-        "proximo_evento": proximo_evento,
-        "recientes": recientes,
+        "kpis": kpis,
+        "proximo": proximo,
+        "proyectos": proyectos,
     })
 
 
 @login_required
 def elegir_evento(request):
-    eventos = Evento.objects.all().order_by("-id")
+    eventos = Evento.objects.filter(estado="PUBLICADO").order_by("-fecha", "-id")
+    evento_id = request.GET.get("evento")
+    evento_sel = None
+    if evento_id:
+        try:
+            evento_sel = eventos.get(pk=int(evento_id))
+        except (ValueError, Evento.DoesNotExist):
+            messages.error(request, "El evento seleccionado no es válido o ya no está disponible.")
 
-    q = (request.GET.get("q") or "").strip().lower()
-    if q:
-        eventos = [
-            e for e in eventos
-            if q in _get_event_name(e).lower()
-            or q in _get_event_place(e).lower()
-        ]
+    proyectos_qs = ProyectoParticipante.objects.select_related("evento").filter(participante=request.user)
+    proyecto_sel = proyectos_qs.filter(evento=evento_sel).first() if evento_sel else None
+
+    form = ProyectoParticipanteForm(
+        evento=evento_sel,
+        usuario=request.user,
+        initial={
+            "nombre_participante": request.user.get_full_name() or getattr(request.user, "username", ""),
+            "correo": getattr(request.user, "email", ""),
+        },
+    )
+    abrir_modal = False
+    evento_modal = evento_sel
 
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
 
-        if action == "inscribir":
-            evento_id = request.POST.get("evento_id")
-            evento = get_object_or_404(Evento, pk=evento_id)
+        if action == "select_event":
+            sel = SeleccionEventoForm(request.POST)
+            if sel.is_valid() and eventos.filter(pk=sel.cleaned_data["evento_id"]).exists():
+                return redirect(f"{request.path}?evento={sel.cleaned_data['evento_id']}")
+            messages.error(request, "Selecciona un evento válido.")
+            return redirect(request.path)
 
-            existente = InscripcionParticipante.objects.filter(
-                participante=request.user,
-                evento=evento
-            ).first()
+        if action == "registrar":
+            if not evento_sel:
+                messages.error(request, "Debes seleccionar un evento publicado antes de registrar tu proyecto.")
+                return redirect(request.path)
 
-            if existente:
-                messages.error(request, "Ya cuentas con un registro para este evento.")
-                return redirect("participante:elegir_evento")
+            form = ProyectoParticipanteForm(request.POST, request.FILES, evento=evento_sel, usuario=request.user)
+            abrir_modal = True
+            if form.is_valid():
+                proyecto = form.save(commit=False)
+                proyecto.evento = evento_sel
+                proyecto.participante = request.user
+                proyecto.estado = ProyectoParticipante.ESTADO_REGISTRADO
+                try:
+                    with transaction.atomic():
+                        proyecto.save()
+                        _asegurar_inscripcion_participante(evento_sel, request.user)
+                    registrar_auditoria(
+                        request=request,
+                        accion=f"PROYECTOS | CREAR | {proyecto.nombre_proyecto}",
+                        modulo="PARTICIPANTE",
+                        accion_tipo="CREAR",
+                        entidad="ProyectoParticipante",
+                        objeto_id=proyecto.pk,
+                        resultado="EXITOSO",
+                    )
+                    messages.success(request, "El proyecto fue registrado correctamente y tu inscripción al evento quedó vinculada como participante.")
+                    return redirect(f"{request.path}?evento={evento_sel.id}")
+                except IntegrityError:
+                    form.add_error(None, "Ya tienes un proyecto registrado en este evento.")
+            messages.error(request, "No fue posible registrar el proyecto. Verifica la información capturada.")
 
-            inscripcion = InscripcionParticipante.objects.create(
-                participante=request.user,
-                evento=evento,
-                estado_inscripcion=InscripcionParticipante.ESTADO_PREINSCRITO,
-                tipo_acceso="Participante",
-            )
-            inscripcion.folio_inscripcion = _generar_folio_inscripcion(inscripcion.id)
-            inscripcion.codigo_pase = _generar_codigo_pase(inscripcion.id)
-            inscripcion.pase_generado_en = timezone.now()
-            inscripcion.save(update_fields=[
-                "folio_inscripcion",
-                "codigo_pase",
-                "pase_generado_en",
-            ])
+        if action == "editar":
+            proyecto = get_object_or_404(ProyectoParticipante, pk=request.POST.get("proyecto_id"), participante=request.user)
+            evento_sel = proyecto.evento
+            evento_modal = evento_sel
+            form = ProyectoParticipanteForm(request.POST, request.FILES, instance=proyecto, evento=evento_sel, usuario=request.user)
+            abrir_modal = True
+            if not proyecto.puede_editar():
+                messages.error(request, "Este proyecto ya no permite edición.")
+                return redirect(f"{request.path}?evento={evento_sel.id}")
+            if form.is_valid():
+                with transaction.atomic():
+                    proyecto = form.save()
+                    _asegurar_inscripcion_participante(evento_sel, request.user)
+                messages.success(request, "El proyecto fue actualizado correctamente.")
+                return redirect(f"{request.path}?evento={evento_sel.id}")
+            messages.error(request, "No fue posible actualizar el proyecto. Revisa los campos marcados.")
 
-            messages.success(request, "Tu inscripción al evento fue registrada correctamente.")
-            return redirect("participante:elegir_evento")
-
-    inscripciones_usuario = {
-        item.evento_id: item
-        for item in InscripcionParticipante.objects.filter(participante=request.user)
-    }
-
+    eventos_ya_inscritos = set(proyectos_qs.values_list("evento_id", flat=True))
     return render(request, "participante/evento/elegir_evento.html", {
         "active": "elegir_evento",
         "eventos": eventos,
-        "search_q": request.GET.get("q", ""),
-        "inscripciones_usuario": inscripciones_usuario,
+        "evento_sel": evento_sel,
+        "evento_modal": evento_modal,
+        "proyecto_sel": proyecto_sel,
+        "proyectos_usuario": proyectos_qs,
+        "eventos_ya_inscritos": eventos_ya_inscritos,
+        "form": form,
+        "abrir_modal": abrir_modal,
     })
 
 
 @login_required
+def eliminar_proyecto(request, pk: int):
+    proyecto = get_object_or_404(ProyectoParticipante, pk=pk, participante=request.user)
+    evento_id = proyecto.evento_id
+    if request.method == "POST":
+        with transaction.atomic():
+            proyecto.delete()
+            _limpiar_inscripcion_si_corresponde(proyecto.evento, request.user)
+        messages.success(request, "El proyecto fue eliminado correctamente.")
+    return redirect(f"/participante/evento/elegir/?evento={evento_id}")
+
+
+@login_required
 def programa(request):
-    inscripciones = (
-        InscripcionParticipante.objects.select_related("evento")
-        .filter(
-            participante=request.user,
-            estado_inscripcion__in=[
-                InscripcionParticipante.ESTADO_PREINSCRITO,
-                InscripcionParticipante.ESTADO_CONFIRMADO,
-            ],
-        )
-        .order_by("-actualizado_en", "-id")
-    )
-
-    inscripcion_id = request.GET.get("inscripcion")
-    inscripcion_sel = None
-
-    if inscripcion_id:
-        inscripcion_sel = get_object_or_404(
-            InscripcionParticipante.objects.select_related("evento"),
-            pk=inscripcion_id,
-            participante=request.user,
-        )
-    else:
-        inscripcion_sel = inscripciones.first()
-
-    programa_items = []
-    if inscripcion_sel:
-        programa_items.append({
-            "titulo": _get_event_name(inscripcion_sel.evento),
-            "fecha_inicio": _get_event_start(inscripcion_sel.evento),
-            "fecha_fin": _get_event_end(inscripcion_sel.evento),
-            "lugar": _get_event_place(inscripcion_sel.evento),
-            "tipo": "Evento",
-            "descripcion": getattr(inscripcion_sel.evento, "descripcion", "") or "Programa general del evento.",
-        })
-
+    proyectos = ProyectoParticipante.objects.filter(participante=request.user).select_related("evento").order_by("fecha_programada", "hora_inicio", "-actualizado_en")
     return render(request, "participante/programa/programa.html", {
         "active": "programa",
-        "inscripciones": inscripciones,
-        "inscripcion_sel": inscripcion_sel,
-        "programa_items": programa_items,
+        "proyectos": proyectos,
     })
 
 
 @login_required
 def mi_pase(request):
-    inscripciones = (
-        InscripcionParticipante.objects.select_related("evento")
-        .filter(participante=request.user)
-        .exclude(estado_inscripcion=InscripcionParticipante.ESTADO_CANCELADO)
-        .order_by("-actualizado_en", "-id")
+    proyecto = (
+        ProyectoParticipante.objects.filter(participante=request.user)
+        .exclude(estado=ProyectoParticipante.ESTADO_RECHAZADO)
+        .select_related("evento")
+        .order_by("-actualizado_en")
+        .first()
     )
-
-    inscripcion_id = request.GET.get("inscripcion")
-    inscripcion_sel = None
-
-    if inscripcion_id:
-        inscripcion_sel = get_object_or_404(
-            InscripcionParticipante.objects.select_related("evento"),
-            pk=inscripcion_id,
-            participante=request.user,
-        )
-    else:
-        inscripcion_sel = inscripciones.first()
-
-    if inscripcion_sel and not inscripcion_sel.codigo_pase:
-        inscripcion_sel.codigo_pase = _generar_codigo_pase(inscripcion_sel.id)
-        inscripcion_sel.pase_generado_en = timezone.now()
-        inscripcion_sel.save(update_fields=["codigo_pase", "pase_generado_en"])
-
-    return render(request, "participante/pase/mi_pase.html", {
+    return render(request, "participante/pase/pase.html", {
         "active": "mi_pase",
-        "inscripciones": inscripciones,
-        "inscripcion_sel": inscripcion_sel,
+        "proyecto": proyecto,
     })
 
 
 @login_required
-def descargar_constancia(request):
-    inscripciones_qs = (
-        InscripcionParticipante.objects.select_related("evento")
-        .filter(participante=request.user)
-        .order_by("-actualizado_en", "-id")
+def constancia(request):
+    proyecto = (
+        ProyectoParticipante.objects.filter(participante=request.user)
+        .select_related("evento")
+        .order_by("-actualizado_en")
+        .first()
     )
-
-    disponibles = [i for i in inscripciones_qs if i.puede_descargar_constancia()]
-
-    inscripcion_id = request.GET.get("inscripcion")
-    inscripcion_sel = None
-
-    if inscripcion_id:
-        inscripcion_sel = get_object_or_404(
-            InscripcionParticipante.objects.select_related("evento"),
-            pk=inscripcion_id,
-            participante=request.user,
-        )
-        if not inscripcion_sel.puede_descargar_constancia():
-            messages.error(request, "La constancia aún no está disponible para esta inscripción.")
-            return redirect("participante:constancia")
-    elif disponibles:
-        inscripcion_sel = disponibles[0]
-
-    if request.method == "POST":
-        action = (request.POST.get("action") or "").strip()
-        if action == "generar_pdf":
-            inscripcion_id_post = request.POST.get("inscripcion_id")
-            inscripcion_pdf = get_object_or_404(
-                InscripcionParticipante.objects.select_related("evento"),
-                pk=inscripcion_id_post,
-                participante=request.user,
-            )
-
-            if not inscripcion_pdf.puede_descargar_constancia():
-                messages.error(request, "La constancia no está habilitada para esta inscripción.")
-                return redirect("participante:constancia")
-
-            if not inscripcion_pdf.folio_constancia:
-                inscripcion_pdf.folio_constancia = _generar_folio_constancia(inscripcion_pdf.id)
-                inscripcion_pdf.constancia_generada_en = timezone.now()
-                inscripcion_pdf.save(update_fields=["folio_constancia", "constancia_generada_en"])
-
-            messages.success(request, "La constancia quedó lista para descarga.")
-            return redirect(f"{request.path}?inscripcion={inscripcion_pdf.id}")
+    promedio = None
+    if proyecto and proyecto.evaluacion_proyecto:
+        promedio = EvaluacionEntrega.objects.filter(
+            asignacion__proyecto=proyecto.evaluacion_proyecto,
+            estado=EvaluacionEntrega.ESTADO_ENVIADA,
+        ).aggregate(prom=Avg("calificacion_total")).get("prom")
+        promedio = Decimal(promedio or 0).quantize(Decimal("0.01")) if promedio is not None else None
 
     return render(request, "participante/constancia/constancia.html", {
         "active": "constancia",
-        "inscripciones_disponibles": disponibles,
-        "inscripcion_sel": inscripcion_sel,
-        "fecha_emision": timezone.localdate(),
+        "proyecto": proyecto,
+        "promedio": promedio,
     })
 
 
 @login_required
 def configuracion(request):
-    user = request.user
-
-    perfil, _ = PerfilParticipante.objects.get_or_create(user=user)
-    if perfil is None:
-        perfil = _resolve_participante_profile(user)
+    perfil = _resolve_profile(request.user)
+    cuenta_form = ParticipanteCuentaForm(user=request.user, initial={
+        "nombres": getattr(request.user, "first_name", ""),
+        "apellidos": getattr(request.user, "last_name", ""),
+        "correo": getattr(request.user, "email", ""),
+    })
+    perfil_form = ParticipantePerfilForm(instance=perfil)
 
     if request.method == "POST":
-        nombres = (request.POST.get("nombres") or "").strip()
-        apellidos = (request.POST.get("apellidos") or "").strip()
-        correo = (request.POST.get("correo") or "").strip().lower()
-        telefono = (request.POST.get("telefono") or "").strip()
-        institucion = (request.POST.get("institucion") or "").strip()
-        carrera = (request.POST.get("carrera") or "").strip()
-        bio = (request.POST.get("bio") or "").strip()
-
-        password_actual = (request.POST.get("password_actual") or "").strip()
-        password_nueva1 = (request.POST.get("password_nueva1") or "").strip()
-        password_nueva2 = (request.POST.get("password_nueva2") or "").strip()
-
-        if not nombres or not apellidos or not correo:
-            messages.error(request, "Nombre, apellidos y correo son obligatorios.")
+        cuenta_form = ParticipanteCuentaForm(request.POST, user=request.user)
+        perfil_form = ParticipantePerfilForm(request.POST, request.FILES, instance=perfil)
+        if cuenta_form.is_valid() and perfil_form.is_valid():
+            request.user.first_name = cuenta_form.cleaned_data["nombres"]
+            request.user.last_name = cuenta_form.cleaned_data["apellidos"]
+            request.user.email = cuenta_form.cleaned_data["correo"]
+            nueva = cuenta_form.cleaned_data.get("password_nueva")
+            if nueva:
+                request.user.set_password(nueva)
+            request.user.save()
+            perfil_form.save()
+            if nueva:
+                update_session_auth_hash(request, request.user)
+            messages.success(request, "La configuración se actualizó correctamente.")
             return redirect("participante:configuracion")
-
-        existe_correo = type(user).objects.exclude(pk=user.pk).filter(email__iexact=correo).exists()
-        if existe_correo:
-            messages.error(request, "Ya existe una cuenta registrada con este correo.")
-            return redirect("participante:configuracion")
-
-        if any([password_actual, password_nueva1, password_nueva2]):
-            if not password_actual:
-                messages.error(request, "Debes capturar tu contraseña actual.")
-                return redirect("participante:configuracion")
-
-            if not user.check_password(password_actual):
-                messages.error(request, "La contraseña actual no es correcta.")
-                return redirect("participante:configuracion")
-
-            if not password_nueva1 or not password_nueva2:
-                messages.error(request, "Debes capturar y confirmar la nueva contraseña.")
-                return redirect("participante:configuracion")
-
-            if password_nueva1 != password_nueva2:
-                messages.error(request, "La confirmación de contraseña no coincide.")
-                return redirect("participante:configuracion")
-
-            if len(password_nueva1) < 8:
-                messages.error(request, "La nueva contraseña debe tener al menos 8 caracteres.")
-                return redirect("participante:configuracion")
-
-            user.set_password(password_nueva1)
-
-        user.first_name = nombres
-        user.last_name = apellidos
-        user.email = correo
-        user.save()
-
-        perfil.telefono = telefono
-        perfil.institucion = institucion
-        perfil.carrera = carrera
-        perfil.bio = bio
-
-        if request.FILES.get("avatar"):
-            perfil.avatar = request.FILES["avatar"]
-
-        perfil.save()
-
-        if any([password_actual, password_nueva1, password_nueva2]):
-            update_session_auth_hash(request, user)
-
-        messages.success(request, "La configuración del participante fue actualizada correctamente.")
-        return redirect("participante:configuracion")
+        messages.error(request, "No fue posible guardar la configuración. Verifica la información.")
 
     return render(request, "participante/configuracion/configuracion.html", {
         "active": "configuracion",
+        "cuenta_form": cuenta_form,
+        "perfil_form": perfil_form,
         "perfil": perfil,
     })

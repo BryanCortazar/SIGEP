@@ -10,16 +10,16 @@
     <div>
       <h1 class="text-3xl font-black text-slate-900 tracking-tight">Registro a eventos disponibles</h1>
       <p class="text-slate-500 mt-2">
-        Selecciona un evento publicado y registra tu ponencia.
+        Selecciona un evento publicado y registra una sola ponencia por evento.
       </p>
     </div>
 
     <button type="button"
-            {% if evento_sel %}onclick="openModal('modalRegistrarPonencia')"{% else %}disabled{% endif %}
+            {% if evento_sel and puede_registrar %}onclick="openModal('modalRegistrarPonencia')"{% else %}disabled{% endif %}
             class="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition
-            {% if evento_sel %}bg-primary text-white hover:bg-blue-700{% else %}bg-slate-200 text-slate-400 cursor-not-allowed{% endif %}">
+            {% if evento_sel and puede_registrar %}bg-primary text-white hover:bg-blue-700{% else %}bg-slate-200 text-slate-400 cursor-not-allowed{% endif %}">
       <span class="material-symbols-outlined text-[20px]">add</span>
-      Registrar ponencia
+      {% if evento_sel and not puede_registrar %}Ponencia registrada{% else %}Registrar ponencia{% endif %}
     </button>
   </div>
 
@@ -63,7 +63,7 @@
           <p class="text-sm font-semibold text-slate-900">
             {{ evento_sel.nombre|default:evento_sel.titulo }}
           </p>
-          <p class="text-sm text-slate-600 mt-1">Evento seleccionado para registrar tu ponencia.</p>
+          <p class="text-sm text-slate-600 mt-1">{% if puede_registrar %}Evento seleccionado para registrar tu ponencia.{% else %}Ya cuentas con una ponencia registrada en este evento.{% endif %}</p>
         </div>
         {% endif %}
       </div>
@@ -148,10 +148,10 @@
             <h3 class="text-lg font-bold text-slate-900">No hay ponencias registradas</h3>
             <p class="mt-2 text-sm text-slate-500">Ya puedes registrar tu primera ponencia.</p>
             <button type="button"
-                    onclick="openModal('modalRegistrarPonencia')"
-                    class="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
+                    {% if puede_registrar %}onclick="openModal('modalRegistrarPonencia')"{% else %}disabled{% endif %}
+                    class="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold {% if puede_registrar %}bg-primary text-white hover:bg-blue-700{% else %}bg-slate-200 text-slate-400 cursor-not-allowed{% endif %}">
               <span class="material-symbols-outlined text-[20px]">add</span>
-              Registrar ponencia
+              {% if evento_sel and not puede_registrar %}Ponencia registrada{% else %}Registrar ponencia{% endif %}
             </button>
           </div>
         {% endif %}
@@ -163,20 +163,21 @@
 
 {% block modals %}
 <div id="modalRegistrarPonencia" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-950/50" onclick="closeModal('modalRegistrarPonencia')"></div>
-  <div class="relative min-h-full flex items-center justify-center p-4">
-    <div class="w-full max-w-3xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
-      <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+  <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeModal('modalRegistrarPonencia')"></div>
+  <div class="relative min-h-full flex items-center justify-center p-3 sm:p-4">
+    <div class="w-full max-w-4xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-200 flex items-center justify-between gap-4 shrink-0">
         <div>
           <h3 class="text-lg font-bold text-slate-900">Registrar ponencia</h3>
-          <p class="text-sm text-slate-500 mt-1">Captura los datos de tu propuesta.</p>
+          <p class="text-sm text-slate-500 mt-1">Captura los datos de tu propuesta. El formulario se adapta a pantalla y mantiene visibles las acciones principales.</p>
         </div>
         <button type="button" onclick="closeModal('modalRegistrarPonencia')" class="text-slate-400 hover:text-slate-700">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
 
-      <form method="post" enctype="multipart/form-data" class="px-6 py-6 space-y-5">
+      <form method="post" enctype="multipart/form-data" class="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div class="px-5 sm:px-6 py-5 sm:py-6 space-y-5 overflow-y-auto">
         {% csrf_token %}
         <input type="hidden" name="action" value="registrar">
 
@@ -217,13 +218,16 @@
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
-          <button type="button" onclick="closeModal('modalRegistrarPonencia')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium">
-            Cancelar
-          </button>
-          <button type="submit" class="px-4 py-2.5 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-medium">
-            Guardar registro
-          </button>
+        </div>
+        <div class="px-5 sm:px-6 py-4 border-t border-slate-200 bg-white/95 backdrop-blur shrink-0">
+          <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <button type="button" onclick="closeModal('modalRegistrarPonencia')" class="w-full sm:w-auto px-4 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-semibold">
+              Cancelar
+            </button>
+            <button type="submit" class="w-full sm:w-auto px-4 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold shadow-sm">
+              Guardar ponencia
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -231,10 +235,10 @@
 </div>
 
 <div id="modalEditarPonencia" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-950/50" onclick="closeModal('modalEditarPonencia')"></div>
-  <div class="relative min-h-full flex items-center justify-center p-4">
-    <div class="w-full max-w-3xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
-      <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+  <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeModal('modalEditarPonencia')"></div>
+  <div class="relative min-h-full flex items-center justify-center p-3 sm:p-4">
+    <div class="w-full max-w-4xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-200 flex items-center justify-between gap-4 shrink-0">
         <div>
           <h3 class="text-lg font-bold text-slate-900">Editar ponencia</h3>
         </div>
@@ -243,7 +247,8 @@
         </button>
       </div>
 
-      <form method="post" enctype="multipart/form-data" class="px-6 py-6 space-y-5">
+      <form method="post" enctype="multipart/form-data" class="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div class="px-5 sm:px-6 py-5 sm:py-6 space-y-5 overflow-y-auto">
         {% csrf_token %}
         <input type="hidden" name="action" value="editar">
         <input type="hidden" name="ponencia_id" id="edit_ponencia_id">
@@ -285,13 +290,16 @@
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
-          <button type="button" onclick="closeModal('modalEditarPonencia')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium">
-            Cancelar
-          </button>
-          <button type="submit" class="px-4 py-2.5 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-medium">
-            Guardar cambios
-          </button>
+        </div>
+        <div class="px-5 sm:px-6 py-4 border-t border-slate-200 bg-white/95 backdrop-blur shrink-0">
+          <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <button type="button" onclick="closeModal('modalEditarPonencia')" class="w-full sm:w-auto px-4 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-semibold">
+              Cancelar
+            </button>
+            <button type="submit" class="w-full sm:w-auto px-4 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold shadow-sm">
+              Guardar cambios
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -299,8 +307,8 @@
 </div>
 
 <div id="modalEliminarPonencia" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-950/50" onclick="closeModal('modalEliminarPonencia')"></div>
-  <div class="relative min-h-full flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeModal('modalEliminarPonencia')"></div>
+  <div class="relative min-h-full flex items-center justify-center p-3 sm:p-4">
     <div class="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
       <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
         <div>
@@ -320,12 +328,12 @@
           ¿Deseas eliminar la ponencia <span id="delete_ponencia_titulo" class="font-semibold text-slate-900"></span>?
         </p>
 
-        <div class="mt-6 flex justify-end gap-3">
-          <button type="button" onclick="closeModal('modalEliminarPonencia')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium">
+        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+          <button type="button" onclick="closeModal('modalEliminarPonencia')" class="w-full sm:w-auto px-4 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-semibold">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 text-sm font-medium">
-            Eliminar
+          <button type="submit" class="w-full sm:w-auto px-4 py-3 rounded-xl bg-red-600 text-white hover:bg-red-700 text-sm font-semibold shadow-sm">
+            Eliminar ponencia
           </button>
         </div>
       </form>

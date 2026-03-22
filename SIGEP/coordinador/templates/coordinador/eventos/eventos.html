@@ -1,138 +1,303 @@
 {% extends "coordinador/base_coor.html" %}
-{% block title %}Coordinador: Panel de Coordinación - SIGEP{% endblock %}
+{% block title %}Coordinador: Eventos - SIGEP{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-8">
 
-  <div class="flex flex-col gap-2">
-    <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Panel de coordinación</h1>
-    <p class="text-slate-500 dark:text-slate-400 text-base">
-      Selecciona un evento para gestionarlo o crea uno nuevo desde aquí.
-    </p>
-  </div>
+  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Gestión de eventos</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-base">
+        Administra tus eventos, cambia su estado operativo y mantén seleccionado el evento con el que vas a trabajar.
+      </p>
+    </div>
 
-  <!-- selector + gestionar -->
-  <div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-slate-200 dark:border-border-dark p-6 space-y-4">
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
-
-      <div class="lg:col-span-2">
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Evento</label>
-
-        <form method="POST" action="{% url 'coordinador:evento_seleccionar' %}" class="flex flex-col sm:flex-row gap-3">
-          {% csrf_token %}
-          <div class="relative flex-1">
-            <select name="evento_id"
-                    class="w-full h-12 pl-4 pr-10 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border-dark text-slate-700 dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary block appearance-none font-medium">
-              <option value="" disabled {% if not evento %}selected{% endif %}>Selecciona un evento...</option>
-              {% for e in eventos %}
-                <option value="{{ e.id }}" {% if evento and evento.id == e.id %}selected{% endif %}>{{ e.titulo }}</option>
-              {% endfor %}
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-              <span class="material-symbols-outlined text-xl">expand_more</span>
-            </div>
-          </div>
-
-          <button type="submit"
-                  class="h-12 px-6 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-white rounded-lg text-sm font-bold">
-            Seleccionar
-          </button>
-        </form>
-
-        {% if evento %}
-          <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
-            Evento actual: <b>{{ evento.titulo }}</b>
-          </p>
-        {% endif %}
-      </div>
-
-      <div class="flex gap-3 justify-end">
-        <button type="button"
-                id="openCreateEvent"
-                class="h-12 px-6 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-bold flex items-center gap-2">
-          <span class="material-symbols-outlined">add_circle</span>
-          Crear evento
-        </button>
-
+    <div class="flex flex-wrap gap-3">
+      {% if selected_evento %}
         <a href="{% url 'coordinador:gestion_evento' %}"
-           class="h-12 px-6 rounded-lg text-sm font-bold flex items-center gap-2
-                  {% if not evento %}pointer-events-none opacity-50 bg-slate-200 text-slate-500{% else %}bg-slate-900 hover:bg-black text-white{% endif %}">
-          <span class="material-symbols-outlined">settings</span>
-          Gestionar
+           class="h-11 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-sm font-bold inline-flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">settings</span>
+          Operar evento actual
         </a>
-      </div>
-
+      {% endif %}
+      <button type="button"
+              onclick="openEventModal()"
+              class="h-11 px-4 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-bold inline-flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">add_circle</span>
+        Nuevo evento
+      </button>
     </div>
   </div>
 
-  <!-- MODAL crear evento -->
-  <div id="modalCreateEvent" class="fixed inset-0 z-[70] hidden">
-    <div class="absolute inset-0 bg-black/40" onclick="closeModal()"></div>
-    <div class="absolute inset-0 flex items-center justify-center p-4">
-      <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white">Crear evento</h3>
-          <button class="text-slate-400 hover:text-slate-700 dark:hover:text-white" onclick="closeModal()">
-            <span class="material-symbols-outlined">close</span>
-          </button>
+  <div class="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-border-dark shadow-sm p-6">
+    <form method="get" class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
+      <div class="lg:col-span-2">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar</label>
+        <input type="text" name="q" value="{{ filter_q }}"
+               placeholder="Título, descripción o lugar"
+               class="w-full h-11 rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
+        <select name="estado" class="w-full h-11 rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          {% for value, label in estado_choices %}
+            <option value="{{ value }}" {% if filter_estado == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="flex-1 h-11 rounded-xl bg-slate-900 hover:bg-black text-white text-sm font-bold">Aplicar</button>
+        <a href="{% url 'coordinador:eventos' %}" class="flex-1 h-11 rounded-xl border border-slate-300 text-slate-700 dark:text-slate-200 text-sm font-bold inline-flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800">Limpiar</a>
+      </div>
+    </form>
+  </div>
+
+  {% if selected_evento %}
+    <div class="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-border-dark shadow-sm p-6">
+      <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Evento seleccionado</p>
+            <span class="px-2 py-1 rounded-full text-xs font-bold {% if selected_evento.estado == 'PUBLICADO' %}bg-emerald-100 text-emerald-700{% elif selected_evento.estado == 'CERRADO' %}bg-rose-100 text-rose-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+              {{ selected_evento.estado }}
+            </span>
+          </div>
+          <h2 class="text-2xl font-black text-slate-900 dark:text-white mt-2">{{ selected_evento.titulo }}</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {% if selected_evento.descripcion %}{{ selected_evento.descripcion }}{% else %}Sin descripción registrada.{% endif %}
+          </p>
+          <div class="flex flex-wrap gap-2 mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800">{{ selected_evento.fecha|date:"d/m/Y" }}</span>
+            {% if selected_evento.lugar %}<span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800">{{ selected_evento.lugar }}</span>{% endif %}
+            <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800">Cupo: {{ selected_evento.cupo|default:0 }}</span>
+          </div>
         </div>
 
-        <form method="POST" action="{% url 'coordinador:evento_crear' %}" class="p-5 space-y-4">
-          {% csrf_token %}
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título *</label>
-            <input name="titulo" required class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
-          </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button"
+                  onclick='openEventModal({id:"{{ selected_evento.id }}", titulo:"{{ selected_evento.titulo|escapejs }}", descripcion:"{{ selected_evento.descripcion|default_if_none:""|escapejs }}", fecha:"{{ selected_evento.fecha|date:"Y-m-d" }}", lugar:"{{ selected_evento.lugar|default_if_none:""|escapejs }}", cupo:"{{ selected_evento.cupo|default:0 }}", estado:"{{ selected_evento.estado }}"})'
+                  class="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold inline-flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">edit</span>
+            Editar
+          </button>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha *</label>
-            <input name="fecha" type="date" required class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
-          </div>
+          {% if selected_evento.estado != 'PUBLICADO' %}
+            <form method="post" action="{% url 'coordinador:evento_cambiar_estado' selected_evento.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="estado" value="PUBLICADO">
+              <button class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">publish</span>
+                Publicar
+              </button>
+            </form>
+          {% endif %}
+          {% if selected_evento.estado != 'BORRADOR' %}
+            <form method="post" action="{% url 'coordinador:evento_cambiar_estado' selected_evento.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="estado" value="BORRADOR">
+              <button class="h-10 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">draft_orders</span>
+                Borrador
+              </button>
+            </form>
+          {% endif %}
+          {% if selected_evento.estado != 'CERRADO' %}
+            <form method="post" action="{% url 'coordinador:evento_cambiar_estado' selected_evento.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="estado" value="CERRADO">
+              <button class="h-10 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">event_busy</span>
+                Cerrar
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar</label>
-              <input name="lugar" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cupo</label>
-              <input name="cupo" type="number" min="0" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción</label>
-            <textarea name="descripcion" rows="3" class="w-full rounded-lg border-slate-300 dark:bg-slate-800"></textarea>
-          </div>
-
-          <div class="flex justify-end gap-2 pt-2">
-            <button type="button"
-                    class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white text-sm font-semibold"
-                    onclick="closeModal()">
-              Cancelar
-            </button>
-            <button class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold">
-              Guardar
-            </button>
-          </div>
-        </form>
-
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mt-6">
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4"><p class="text-xs font-bold uppercase text-slate-500">Inscripciones</p><p class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ selected_stats.inscripciones }}</p></div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4"><p class="text-xs font-bold uppercase text-slate-500">Proyectos</p><p class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ selected_stats.proyectos }}</p></div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4"><p class="text-xs font-bold uppercase text-slate-500">Ponencias</p><p class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ selected_stats.ponencias }}</p></div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4"><p class="text-xs font-bold uppercase text-slate-500">Rúbricas</p><p class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ selected_stats.rubricas }}</p></div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4"><p class="text-xs font-bold uppercase text-slate-500">Espacios</p><p class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ selected_stats.espacios }}</p></div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4"><p class="text-xs font-bold uppercase text-slate-500">Reportes</p><p class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ selected_stats.reportes }}</p></div>
       </div>
     </div>
-  </div>
+  {% endif %}
 
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    {% for item in event_cards %}
+      <div class="bg-white dark:bg-surface-dark rounded-2xl border {% if item.is_selected %}border-primary ring-2 ring-primary/15{% else %}border-slate-200 dark:border-border-dark{% endif %} shadow-sm p-6">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-xl font-black text-slate-900 dark:text-white">{{ item.obj.titulo }}</h3>
+              <span class="px-2 py-1 rounded-full text-xs font-bold {% if item.obj.estado == 'PUBLICADO' %}bg-emerald-100 text-emerald-700{% elif item.obj.estado == 'CERRADO' %}bg-rose-100 text-rose-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                {{ item.obj.estado }}
+              </span>
+              {% if item.is_selected %}<span class="px-2 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">Actual</span>{% endif %}
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              {% if item.obj.descripcion %}{{ item.obj.descripcion|truncatechars:180 }}{% else %}Sin descripción registrada.{% endif %}
+            </p>
+            <div class="flex flex-wrap gap-2 mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+              <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800">{{ item.obj.fecha|date:"d/m/Y" }}</span>
+              {% if item.obj.lugar %}<span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800">{{ item.obj.lugar }}</span>{% endif %}
+              <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800">Cupo: {{ item.obj.cupo|default:0 }}</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 lg:justify-end">
+            <form method="post" action="{% url 'coordinador:evento_seleccionar_directo' item.obj.id %}">
+              {% csrf_token %}
+              <button class="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">touch_app</span>
+                Seleccionar
+              </button>
+            </form>
+            <button type="button"
+                    onclick='openEventModal({id:"{{ item.obj.id }}", titulo:"{{ item.obj.titulo|escapejs }}", descripcion:"{{ item.obj.descripcion|default_if_none:""|escapejs }}", fecha:"{{ item.obj.fecha|date:"Y-m-d" }}", lugar:"{{ item.obj.lugar|default_if_none:""|escapejs }}", cupo:"{{ item.obj.cupo|default:0 }}", estado:"{{ item.obj.estado }}"})'
+                    class="h-10 px-4 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-bold inline-flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">edit</span>
+              Editar
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mt-5">
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><p class="text-[11px] font-bold uppercase text-slate-500">Inscripciones</p><p class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ item.stats.inscripciones }}</p></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><p class="text-[11px] font-bold uppercase text-slate-500">Proyectos</p><p class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ item.stats.proyectos }}</p></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><p class="text-[11px] font-bold uppercase text-slate-500">Ponencias</p><p class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ item.stats.ponencias }}</p></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><p class="text-[11px] font-bold uppercase text-slate-500">Rúbricas</p><p class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ item.stats.rubricas }}</p></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><p class="text-[11px] font-bold uppercase text-slate-500">Espacios</p><p class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ item.stats.espacios }}</p></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><p class="text-[11px] font-bold uppercase text-slate-500">Reportes</p><p class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ item.stats.reportes }}</p></div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-5">
+          {% if item.obj.estado != 'PUBLICADO' %}
+            <form method="post" action="{% url 'coordinador:evento_cambiar_estado' item.obj.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="estado" value="PUBLICADO">
+              <button class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold">Publicar</button>
+            </form>
+          {% endif %}
+          {% if item.obj.estado != 'BORRADOR' %}
+            <form method="post" action="{% url 'coordinador:evento_cambiar_estado' item.obj.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="estado" value="BORRADOR">
+              <button class="h-10 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold">Enviar a borrador</button>
+            </form>
+          {% endif %}
+          {% if item.obj.estado != 'CERRADO' %}
+            <form method="post" action="{% url 'coordinador:evento_cambiar_estado' item.obj.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="estado" value="CERRADO">
+              <button class="h-10 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold">Cerrar</button>
+            </form>
+          {% endif %}
+
+          {% if item.stats.total_relaciones == 1 and item.stats.inscripciones <= 1 and item.obj.estado == 'BORRADOR' %}
+            <form method="post" action="{% url 'coordinador:evento_eliminar' item.obj.id %}" onsubmit="return confirm('¿Seguro que deseas eliminar este evento?');">
+              {% csrf_token %}
+              <button class="h-10 px-4 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-sm font-bold">Eliminar</button>
+            </form>
+          {% else %}
+            <span class="h-10 px-4 rounded-xl border border-slate-200 text-slate-400 text-sm font-bold inline-flex items-center">No eliminable</span>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="xl:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 dark:bg-slate-900/30 p-8 text-center text-slate-500 dark:text-slate-400">
+        No hay eventos disponibles con los filtros aplicados.
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="eventModal" class="fixed inset-0 z-[80] hidden">
+  <div class="absolute inset-0 bg-black/50" onclick="closeEventModal()"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div>
+          <h3 id="eventModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Nuevo evento</h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Captura la información general del evento.</p>
+        </div>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" onclick="closeEventModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form method="post" action="{% url 'coordinador:evento_guardar' %}" class="p-6 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="evento_id" id="modal_evento_id" value="{{ evento_form.evento_id.value|default_if_none:'' }}">
+        <input type="hidden" name="next" value="eventos">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Título *</label>
+            <input type="text" name="titulo" id="modal_titulo" required value="{{ evento_form.titulo.value|default_if_none:'' }}" class="w-full h-11 rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Fecha *</label>
+            <input type="date" name="fecha" id="modal_fecha" required value="{{ evento_form.fecha.value|default_if_none:'' }}" class="w-full h-11 rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Cupo</label>
+            <input type="number" name="cupo" id="modal_cupo" min="0" value="{{ evento_form.cupo.value|default_if_none:'0' }}" class="w-full h-11 rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Lugar</label>
+            <input type="text" name="lugar" id="modal_lugar" value="{{ evento_form.lugar.value|default_if_none:'' }}" class="w-full h-11 rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Descripción</label>
+            <textarea name="descripcion" id="modal_descripcion" rows="4" class="w-full rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700">{{ evento_form.descripcion.value|default_if_none:'' }}</textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Estado</label>
+            <select name="estado" id="modal_estado" class="w-full h-11 rounded-xl border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+              <option value="BORRADOR">Borrador</option>
+              <option value="PUBLICADO">Publicado</option>
+              <option value="CERRADO">Cerrado</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="closeEventModal()" class="h-11 px-4 rounded-xl border border-slate-300 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-50 dark:hover:bg-slate-800">Cancelar</button>
+          <button type="submit" class="h-11 px-4 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold">Guardar evento</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script>
-const modal = document.getElementById("modalCreateEvent");
-document.getElementById("openCreateEvent")?.addEventListener("click", () => {
-  modal.classList.remove("hidden");
-  document.body.style.overflow="hidden";
-});
-function closeModal(){
-  modal.classList.add("hidden");
-  document.body.style.overflow="";
-}
+  const eventModal = document.getElementById('eventModal');
+  const modalTitle = document.getElementById('eventModalTitle');
+  const fieldMap = {
+    id: document.getElementById('modal_evento_id'),
+    titulo: document.getElementById('modal_titulo'),
+    fecha: document.getElementById('modal_fecha'),
+    lugar: document.getElementById('modal_lugar'),
+    cupo: document.getElementById('modal_cupo'),
+    descripcion: document.getElementById('modal_descripcion'),
+    estado: document.getElementById('modal_estado'),
+  };
+
+  function openEventModal(payload = null) {
+    modalTitle.textContent = payload ? 'Editar evento' : 'Nuevo evento';
+    fieldMap.id.value = payload?.id || '';
+    fieldMap.titulo.value = payload?.titulo || '';
+    fieldMap.fecha.value = payload?.fecha || '';
+    fieldMap.lugar.value = payload?.lugar || '';
+    fieldMap.cupo.value = payload?.cupo || 0;
+    fieldMap.descripcion.value = payload?.descripcion || '';
+    fieldMap.estado.value = payload?.estado || 'BORRADOR';
+    eventModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeEventModal() {
+    eventModal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
 </script>
 {% endblock %}

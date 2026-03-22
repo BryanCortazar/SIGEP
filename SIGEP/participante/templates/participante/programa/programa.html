@@ -1,0 +1,53 @@
+{% extends "participante/base_part.html" %}
+
+{% block title %}Participante: Programa - SIGEP{% endblock %}
+{% block section_label %}Agenda{% endblock %}
+{% block section_title %}Programa del participante{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h3 class="text-lg font-bold text-slate-900">Programación de proyectos</h3>
+      <p class="text-sm text-slate-500 mt-1">Consulta la programación asignada por el coordinador.</p>
+    </div>
+  </div>
+
+  <div class="mt-6 overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-200 text-left text-slate-500 uppercase tracking-wide text-xs">
+          <th class="py-3 pr-4">Proyecto</th>
+          <th class="py-3 pr-4">Evento</th>
+          <th class="py-3 pr-4">Fecha</th>
+          <th class="py-3 pr-4">Horario</th>
+          <th class="py-3 pr-4">Espacio</th>
+          <th class="py-3">Estado</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for proyecto in proyectos %}
+        <tr>
+          <td class="py-4 pr-4 font-medium text-slate-900">{{ proyecto.nombre_proyecto }}</td>
+          <td class="py-4 pr-4">{{ proyecto.nombre_evento }}</td>
+          <td class="py-4 pr-4">{{ proyecto.fecha_programada|date:"d/m/Y"|default:"Pendiente" }}</td>
+          <td class="py-4 pr-4">
+            {% if proyecto.hora_inicio %}
+              {{ proyecto.hora_inicio|time:"H:i" }}{% if proyecto.hora_fin %} - {{ proyecto.hora_fin|time:"H:i" }}{% endif %}
+            {% else %}
+              Pendiente
+            {% endif %}
+          </td>
+          <td class="py-4 pr-4">{{ proyecto.espacio_asignado|default:"Por definir" }}</td>
+          <td class="py-4">{{ proyecto.get_estado_programacion_display }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-8 text-center text-slate-500">Aún no hay proyectos registrados o programados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

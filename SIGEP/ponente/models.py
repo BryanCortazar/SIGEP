@@ -216,13 +216,14 @@ class Ponencia(TimeStampedModel):
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["evento", "ponente", "titulo"],
-                name="uq_ponencia_evento_ponente_titulo",
+                fields=["evento", "ponente"],
+                name="uq_ponencia_evento_ponente",
             )
         ]
 
     def puede_editar(self) -> bool:
-        return self.estado in {self.ESTADO_REGISTRADA, self.ESTADO_EN_REVISION}
+        evento_publicado = getattr(self.evento, "estado", "") == "PUBLICADO"
+        return evento_publicado and self.estado in {self.ESTADO_REGISTRADA, self.ESTADO_EN_REVISION}
 
     def porcentaje_documentacion(self) -> int:
         total = 4

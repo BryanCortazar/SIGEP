@@ -70,7 +70,7 @@ def _redirect_por_rol(user):
     if rol == "PON":
         return _safe_redirect("ponente:dashboard")
     if rol == "PART":
-        return _safe_redirect("participante:dashboard")
+        return _safe_redirect("participante:panel_participante")
 
     # Si no hay rol definido (o el campo no existe)
     return redirect("principal:dashboard")

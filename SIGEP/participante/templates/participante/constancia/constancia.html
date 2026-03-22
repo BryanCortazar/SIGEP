@@ -1,0 +1,35 @@
+{% extends "participante/base_part.html" %}
+
+{% block title %}Participante: Constancia - SIGEP{% endblock %}
+{% block section_label %}Documentos{% endblock %}
+{% block section_title %}Constancia de participación{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+  <section class="xl:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h3 class="text-lg font-bold text-slate-900">Constancia</h3>
+    {% if proyecto %}
+    <div class="mt-6 rounded-2xl border border-slate-200 p-6 bg-slate-50">
+      <p class="text-sm text-slate-500">Participante</p>
+      <h4 class="mt-1 text-2xl font-bold text-slate-900">{{ proyecto.nombre_participante }}</h4>
+      <p class="mt-4 text-sm text-slate-600">Proyecto: <span class="font-semibold text-slate-900">{{ proyecto.nombre_proyecto }}</span></p>
+      <p class="mt-2 text-sm text-slate-600">Evento: <span class="font-semibold text-slate-900">{{ proyecto.nombre_evento }}</span></p>
+      <p class="mt-2 text-sm text-slate-600">Estado: <span class="font-semibold text-slate-900">{{ proyecto.get_estado_display }}</span></p>
+      <p class="mt-2 text-sm text-slate-600">Promedio: <span class="font-semibold text-slate-900">{% if promedio %}{{ promedio }}{% else %}Pendiente{% endif %}</span></p>
+      <div class="mt-6">
+        <button type="button" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-medium" disabled>
+          Descargar constancia
+        </button>
+      </div>
+    </div>
+    {% else %}
+    <p class="mt-4 text-sm text-slate-500">Aún no cuentas con una participación registrada para generar constancia.</p>
+    {% endif %}
+  </section>
+
+  <aside class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h3 class="text-lg font-bold text-slate-900">Estado del documento</h3>
+    <p class="mt-4 text-sm text-slate-600">La descarga puede habilitarse cuando la participación y la evaluación del proyecto estén concluidas.</p>
+  </aside>
+</div>
+{% endblock %}

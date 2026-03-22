@@ -17,6 +17,10 @@
     </button>
   </div>
 
+  <div class="rounded-xl border border-blue-100 bg-blue-50 dark:bg-blue-500/10 dark:border-blue-500/20 px-4 py-3 text-sm text-blue-800 dark:text-blue-100">
+    Puedes registrar un usuario nuevo o vincular al evento un usuario ya existente usando su mismo correo. El sistema evitará duplicados dentro del evento.
+  </div>
+
   <!-- Filtros -->
   <form method="GET" class="flex flex-col lg:flex-row gap-4 items-center justify-between">
     <div class="relative flex-1 w-full lg:max-w-xl">
@@ -31,11 +35,9 @@
         <select name="rol"
                 class="w-full pl-4 pr-10 py-2.5 rounded-md border border-slate-200 dark:border-border-dark bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary text-sm appearance-none cursor-pointer font-medium">
           <option value="">Todos los roles</option>
-          <option value="ADMINISTRADOR" {% if rol == "ADMINISTRADOR" %}selected{% endif %}>Administrador</option>
-          <option value="USUARIO" {% if rol == "USUARIO" %}selected{% endif %}>Usuario</option>
-          <option value="EVALUADOR" {% if rol == "EVALUADOR" %}selected{% endif %}>Evaluador</option>
-          <option value="PONENTE" {% if rol == "PONENTE" %}selected{% endif %}>Ponente</option>
-          <option value="PARTICIPANTE" {% if rol == "PARTICIPANTE" %}selected{% endif %}>Participante</option>
+          {% for item in role_choices %}
+            <option value="{{ item.value }}" {% if rol == item.value %}selected{% endif %}>{{ item.label }}</option>
+          {% endfor %}
         </select>
         <span class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-[20px]">expand_more</span>
       </div>
@@ -143,65 +145,88 @@
 <!-- =========================
      MODAL Crear/Editar
 ========================= -->
-<div id="modalForm" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40" data-close="modalForm"></div>
+<div id="modalForm" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]" data-close="modalForm"></div>
 
-  <div class="absolute inset-0 flex items-start justify-center p-4">
-    <div class="relative mt-16 w-[95%] max-w-xl bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-slate-200 dark:border-border-dark overflow-hidden">
-      <div class="p-5 border-b border-slate-100 dark:border-border-dark flex items-center justify-between">
-        <h3 id="modalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Nueva inscripción</h3>
-        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" data-close="modalForm">
-          <span class="material-symbols-outlined">close</span>
+  <div class="absolute inset-0 flex items-center justify-center p-3 sm:p-4">
+    <div class="relative w-full max-w-3xl max-h-[92vh] bg-white dark:bg-surface-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-border-dark overflow-hidden flex flex-col">
+      <div class="shrink-0 px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-border-dark flex items-center justify-between gap-4 bg-white dark:bg-surface-dark">
+        <div class="min-w-0">
+          <h3 id="modalTitle" class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Nueva inscripción</h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Capture o actualice los datos del usuario y su rol dentro del evento.
+          </p>
+        </div>
+        <button type="button"
+                class="inline-flex items-center justify-center size-10 rounded-full border border-slate-200 dark:border-border-dark text-slate-500 hover:text-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:text-white transition"
+                data-close="modalForm"
+                aria-label="Cerrar ventana">
+          <span class="material-symbols-outlined pointer-events-none">close</span>
         </button>
       </div>
 
-      <form method="POST" action="{% url 'coordinador:inscripcion_guardar' %}" class="p-5 space-y-4" autocomplete="off">
+      <form method="POST"
+            action="{% url 'coordinador:inscripcion_guardar' %}"
+            class="flex flex-col min-h-0"
+            autocomplete="off">
         {% csrf_token %}
         {{ form.user_id }}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-6">
+          <div class="rounded-xl border border-blue-100 bg-blue-50 dark:bg-blue-500/10 dark:border-blue-500/20 px-4 py-3">
+            <p class="text-sm text-blue-800 dark:text-blue-100">
+              Puedes registrar un usuario nuevo o vincular al evento un usuario ya existente usando su correo.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombres</label>
+              {{ form.nombres }}
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Apellidos</label>
+              {{ form.apellidos }}
+            </div>
+          </div>
+
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombres</label>
-            {{ form.nombres }}
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo electrónico</label>
+            {{ form.correo }}
           </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rol en el evento</label>
+              {{ form.rol }}
+            </div>
+            <div class="rounded-xl border border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-slate-900 px-4 py-4 flex items-center gap-3 md:mt-6">
+              {{ form.activo }}
+              <div>
+                <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Cuenta activa</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Permite acceso y operación del usuario en el sistema.</p>
+              </div>
+            </div>
+          </div>
+
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Apellidos</label>
-            {{ form.apellidos }}
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Contraseña</label>
+            {{ form.password }}
+            <p id="helpPassword" class="text-xs text-slate-500 mt-2 leading-relaxed">
+              En edición: deja vacío para conservar la contraseña actual. En alta: si el correo ya existe en el sistema, la contraseña puede dejarse vacía para solo vincular el usuario al evento.
+            </p>
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo</label>
-          {{ form.correo }}
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rol</label>
-            {{ form.rol }}
-          </div>
-          <div class="flex items-center gap-3 pt-8">
-            {{ form.activo }}
-            <span class="text-sm text-slate-700 dark:text-slate-200 font-medium">Cuenta activa</span>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Contraseña</label>
-          {{ form.password }}
-          <p id="helpPassword" class="text-xs text-slate-500 mt-2">
-            En edición: deja vacío para conservar la contraseña actual.
-          </p>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" data-close="modalForm"
-                  class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold">
+        <div class="shrink-0 px-5 sm:px-6 py-4 border-t border-slate-100 dark:border-border-dark bg-slate-50/80 dark:bg-slate-900/70 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+          <button type="button"
+                  data-close="modalForm"
+                  class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-border-dark hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold transition">
             Cancelar
           </button>
           <button type="submit"
-                  class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold">
-            Guardar
+                  class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold shadow-sm transition">
+            Guardar inscripción
           </button>
         </div>
       </form>
@@ -212,20 +237,23 @@
 <!-- =========================
      MODAL Confirmar eliminar
 ========================= -->
-<div id="modalDelete" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40" data-close="modalDelete"></div>
+<div id="modalDelete" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]" data-close="modalDelete"></div>
 
-  <div class="absolute inset-0 flex items-start justify-center p-4">
-    <div class="relative mt-24 w-[95%] max-w-lg bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-slate-200 dark:border-border-dark overflow-hidden">
-      <div class="p-5 border-b border-slate-100 dark:border-border-dark flex items-center justify-between">
+  <div class="absolute inset-0 flex items-center justify-center p-3 sm:p-4">
+    <div class="relative w-full max-w-lg bg-white dark:bg-surface-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-border-dark overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-border-dark flex items-center justify-between gap-4">
         <h3 class="text-lg font-bold text-slate-900 dark:text-white">Eliminar inscripción</h3>
-        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" data-close="modalDelete">
-          <span class="material-symbols-outlined">close</span>
+        <button type="button"
+                class="inline-flex items-center justify-center size-10 rounded-full border border-slate-200 dark:border-border-dark text-slate-500 hover:text-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:text-white transition"
+                data-close="modalDelete"
+                aria-label="Cerrar ventana">
+          <span class="material-symbols-outlined pointer-events-none">close</span>
         </button>
       </div>
 
-      <div class="p-5 space-y-3">
-        <div class="p-4 rounded-lg bg-red-50 border border-red-100 text-red-700">
+      <div class="p-5 space-y-4">
+        <div class="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700">
           <p class="font-semibold">¿Deseas eliminar este usuario del evento?</p>
           <p class="text-sm mt-1">
             <span class="font-bold" id="delName">Usuario</span>
@@ -234,16 +262,17 @@
           <p class="text-xs mt-2 text-red-600/90">Esta acción no se puede deshacer.</p>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2">
-          <button type="button" data-close="modalDelete"
-                  class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold">
+        <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3 pt-1">
+          <button type="button"
+                  data-close="modalDelete"
+                  class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold transition">
             No, cancelar
           </button>
 
-          <form method="POST" id="formDelete" action="">
+          <form method="POST" id="formDelete" action="" class="w-full sm:w-auto">
             {% csrf_token %}
             <button type="submit"
-                    class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">
+                    class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition">
               Sí, eliminar
             </button>
           </form>
@@ -254,14 +283,13 @@
 </div>
 
 <script>
-(function(){
-  // estilo tailwind a inputs del modal (por si el form no trae clases)
+(function () {
   function styleInputs(scope){
     const els = document.querySelectorAll(scope + " input, " + scope + " select");
     els.forEach(el=>{
       if (el.type === "hidden" || el.type === "checkbox") return;
       el.classList.add(
-        "w-full","h-11","px-3","rounded-lg",
+        "w-full","h-11","px-3","rounded-xl",
         "bg-white","dark:bg-slate-900",
         "border","border-slate-200","dark:border-border-dark",
         "text-slate-900","dark:text-white",
@@ -270,6 +298,7 @@
     });
   }
 
+  const body = document.body;
   const modalForm = document.getElementById("modalForm");
   const modalDelete = document.getElementById("modalDelete");
 
@@ -290,8 +319,27 @@
 
   styleInputs("#modalForm");
 
-  function open(m){ m.classList.remove("hidden"); }
-  function close(m){ m.classList.add("hidden"); }
+  function lockBody() {
+    body.classList.add("overflow-hidden");
+  }
+
+  function unlockBody() {
+    if (modalForm.classList.contains("hidden") && modalDelete.classList.contains("hidden")) {
+      body.classList.remove("overflow-hidden");
+    }
+  }
+
+  function open(modal){
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    lockBody();
+  }
+
+  function close(modal){
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    unlockBody();
+  }
 
   function resetForm(){
     modalTitle.textContent = "Nueva inscripción";
@@ -299,7 +347,7 @@
     fNombres.value = "";
     fApellidos.value = "";
     fCorreo.value = "";
-    fRol.value = "PARTICIPANTE";
+    fRol.value = "PART";
     fActivo.checked = true;
     fPassword.value = "";
   }
@@ -319,9 +367,9 @@
       fNombres.value = row.dataset.nombres || "";
       fApellidos.value = row.dataset.apellidos || "";
       fCorreo.value = row.dataset.correo || "";
-      fRol.value = row.dataset.rol || "PARTICIPANTE";
+      fRol.value = row.dataset.rol || "PART";
       fActivo.checked = (row.dataset.activo === "1");
-      fPassword.value = ""; // importante: no mostrar password
+      fPassword.value = "";
 
       open(modalForm);
     });
@@ -332,7 +380,7 @@
       const row = e.currentTarget.closest("tr");
       if (!row) return;
 
-      delName.textContent = (row.dataset.nombres || "") + " " + (row.dataset.apellidos || "");
+      delName.textContent = ((row.dataset.nombres || "") + " " + (row.dataset.apellidos || "")).trim() || "Usuario";
       delEmail.textContent = "(" + (row.dataset.correo || "") + ")";
       formDelete.action = row.dataset.delUrl || "";
 
@@ -341,8 +389,9 @@
   });
 
   document.addEventListener("click", (e)=>{
-    const key = e.target?.getAttribute?.("data-close");
-    if (!key) return;
+    const closer = e.target.closest("[data-close]");
+    if (!closer) return;
+    const key = closer.getAttribute("data-close");
     if (key === "modalForm") close(modalForm);
     if (key === "modalDelete") close(modalDelete);
   });

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError, models
+from django.db import IntegrityError, models, transaction
 from django.db.models import Avg, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -15,6 +15,8 @@ from django.utils import timezone
 from xhtml2pdf import pisa
 
 from administrador.models import Evento
+from administrador.utils_auditoria import registrar_auditoria
+from coordinador.models import Inscripcion
 from evaluador.models import EvaluacionAsignacion, EvaluacionEntrega
 
 from .forms import (
@@ -57,6 +59,38 @@ def _resolve_ponente_profile(user):
         avatar=getattr(user, "avatar", None),
         cv=getattr(user, "cv", None),
     )
+
+
+def _asegurar_inscripcion_ponente(evento: Evento, usuario) -> Inscripcion:
+    """
+    Garantiza que el usuario quede inscrito en el evento como PONENTE
+    cuando registra o actualiza una ponencia.
+    """
+    inscripcion, _ = Inscripcion.objects.get_or_create(
+        evento=evento,
+        usuario=usuario,
+        defaults={"rol": Inscripcion.ROL_PONENTE},
+    )
+    if inscripcion.rol != Inscripcion.ROL_PONENTE:
+        inscripcion.rol = Inscripcion.ROL_PONENTE
+        inscripcion.save(update_fields=["rol", "actualizado_en"])
+    return inscripcion
+
+
+def _limpiar_inscripcion_ponente_si_corresponde(evento: Evento, usuario) -> None:
+    """
+    Si el usuario ya no tiene ponencias en el evento, elimina su inscripción
+    de ponente para no dejar basura operativa.
+    """
+    tiene_ponencias = Ponencia.objects.filter(evento=evento, ponente=usuario).exists()
+    if tiene_ponencias:
+        return
+
+    Inscripcion.objects.filter(
+        evento=evento,
+        usuario=usuario,
+        rol=Inscripcion.ROL_PONENTE,
+    ).delete()
 
 
 @login_required
@@ -124,7 +158,7 @@ def panel(request):
 
 @login_required
 def inscripcion(request):
-    eventos = Evento.objects.filter(estado="PUBLICADO").order_by("-id")
+    eventos = Evento.objects.filter(estado="PUBLICADO").order_by("-fecha", "-id")
 
     evento_id = request.GET.get("evento")
     evento_sel = None
@@ -152,6 +186,9 @@ def inscripcion(request):
             if not evento_sel:
                 messages.error(request, "Debes seleccionar un evento antes de registrar tu ponencia.")
                 return redirect(request.path)
+            if Ponencia.objects.filter(evento=evento_sel, ponente=request.user).exists():
+                messages.error(request, "Solo puedes registrar una ponencia por evento.")
+                return redirect(f"{request.path}?evento={evento_sel.id}")
 
             form = PonenciaForm(request.POST, request.FILES)
             if form.is_valid():
@@ -161,10 +198,26 @@ def inscripcion(request):
                 ponencia.estado = Ponencia.ESTADO_REGISTRADA
 
                 try:
-                    ponencia.save()
-                    messages.success(request, "La ponencia fue registrada correctamente.")
+                    with transaction.atomic():
+                        ponencia.save()
+                        _asegurar_inscripcion_ponente(evento_sel, request.user)
+
+                    registrar_auditoria(
+                        request=request,
+                        accion=f"PONENCIAS | CREAR | {ponencia.titulo}",
+                        modulo="PONENCIAS",
+                        accion_tipo="CREAR",
+                        entidad="Ponencia",
+                        objeto_id=ponencia.pk,
+                        resultado="EXITOSO",
+                        detalles={"evento_id": evento_sel.id, "evento": evento_sel.titulo},
+                    )
+                    messages.success(
+                        request,
+                        "La ponencia fue registrada correctamente y tu inscripción al evento quedó vinculada como ponente.",
+                    )
                 except IntegrityError:
-                    messages.error(request, "Ya registraste una ponencia con ese título en este evento.")
+                    messages.error(request, "Ya tienes una ponencia registrada en este evento.")
 
                 return redirect(f"{request.path}?evento={evento_sel.id}")
 
@@ -191,10 +244,23 @@ def inscripcion(request):
             form = PonenciaForm(request.POST, request.FILES, instance=ponencia)
             if form.is_valid():
                 try:
-                    form.save()
+                    with transaction.atomic():
+                        form.save()
+                        _asegurar_inscripcion_ponente(evento_sel, request.user)
+
+                    registrar_auditoria(
+                        request=request,
+                        accion=f"PONENCIAS | EDITAR | {ponencia.titulo}",
+                        modulo="PONENCIAS",
+                        accion_tipo="EDITAR",
+                        entidad="Ponencia",
+                        objeto_id=ponencia.pk,
+                        resultado="EXITOSO",
+                        detalles={"evento_id": evento_sel.id, "evento": evento_sel.titulo},
+                    )
                     messages.success(request, "La ponencia fue actualizada correctamente.")
                 except IntegrityError:
-                    messages.error(request, "Ya tienes otra ponencia con ese título en este evento.")
+                    messages.error(request, "Ya tienes una ponencia registrada en este evento.")
             else:
                 messages.error(request, "No fue posible actualizar la ponencia.")
 
@@ -217,7 +283,22 @@ def inscripcion(request):
                 messages.error(request, "Esta ponencia ya no permite eliminación.")
                 return redirect(f"{request.path}?evento={evento_sel.id}")
 
-            ponencia.delete()
+            ponencia_id_deleted = ponencia.pk
+            ponencia_titulo = ponencia.titulo
+            with transaction.atomic():
+                ponencia.delete()
+                _limpiar_inscripcion_ponente_si_corresponde(evento_sel, request.user)
+
+            registrar_auditoria(
+                request=request,
+                accion=f"PONENCIAS | ELIMINAR | {ponencia_titulo}",
+                modulo="PONENCIAS",
+                accion_tipo="ELIMINAR",
+                entidad="Ponencia",
+                objeto_id=ponencia_id_deleted,
+                resultado="EXITOSO",
+                detalles={"evento_id": evento_sel.id, "evento": evento_sel.titulo},
+            )
             messages.success(request, "La ponencia fue eliminada correctamente.")
             return redirect(f"{request.path}?evento={evento_sel.id}")
 
@@ -228,11 +309,14 @@ def inscripcion(request):
             ponente=request.user
         ).order_by("-actualizado_en")
 
+    puede_registrar = bool(evento_sel) and not ponencias.exists()
+
     return render(request, "ponente/inscripcion/inscripcion.html", {
         "active": "inscripcion",
         "eventos": eventos,
         "evento_sel": evento_sel,
         "ponencias": ponencias,
+        "puede_registrar": puede_registrar,
         "form_registrar": PonenciaForm(),
     })
 
@@ -267,6 +351,16 @@ def gestionar_participacion(request):
                 registro.diapositivas_estado = Ponencia.DOC_EN_REVISION
 
             registro.save()
+            registrar_auditoria(
+                request=request,
+                accion=f"PONENCIAS | ACTUALIZAR_DOCUMENTACION | {registro.titulo}",
+                modulo="PONENCIAS",
+                accion_tipo="ACTUALIZAR_DOCUMENTACION",
+                entidad="Ponencia",
+                objeto_id=registro.pk,
+                resultado="EXITOSO",
+                detalles={"evento_id": registro.evento_id, "evento": registro.nombre_evento()},
+            )
             messages.success(request, "La documentación de participación fue actualizada correctamente.")
             return redirect(f"{request.path}?ponencia={registro.id}")
 
@@ -536,6 +630,15 @@ def configuracion(request):
             if cuenta_form.password_changed:
                 update_session_auth_hash(request, usuario_actualizado)
 
+            registrar_auditoria(
+                request=request,
+                accion="PONENCIAS | CONFIGURACION | Actualización de cuenta/perfil",
+                modulo="PONENCIAS",
+                accion_tipo="CONFIGURACION",
+                entidad="PerfilPonente",
+                objeto_id=request.user.pk,
+                resultado="EXITOSO",
+            )
             messages.success(request, "La configuración del ponente fue actualizada correctamente.")
             return redirect("ponente:configuracion")
 

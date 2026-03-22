@@ -2,336 +2,409 @@
 {% block title %}Coordinador: Rúbricas - SIGEP{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-8">
-
-  <div class="flex items-start justify-between gap-4">
-    <div class="space-y-2">
-      <h2 class="text-3xl font-bold text-[#0B1221] dark:text-white">Gestión de Rúbricas</h2>
-      <p class="text-slate-500 dark:text-gray-400">Defina los criterios de evaluación que utilizarán los jurados.</p>
-      <p class="text-sm text-slate-500 dark:text-gray-400">Evento: <b>{{ evento.titulo }}</b></p>
+<div class="max-w-7xl mx-auto space-y-6">
+  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Gestión de Rúbricas</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Evento actual: <span class="font-semibold text-slate-700 dark:text-slate-200">{{ evento.titulo }}</span>
+      </p>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        La rúbrica se genera dentro del evento activo y puede asociarse a un proyecto o a una ponencia. Cuando la rúbrica es para una ponencia y ya existe puente evaluable, también queda enlazada al registro que consumirá el módulo evaluador.
+      </p>
     </div>
-
-    <button type="button"
-            class="px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow inline-flex items-center gap-2"
-            onclick="openRubricaModal()">
+    <button type="button" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow" onclick="openRubricaModal()">
       <span class="material-symbols-outlined">add</span>
-      Nueva Rúbrica
+      Nueva rúbrica
     </button>
   </div>
 
-  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm"><p class="text-xs uppercase tracking-wider text-slate-500">Rúbricas totales</p><p class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ kpis.total }}</p></div>
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm"><p class="text-xs uppercase tracking-wider text-slate-500">Activas</p><p class="mt-2 text-3xl font-black text-emerald-600">{{ kpis.activas }}</p></div>
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm"><p class="text-xs uppercase tracking-wider text-slate-500">Pendientes de proyecto</p><p class="mt-2 text-3xl font-black text-amber-600">{{ kpis.pendientes_proyecto }}</p></div>
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm"><p class="text-xs uppercase tracking-wider text-slate-500">Pendientes de ponencia</p><p class="mt-2 text-3xl font-black text-violet-600">{{ kpis.pendientes_ponencia }}</p></div>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+      <div class="xl:col-span-2">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Búsqueda</label>
+        <input type="text" name="q" value="{{ q }}" placeholder="Título, proyecto o ponencia" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800 dark:border-slate-700 px-3">
+      </div>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Estado</label>
+        <select name="estado" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          <option value="">Todos</option>
+          <option value="BORRADOR" {% if estado == "BORRADOR" %}selected{% endif %}>Borrador</option>
+          <option value="ACTIVA" {% if estado == "ACTIVA" %}selected{% endif %}>Activa</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Tipo</label>
+        <select name="tipo" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          <option value="">Todos</option>
+          <option value="PROYECTO" {% if tipo == "PROYECTO" %}selected{% endif %}>Proyecto</option>
+          <option value="PONENCIA" {% if tipo == "PONENCIA" %}selected{% endif %}>Ponencia</option>
+        </select>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="flex-1 h-11 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Aplicar</button>
+        <a href="{% url 'coordinador:rubricas' %}" class="flex-1 h-11 rounded-lg border border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold flex items-center justify-center dark:border-slate-700">Limpiar</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-300">
-          <tr>
-            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Nombre de la rúbrica</th>
-            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Evento asociado</th>
-            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Puntaje máximo</th>
-            <th class="text-left px-6 py-4 uppercase tracking-wider text-xs font-bold">Estado</th>
-            <th class="text-right px-6 py-4 uppercase tracking-wider text-xs font-bold">Acciones</th>
+        <thead class="bg-slate-50 dark:bg-slate-800/60">
+          <tr class="text-left text-slate-500 dark:text-slate-300">
+            <th class="px-6 py-4 uppercase tracking-wider text-xs font-bold">Rúbrica</th>
+            <th class="px-6 py-4 uppercase tracking-wider text-xs font-bold">Asignación</th>
+            <th class="px-6 py-4 uppercase tracking-wider text-xs font-bold">Tipo</th>
+            <th class="px-6 py-4 uppercase tracking-wider text-xs font-bold">Puntaje</th>
+            <th class="px-6 py-4 uppercase tracking-wider text-xs font-bold">Estado</th>
+            <th class="px-6 py-4 uppercase tracking-wider text-xs font-bold text-right">Acciones</th>
           </tr>
         </thead>
-
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
           {% for r in rubricas %}
-          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 align-top">
             <td class="px-6 py-4">
               <div class="font-bold text-slate-900 dark:text-white">{{ r.titulo }}</div>
-              <div class="text-xs text-slate-500 dark:text-gray-400">
-                {{ r.criterios.count }} criterio(s)
-                {% if r.proyecto %} • Proyecto: <b>{{ r.proyecto.titulo }}</b>{% endif %}
-                {% if r.adjuntos.count %} • {{ r.adjuntos.count }} adjunto(s){% endif %}
+              <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ r.criterios.count }} criterio(s){% if r.adjuntos.count %} • {{ r.adjuntos.count }} archivo(s){% endif %}</div>
+              {% if r.adjuntos.all %}
+              <div class="mt-3 flex flex-wrap gap-2">
+                {% for a in r.adjuntos.all %}
+                <div class="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs">
+                  <a href="{% url 'coordinador:rubrica_adjunto_descargar' a.id %}" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">{{ a.nombre_original|default:a.archivo.name }}</a>
+                  <form method="post" action="{% url 'coordinador:rubrica_adjunto_eliminar' a.id %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-rose-600 hover:text-rose-700 font-bold" onclick="return confirm('¿Eliminar este adjunto?')">×</button>
+                  </form>
+                </div>
+                {% endfor %}
               </div>
-            </td>
-
-            <td class="px-6 py-4 text-slate-700 dark:text-slate-200">
-              {{ evento.titulo }}
-            </td>
-
-            <td class="px-6 py-4">
-              <span class="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 font-bold text-xs">
-                {{ r.puntaje_maximo }} puntos
-              </span>
-            </td>
-
-            <td class="px-6 py-4">
-              {% if r.estado == "ACTIVA" %}
-                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 font-bold text-xs">
-                  ACTIVA
-                </span>
-              {% else %}
-                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs">
-                  BORRADOR
-                </span>
               {% endif %}
             </td>
-
-            <td class="px-6 py-4 text-right whitespace-nowrap space-x-2">
-              <button type="button"
-                      class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-                      title="Editar"
-                      onclick="openRubricaModal({
-                        id: '{{ r.id }}',
-                        titulo: '{{ r.titulo|escapejs }}',
-                        estado: '{{ r.estado }}',
-                        proyecto_id: '{% if r.proyecto %}{{ r.proyecto.id }}{% endif %}',
-                        criterios: [{% for c in r.criterios.all %}{titulo:'{{ c.titulo|escapejs }}',desc:'{{ c.descripcion|escapejs }}',puntos:'{{ c.puntaje_max }}'}{% if not forloop.last %},{% endif %}{% endfor %}]
-                      })">
-                <span class="material-symbols-outlined">edit</span>
-              </button>
-
-              <form method="POST" action="{% url 'coordinador:rubrica_eliminar' r.id %}" class="inline">
-                {% csrf_token %}
-                <button type="submit"
-                        class="p-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white"
-                        title="Eliminar"
-                        onclick="return confirm('¿Eliminar esta rúbrica?')">
-                  <span class="material-symbols-outlined">delete</span>
+            <td class="px-6 py-4">
+              <div class="font-semibold text-slate-900 dark:text-white">{{ r.objetivo_titulo }}</div>
+              {% if r.ponencia_id and r.proyecto_id %}
+              <div class="mt-2 inline-flex items-center rounded-md bg-indigo-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">Enlazada al puente evaluable</div>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              {% if r.ponencia_id %}
+                <span class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700 dark:bg-violet-900/40 dark:text-violet-200">Ponencia</span>
+              {% else %}
+                <span class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">Proyecto</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 font-bold text-slate-900 dark:text-white">{{ r.puntaje_maximo }} pts</td>
+            <td class="px-6 py-4">
+              {% if r.estado == 'ACTIVA' %}
+                <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">Activa</span>
+              {% else %}
+                <span class="inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-100">Borrador</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-right">
+              <div class="inline-flex items-center gap-2">
+                <button type="button" class="inline-flex items-center justify-center p-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100" title="Editar"
+                  onclick='openRubricaModal({
+                    id: {{ r.id }},
+                    titulo: "{{ r.titulo|escapejs }}",
+                    estado: "{{ r.estado|escapejs }}",
+                    target_type: "{{ r.tipo_objetivo|escapejs }}",
+                    proyecto_id: "{{ r.proyecto_id|default_if_none:'' }}",
+                    ponencia_id: "{{ r.ponencia_id|default_if_none:'' }}",
+                    criterios: [{% for c in r.criterios.all %}{titulo:"{{ c.titulo|escapejs }}",descripcion:"{{ c.descripcion|escapejs }}",puntaje:{{ c.puntaje_max|default:0 }}}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    adjuntos: [{% for a in r.adjuntos.all %}{id:{{ a.id }},nombre:"{{ a.nombre_original|default:a.archivo.name|escapejs }}",url:"{% url 'coordinador:rubrica_adjunto_descargar' a.id %}"}{% if not forloop.last %},{% endif %}{% endfor %}]
+                  })'>
+                  <span class="material-symbols-outlined">edit</span>
                 </button>
-              </form>
+                <form method="post" action="{% url 'coordinador:rubrica_eliminar' r.id %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="inline-flex items-center justify-center p-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white" onclick="return confirm('¿Eliminar esta rúbrica?')" title="Eliminar">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </form>
+              </div>
             </td>
           </tr>
           {% empty %}
-          <tr>
-            <td colspan="5" class="px-6 py-12 text-center text-slate-500 dark:text-gray-400">
-              No hay rúbricas registradas para este evento.
-            </td>
-          </tr>
+          <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500 dark:text-slate-400">No hay rúbricas registradas para este evento.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
-
 </div>
 
-
-<!-- ========================= MODAL RÚBRICA ========================= -->
 <div id="modalRubrica" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalRubrica')"></div>
-
+  <div class="absolute inset-0 bg-black/50" onclick="closeRubricaModal()"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-
-      <!-- HEADER con X -->
-      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between relative">
-        <h3 id="rubricaModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">
-          Crear Nueva Rúbrica
-        </h3>
-
-        <button type="button"
-                onclick="closeModal('modalRubrica')"
-                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
-                       bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/40
-                       transition-colors group"
-                aria-label="Cerrar modal">
-          <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400">
-            close
-          </span>
-        </button>
+    <div class="w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl">
+      <div class="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div>
+          <h3 id="rubricaModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Nueva rúbrica</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Evento actual: {{ evento.titulo }}</p>
+        </div>
+        <button type="button" class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center" onclick="closeRubricaModal()"><span class="material-symbols-outlined">close</span></button>
       </div>
 
-      <form method="POST"
-            action="{% url 'coordinador:rubrica_guardar' %}"
-            enctype="multipart/form-data"
-            class="p-5 space-y-5"
-            autocomplete="off">
+      <form method="post" action="{% url 'coordinador:rubrica_guardar' %}" enctype="multipart/form-data" class="max-h-[calc(92vh-72px)] overflow-y-auto px-6 py-5 space-y-5" id="rubricaFormModal">
         {% csrf_token %}
-        <input type="hidden" name="rubrica_id" id="rubrica_id" value="">
+        <input type="hidden" name="rubrica_id" id="rubrica_id" value="{{ modal_prefill.id|default:'' }}">
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la rúbrica *</label>
-            {{ form_rubrica.titulo }}
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
-            {{ form_rubrica.estado }}
-          </div>
+        {% if form_rubrica.non_field_errors or form_rubrica.errors %}
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
+          <p class="font-bold mb-2">Verifica la información de la rúbrica.</p>
+          <ul class="list-disc pl-5 space-y-1">
+            {% for err in form_rubrica.non_field_errors %}<li>{{ err }}</li>{% endfor %}
+            {% for field in form_rubrica %}
+              {% for err in field.errors %}<li>{{ field.label }}: {{ err }}</li>{% endfor %}
+            {% endfor %}
+          </ul>
         </div>
+        {% endif %}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Evento</label>
-            <input class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800" value="{{ evento.titulo }}" disabled>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Proyecto / Ponencia (opcional)</label>
-            {{ form_rubrica.proyecto }}
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between">
-          <div class="space-y-1">
-            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Criterios de evaluación</div>
-            <div class="text-sm text-slate-500 dark:text-gray-400">Agrega criterios y puntaje máximo.</div>
-          </div>
-          <button type="button" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-1" onclick="addCriterioRow()">
-            <span class="material-symbols-outlined">add</span> Agregar Criterio
-          </button>
-        </div>
-
-        <div id="criteriosWrap" class="space-y-3"></div>
-
-        <div class="flex items-center justify-end">
-          <div class="text-right">
-            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Puntaje total</div>
-            <div class="text-2xl font-extrabold text-slate-900 dark:text-white">
-              <span id="puntajeTotal">0</span> pts
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-800/30">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Evento seleccionado</label>
+              <input type="text" value="{{ evento.titulo }}" readonly class="w-full h-11 rounded-lg border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 cursor-not-allowed">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Nombre de la rúbrica *</label>
+              {{ form_rubrica.titulo }}
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Estado</label>
+              {{ form_rubrica.estado }}
             </div>
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-            Adjuntar rúbrica en archivo (opcional) — PDF, XLSX, etc.
-          </label>
-          <input type="file" name="archivos" multiple
-                 class="w-full rounded-lg border-slate-300 dark:bg-slate-800">
-          <p class="text-xs text-slate-500 mt-2">
-            Puedes subir varios archivos. (Límite recomendado por archivo: 15MB).
-          </p>
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Tipo de registro *</label>
+              {{ form_rubrica.target_type }}
+            </div>
+            <div id="proyectoWrap">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Proyecto *</label>
+              {{ form_rubrica.proyecto }}
+              <p class="mt-2 text-xs text-slate-500">Se muestran únicamente proyectos del evento activo.</p>
+            </div>
+            <div id="ponenciaWrap" class="hidden">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Ponencia *</label>
+              {{ form_rubrica.ponencia }}
+              <p class="mt-2 text-xs text-slate-500">Se muestran únicamente ponencias del evento activo.</p>
+            </div>
+          </div>
+          <div id="targetNotice" class="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+            Si la rúbrica es para una ponencia y esa ponencia ya tiene puente evaluable, la vista la enlazará también al registro que usará el módulo evaluador.
+          </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2">
-          <button type="button"
-                  class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
-                  onclick="closeModal('modalRubrica')">
-            Cancelar
-          </button>
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h4 class="text-sm font-bold text-slate-900 dark:text-white">Criterios de evaluación</h4>
+              <p class="text-sm text-slate-500 dark:text-slate-400">Agrega al menos un criterio con puntaje mayor a 0.</p>
+            </div>
+            <button type="button" class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold" onclick="addCriterioRow()"><span class="material-symbols-outlined">add</span> Agregar criterio</button>
+          </div>
+          <div id="criteriosWrap" class="space-y-3 mt-4"></div>
+          <div class="flex items-center justify-end mt-4">
+            <div class="text-right">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Puntaje total</div>
+              <div class="text-2xl font-black text-slate-900 dark:text-white"><span id="puntajeTotal">0</span> pts</div>
+            </div>
+          </div>
+        </div>
 
-          <button type="submit"
-                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold inline-flex items-center gap-2">
-            <span class="material-symbols-outlined">save</span>
-            Guardar Rúbrica
-          </button>
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Adjuntos complementarios (opcional)</label>
+            <input type="file" name="archivos" multiple class="block w-full text-sm text-slate-600 dark:text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-200 file:px-4 file:py-2 file:font-semibold file:text-slate-700 hover:file:bg-slate-300 dark:file:bg-slate-700 dark:file:text-slate-100 dark:hover:file:bg-slate-600">
+            <p class="text-xs text-slate-500 mt-2">Puedes adjuntar archivos de apoyo. Tamaño máximo recomendado: 15MB por archivo.</p>
+          </div>
+          <div id="adjuntosExistentesWrap" class="hidden rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Adjuntos existentes</p>
+            <div id="adjuntosExistentes" class="flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+
+        <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 -mx-6 px-6 py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p class="text-xs text-slate-500">Los cambios se guardan dentro del evento activo.</p>
+          <div class="flex items-center gap-3">
+            <button type="button" class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800" onclick="closeRubricaModal()">Cancelar</button>
+            <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow">Guardar rúbrica</button>
+          </div>
         </div>
       </form>
-
     </div>
   </div>
 </div>
 
+{{ modal_prefill|json_script:"rubrica-prefill" }}
 
 <script>
-  // ===== Modal helpers (con bloqueo scroll) =====
-  function openModal(id){
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.remove("hidden");
-    document.documentElement.classList.add("overflow-hidden");
-    document.body.classList.add("overflow-hidden");
-  }
+const modal = document.getElementById('modalRubrica');
+const criteriosWrap = document.getElementById('criteriosWrap');
+const puntajeTotal = document.getElementById('puntajeTotal');
+const adjuntosExistentesWrap = document.getElementById('adjuntosExistentesWrap');
+const adjuntosExistentes = document.getElementById('adjuntosExistentes');
+const targetTypeField = document.getElementById('id_target_type');
+const proyectoWrap = document.getElementById('proyectoWrap');
+const ponenciaWrap = document.getElementById('ponenciaWrap');
+const rubricaIdField = document.getElementById('rubrica_id');
+const titleNode = document.getElementById('rubricaModalTitle');
 
-  function closeModal(id){
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add("hidden");
-    document.documentElement.classList.remove("overflow-hidden");
-    document.body.classList.remove("overflow-hidden");
-  }
-
-  // Cerrar con ESC (si el modal está abierto)
-  document.addEventListener("keydown", function(e){
-    if (e.key === "Escape") {
-      const el = document.getElementById("modalRubrica");
-      if (el && !el.classList.contains("hidden")) closeModal("modalRubrica");
-    }
-  });
-
-  // ===== Criterios =====
-  function recalcTotal(){
-    let total = 0;
-    document.querySelectorAll("[data-criterio-puntos]").forEach(inp=>{
-      const v = parseInt(inp.value || "0", 10);
-      if (!isNaN(v)) total += v;
-    });
-    document.getElementById("puntajeTotal").innerText = String(total);
-  }
-
-  function criterioRowHTML({titulo="", desc="", puntos=""} = {}){
-    return `
-      <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-          <div class="md:col-span-2">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Título del criterio *</label>
-            <input name="criterio_titulo" value="${titulo}"
-                   class="mt-2 w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"
-                   placeholder="Ej. Claridad" required>
-            <input name="criterio_desc" value="${desc}"
-                   class="mt-2 w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"
-                   placeholder="Descripción breve...">
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Puntaje máx.</label>
-              <button type="button" class="text-slate-400 hover:text-rose-600" onclick="removeCriterioRow(this)" aria-label="Eliminar criterio">
-                <span class="material-symbols-outlined">delete</span>
-              </button>
-            </div>
-            <input name="criterio_puntos" data-criterio-puntos value="${puntos}"
-                   class="mt-2 w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"
-                   type="number" min="1" step="1" placeholder="0" oninput="recalcTotal()" required>
-          </div>
+function criterioRow(data = {}) {
+  const titulo = data.titulo || '';
+  const descripcion = data.descripcion || '';
+  const puntaje = data.puntaje || '';
+  return `
+    <div class="criterio-row rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50/60 dark:bg-slate-800/30">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div class="lg:col-span-4">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Criterio</label>
+          <input type="text" name="criterio_titulo" value="${escapeHtml(titulo)}" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800 dark:border-slate-700 px-3" placeholder="Ej. Dominio del tema">
+        </div>
+        <div class="lg:col-span-5">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Descripción</label>
+          <input type="text" name="criterio_desc" value="${escapeHtml(descripcion)}" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800 dark:border-slate-700 px-3" placeholder="Describe qué se evaluará">
+        </div>
+        <div class="lg:col-span-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Puntaje</label>
+          <input type="number" min="1" step="1" name="criterio_puntos" value="${escapeHtml(String(puntaje))}" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800 dark:border-slate-700 px-3 criterio-puntaje" placeholder="10">
+        </div>
+        <div class="lg:col-span-1 flex items-end">
+          <button type="button" class="w-full h-11 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold" onclick="removeCriterioRow(this)">Quitar</button>
         </div>
       </div>
-    `;
+    </div>`;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function updateTargetVisibility() {
+  const value = targetTypeField?.value || 'PROYECTO';
+  proyectoWrap.classList.toggle('hidden', value !== 'PROYECTO');
+  ponenciaWrap.classList.toggle('hidden', value !== 'PONENCIA');
+}
+
+function updatePuntajeTotal() {
+  let total = 0;
+  document.querySelectorAll('.criterio-puntaje').forEach(input => {
+    const val = parseInt(input.value || '0', 10);
+    if (!Number.isNaN(val) && val > 0) total += val;
+  });
+  puntajeTotal.textContent = String(total);
+}
+
+function addCriterioRow(data = {}) {
+  criteriosWrap.insertAdjacentHTML('beforeend', criterioRow(data));
+  updatePuntajeTotal();
+}
+
+function removeCriterioRow(btn) {
+  const row = btn.closest('.criterio-row');
+  if (row) row.remove();
+  if (!criteriosWrap.children.length) addCriterioRow();
+  updatePuntajeTotal();
+}
+
+function renderAdjuntos(adjuntos = []) {
+  adjuntosExistentes.innerHTML = '';
+  if (!adjuntos.length) {
+    adjuntosExistentesWrap.classList.add('hidden');
+    return;
   }
+  adjuntosExistentesWrap.classList.remove('hidden');
+  adjuntos.forEach(item => {
+    const el = document.createElement('a');
+    el.href = item.url;
+    el.className = 'inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300';
+    el.textContent = item.nombre;
+    adjuntosExistentes.appendChild(el);
+  });
+}
 
-  function addCriterioRow(data){
-    const wrap = document.getElementById("criteriosWrap");
-    wrap.insertAdjacentHTML("beforeend", criterioRowHTML(data));
-    recalcTotal();
-  }
-
-  function removeCriterioRow(btn){
-    const card = btn.closest(".rounded-lg");
-    if (card) card.remove();
-    recalcTotal();
-  }
-
-  // ===== Modal state =====
-  function resetRubricaModal(){
-    document.getElementById("rubricaModalTitle").innerText = "Crear Nueva Rúbrica";
-    document.getElementById("rubrica_id").value = "";
-
-    const t = document.querySelector("#modalRubrica [name='titulo']");
-    const e = document.querySelector("#modalRubrica [name='estado']");
-    const p = document.querySelector("#modalRubrica [name='proyecto']");
-    if (t) t.value = "";
-    if (e) e.value = "BORRADOR";
-    if (p) p.value = "";
-
-    document.getElementById("criteriosWrap").innerHTML = "";
-    addCriterioRow(); // 1 criterio por defecto
-  }
-
-  function openRubricaModal(payload){
-    resetRubricaModal();
-
-    if (payload && payload.id){
-      document.getElementById("rubricaModalTitle").innerText = "Editar Rúbrica";
-      document.getElementById("rubrica_id").value = payload.id;
-
-      const t = document.querySelector("#modalRubrica [name='titulo']");
-      const e = document.querySelector("#modalRubrica [name='estado']");
-      const p = document.querySelector("#modalRubrica [name='proyecto']");
-      if (t) t.value = payload.titulo || "";
-      if (e) e.value = payload.estado || "BORRADOR";
-      if (p) p.value = payload.proyecto_id || "";
-
-      document.getElementById("criteriosWrap").innerHTML = "";
-      (payload.criterios || []).forEach(c => addCriterioRow(c));
-      if (!(payload.criterios || []).length) addCriterioRow();
-    }
-
-    openModal("modalRubrica");
-  }
-
-  // Inicial: 1 criterio
+function clearModal() {
+  document.getElementById('rubricaFormModal').reset();
+  rubricaIdField.value = '';
+  criteriosWrap.innerHTML = '';
   addCriterioRow();
+  renderAdjuntos([]);
+  updateTargetVisibility();
+  titleNode.textContent = 'Nueva rúbrica';
+}
+
+function applyModalData(data = {}) {
+  clearModal();
+  if (data.id) {
+    rubricaIdField.value = data.id;
+    titleNode.textContent = 'Editar rúbrica';
+  }
+  document.getElementById('id_titulo').value = data.titulo || '';
+  document.getElementById('id_estado').value = data.estado || 'BORRADOR';
+  document.getElementById('id_target_type').value = data.target_type || 'PROYECTO';
+  document.getElementById('id_proyecto').value = data.proyecto_id || '';
+  document.getElementById('id_ponencia').value = data.ponencia_id || '';
+  criteriosWrap.innerHTML = '';
+  const criterios = Array.isArray(data.criterios) ? data.criterios : [];
+  if (criterios.length) {
+    criterios.forEach(c => addCriterioRow(c));
+  } else {
+    addCriterioRow();
+  }
+  renderAdjuntos(Array.isArray(data.adjuntos) ? data.adjuntos : []);
+  updateTargetVisibility();
+  updatePuntajeTotal();
+}
+
+function openRubricaModal(data = null) {
+  if (data) applyModalData(data); else clearModal();
+  modal.classList.remove('hidden');
+  document.body.classList.add('overflow-hidden');
+}
+
+function closeRubricaModal() {
+  modal.classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target.classList.contains('criterio-puntaje')) updatePuntajeTotal();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  targetTypeField?.addEventListener('change', updateTargetVisibility);
+  updateTargetVisibility();
+
+  const prefillNode = document.getElementById('rubrica-prefill');
+  let prefill = {};
+  if (prefillNode?.textContent) {
+    try { prefill = JSON.parse(prefillNode.textContent); } catch (err) { prefill = {}; }
+  }
+
+  {% if open_modal %}
+    openRubricaModal(prefill || {});
+  {% else %}
+    clearModal();
+  {% endif %}
+});
 </script>
 {% endblock %}

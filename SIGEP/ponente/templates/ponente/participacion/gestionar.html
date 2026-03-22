@@ -8,7 +8,7 @@
 <div class="max-w-7xl mx-auto space-y-8">
   <div class="flex items-start justify-between gap-4">
     <div class="flex items-start gap-4">
-      <a href="{% url 'ponente:panel' %}"
+      <a href="{% url 'ponente:inscripcion' %}"
          class="h-12 w-12 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-600 hover:text-primary hover:border-primary transition">
         <span class="material-symbols-outlined">arrow_back</span>
       </a>
@@ -16,242 +16,290 @@
       <div>
         <h1 class="text-3xl font-black text-slate-900 tracking-tight">Gestión de Participación</h1>
         <p class="text-slate-500 mt-2">
-          Administre los recursos y documentación de su ponencia.
+          Administra los documentos y requerimientos técnicos de tu ponencia registrada.
         </p>
       </div>
     </div>
   </div>
 
-  {% if ponencias %}
-  <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <label for="ponencia_selector" class="block text-sm font-semibold text-slate-800 mb-2">
-      Seleccionar ponencia
-    </label>
-    <select id="ponencia_selector"
-            onchange="if(this.value){ window.location.href='?ponencia=' + this.value; }"
-            class="w-full md:w-[420px] h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary text-sm">
-      {% for item in ponencias %}
-        <option value="{{ item.id }}" {% if ponencia_sel and item.id == ponencia_sel.id %}selected{% endif %}>
-          {{ item.titulo }} — {{ item.evento.nombre|default:item.evento.titulo }}
-        </option>
+  {% if messages %}
+    <div class="space-y-3">
+      {% for message in messages %}
+        <div class="rounded-2xl border px-4 py-3 text-sm font-medium
+          {% if message.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700
+          {% elif message.tags == 'error' %}border-red-200 bg-red-50 text-red-700
+          {% else %}border-blue-200 bg-blue-50 text-blue-700{% endif %}">
+          {{ message }}
+        </div>
       {% endfor %}
-    </select>
-  </section>
+    </div>
+  {% endif %}
+
+  {% if ponencias %}
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <label for="ponencia_selector" class="block text-sm font-semibold text-slate-800 mb-2">
+            Seleccionar ponencia
+          </label>
+          <select id="ponencia_selector"
+                  onchange="if(this.value){ window.location.href='?ponencia=' + this.value; }"
+                  class="w-full md:w-[460px] h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary text-sm">
+            {% for item in ponencias %}
+              <option value="{{ item.id }}" {% if ponencia_sel and item.id == ponencia_sel.id %}selected{% endif %}>
+                {{ item.titulo }} — {{ item.evento.nombre|default:item.evento.titulo }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {% if ponencia_sel %}
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 min-w-[240px]">
+            <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Avance documental</p>
+            <p class="text-2xl font-black text-slate-900 mt-1">{{ ponencia_sel.porcentaje_documentacion }}%</p>
+            <div class="mt-3 h-2 rounded-full bg-slate-200 overflow-hidden">
+              <div class="h-full bg-primary rounded-full" style="width: {{ ponencia_sel.porcentaje_documentacion }}%;"></div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </section>
   {% endif %}
 
   {% if ponencia_sel %}
-  <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-    {% csrf_token %}
+    <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {% csrf_token %}
 
-    <section class="xl:col-span-2 space-y-6">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-200">
-          <div class="flex items-center gap-3">
-            <div class="h-11 w-11 rounded-xl bg-orange-50 flex items-center justify-center">
-              <span class="material-symbols-outlined text-orange-500">folder_open</span>
-            </div>
-            <div>
-              <h2 class="text-lg font-bold text-slate-900">Documentación Requerida</h2>
-              <p class="text-sm text-slate-500">Archivos necesarios para la validación de su ponencia.</p>
+      <section class="xl:col-span-2 space-y-6">
+        {% if form.errors %}
+          <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p class="font-semibold mb-2">Corrige los siguientes campos:</p>
+            <ul class="list-disc pl-5 space-y-1">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li><span class="font-medium">{{ field.label }}:</span> {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+              {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-5 border-b border-slate-200">
+            <div class="flex items-center gap-3">
+              <div class="h-11 w-11 rounded-xl bg-orange-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-orange-500">folder_open</span>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">Documentación requerida</h2>
+                <p class="text-sm text-slate-500">Sube los archivos que respaldan tu participación en el evento.</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="p-6 space-y-4">
-          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div class="flex items-start gap-4">
-                <div class="h-12 w-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-emerald-600">badge</span>
+          <div class="p-6 space-y-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="flex items-start gap-4">
+                  <div class="h-12 w-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-emerald-600">badge</span>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold text-slate-900">Curriculum Vitae</h3>
+                    <p class="text-sm text-slate-500">
+                      {% if ponencia_sel.cv_documento %}
+                        <a href="{{ ponencia_sel.cv_documento.url }}" target="_blank" class="hover:text-primary">
+                          {{ ponencia_sel.cv_documento.name|cut:"ponente/cv/" }}
+                        </a>
+                      {% else %}
+                        Sin archivo cargado.
+                      {% endif %}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 class="text-base font-bold text-slate-900">Curriculum Vitae</h3>
-                  <p class="text-sm text-slate-500">
-                    {% if ponencia_sel.cv_documento %}
-                      <a href="{{ ponencia_sel.cv_documento.url }}" target="_blank" class="hover:text-primary">
-                        {{ ponencia_sel.cv_documento.name|cut:"ponente/cv/" }}
-                      </a>
-                    {% else %}
-                      Sin archivo cargado.
-                    {% endif %}
-                  </p>
-                </div>
+
+                <span class="px-3 py-1 rounded-full text-xs font-semibold
+                  {% if ponencia_sel.cv_estado == 'VALIDADO' %}bg-emerald-100 text-emerald-700
+                  {% elif ponencia_sel.cv_estado == 'EN_REVISION' %}bg-blue-100 text-blue-700
+                  {% else %}bg-slate-100 text-slate-700{% endif %}">
+                  {{ ponencia_sel.get_cv_estado_display }}
+                </span>
               </div>
 
-              <span class="px-3 py-1 rounded-full text-xs font-semibold
-                {% if ponencia_sel.cv_estado == 'VALIDADO' %}bg-emerald-100 text-emerald-700
-                {% elif ponencia_sel.cv_estado == 'EN_REVISION' %}bg-blue-100 text-blue-700
-                {% else %}bg-slate-100 text-slate-700{% endif %}">
-                {{ ponencia_sel.get_cv_estado_display }}
-              </span>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Subir CV en PDF</label>
+                {{ form.cv_documento }}
+              </div>
             </div>
 
-            <div class="mt-4">
-              <label class="block text-sm font-medium text-slate-700 mb-2">Subir CV en PDF</label>
-              {{ form.cv_documento }}
-            </div>
-          </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="flex items-start gap-4">
+                  <div class="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-blue-600">description</span>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold text-slate-900">Reseña biográfica</h3>
+                    <p class="text-sm text-slate-500">
+                      {% if ponencia_sel.resena_biografica %}
+                        <a href="{{ ponencia_sel.resena_biografica.url }}" target="_blank" class="hover:text-primary">
+                          {{ ponencia_sel.resena_biografica.name|cut:"ponente/resenas/" }}
+                        </a>
+                      {% else %}
+                        Sin archivo cargado.
+                      {% endif %}
+                    </p>
+                  </div>
+                </div>
 
-          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div class="flex items-start gap-4">
-                <div class="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-blue-600">description</span>
-                </div>
-                <div>
-                  <h3 class="text-base font-bold text-slate-900">Reseña Biográfica</h3>
-                  <p class="text-sm text-slate-500">
-                    {% if ponencia_sel.resena_biografica %}
-                      <a href="{{ ponencia_sel.resena_biografica.url }}" target="_blank" class="hover:text-primary">
-                        {{ ponencia_sel.resena_biografica.name|cut:"ponente/resenas/" }}
-                      </a>
-                    {% else %}
-                      Sin archivo cargado.
-                    {% endif %}
-                  </p>
-                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold
+                  {% if ponencia_sel.resena_estado == 'VALIDADO' %}bg-emerald-100 text-emerald-700
+                  {% elif ponencia_sel.resena_estado == 'EN_REVISION' %}bg-blue-100 text-blue-700
+                  {% else %}bg-slate-100 text-slate-700{% endif %}">
+                  {{ ponencia_sel.get_resena_estado_display }}
+                </span>
               </div>
 
-              <span class="px-3 py-1 rounded-full text-xs font-semibold
-                {% if ponencia_sel.resena_estado == 'VALIDADO' %}bg-emerald-100 text-emerald-700
-                {% elif ponencia_sel.resena_estado == 'EN_REVISION' %}bg-blue-100 text-blue-700
-                {% else %}bg-slate-100 text-slate-700{% endif %}">
-                {{ ponencia_sel.get_resena_estado_display }}
-              </span>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Subir reseña en PDF</label>
+                {{ form.resena_biografica }}
+              </div>
             </div>
 
-            <div class="mt-4">
-              <label class="block text-sm font-medium text-slate-700 mb-2">Subir reseña en PDF</label>
-              {{ form.resena_biografica }}
-            </div>
-          </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="flex items-start gap-4">
+                  <div class="h-12 w-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-indigo-600">slideshow</span>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold text-slate-900">Diapositivas de presentación</h3>
+                    <p class="text-sm text-slate-500">
+                      {% if ponencia_sel.diapositivas_presentacion %}
+                        <a href="{{ ponencia_sel.diapositivas_presentacion.url }}" target="_blank" class="hover:text-primary">
+                          {{ ponencia_sel.diapositivas_presentacion.name|cut:"ponente/diapositivas/" }}
+                        </a>
+                      {% else %}
+                        Sin archivo cargado.
+                      {% endif %}
+                    </p>
+                  </div>
+                </div>
 
-          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div class="flex items-start gap-4">
-                <div class="h-12 w-12 rounded-xl bg-indigo-100 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-indigo-600">slideshow</span>
-                </div>
-                <div>
-                  <h3 class="text-base font-bold text-slate-900">Diapositivas de Presentación</h3>
-                  <p class="text-sm text-slate-500">
-                    {% if ponencia_sel.diapositivas_presentacion %}
-                      <a href="{{ ponencia_sel.diapositivas_presentacion.url }}" target="_blank" class="hover:text-primary">
-                        {{ ponencia_sel.diapositivas_presentacion.name|cut:"ponente/diapositivas/" }}
-                      </a>
-                    {% else %}
-                      Sin archivo cargado.
-                    {% endif %}
-                  </p>
-                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold
+                  {% if ponencia_sel.diapositivas_estado == 'VALIDADO' %}bg-emerald-100 text-emerald-700
+                  {% elif ponencia_sel.diapositivas_estado == 'EN_REVISION' %}bg-blue-100 text-blue-700
+                  {% else %}bg-slate-100 text-slate-700{% endif %}">
+                  {{ ponencia_sel.get_diapositivas_estado_display }}
+                </span>
               </div>
 
-              <span class="px-3 py-1 rounded-full text-xs font-semibold
-                {% if ponencia_sel.diapositivas_estado == 'VALIDADO' %}bg-emerald-100 text-emerald-700
-                {% elif ponencia_sel.diapositivas_estado == 'EN_REVISION' %}bg-blue-100 text-blue-700
-                {% else %}bg-slate-100 text-slate-700{% endif %}">
-                {{ ponencia_sel.get_diapositivas_estado_display }}
-              </span>
-            </div>
-
-            <div class="mt-4">
-              <label class="block text-sm font-medium text-slate-700 mb-2">Subir presentación (PDF, PPT o PPTX)</label>
-              {{ form.diapositivas_presentacion }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-200">
-          <div class="flex items-center gap-3">
-            <div class="h-11 w-11 rounded-xl bg-purple-100 flex items-center justify-center">
-              <span class="material-symbols-outlined text-purple-600">construction</span>
-            </div>
-            <div>
-              <h2 class="text-lg font-bold text-slate-900">Requerimientos Técnicos</h2>
-              <p class="text-sm text-slate-500">Indique el equipo, material o soporte que necesita para su ponencia.</p>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Subir presentación (PDF, PPT o PPTX)</label>
+                {{ form.diapositivas_presentacion }}
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="p-6">
-          <label class="block text-sm font-medium text-slate-700 mb-2">Detalle de requerimientos</label>
-          {{ form.requerimientos_tecnicos }}
-        </div>
-      </div>
-
-      <div class="flex justify-end">
-        <button type="submit"
-                class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
-          <span class="material-symbols-outlined text-[20px]">save</span>
-          Guardar documentación
-        </button>
-      </div>
-    </section>
-
-    <aside class="xl:col-span-1 space-y-6">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-200">
-          <h2 class="text-lg font-bold text-slate-900">Detalles del Evento</h2>
-        </div>
-
-        <div class="p-6 space-y-5">
-          <div class="flex items-start gap-4">
-            <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
-              <span class="material-symbols-outlined text-primary">event</span>
-            </div>
-            <div>
-              <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Evento</p>
-              <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.evento.nombre|default:ponencia_sel.evento.titulo }}</p>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-5 border-b border-slate-200">
+            <div class="flex items-center gap-3">
+              <div class="h-11 w-11 rounded-xl bg-purple-100 flex items-center justify-center">
+                <span class="material-symbols-outlined text-purple-600">construction</span>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">Requerimientos técnicos</h2>
+                <p class="text-sm text-slate-500">Indica equipo, material o soporte adicional que necesitarás durante tu presentación.</p>
+              </div>
             </div>
           </div>
 
-          <div class="flex items-start gap-4">
-            <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
-              <span class="material-symbols-outlined text-primary">mic</span>
-            </div>
-            <div>
-              <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Ponencia</p>
-              <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.titulo }}</p>
-            </div>
-          </div>
-
-          <div class="flex items-start gap-4">
-            <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
-              <span class="material-symbols-outlined text-primary">category</span>
-            </div>
-            <div>
-              <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Tipo</p>
-              <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.tipo|default:"No especificado" }}</p>
-            </div>
-          </div>
-
-          <div class="flex items-start gap-4">
-            <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
-              <span class="material-symbols-outlined text-primary">progress_activity</span>
-            </div>
-            <div>
-              <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Avance documental</p>
-              <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.porcentaje_documentacion }}%</p>
-            </div>
+          <div class="p-6">
+            <label class="block text-sm font-medium text-slate-700 mb-2">Detalle de requerimientos</label>
+            {{ form.requerimientos_tecnicos }}
           </div>
         </div>
-      </div>
-    </aside>
-  </form>
+
+        <div class="flex justify-end">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
+            <span class="material-symbols-outlined text-[20px]">save</span>
+            Guardar documentación
+          </button>
+        </div>
+      </section>
+
+      <aside class="xl:col-span-1 space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-5 border-b border-slate-200">
+            <h2 class="text-lg font-bold text-slate-900">Resumen de participación</h2>
+          </div>
+
+          <div class="p-6 space-y-5">
+            <div class="flex items-start gap-4">
+              <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary">event</span>
+              </div>
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Evento</p>
+                <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.evento.nombre|default:ponencia_sel.evento.titulo }}</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary">mic</span>
+              </div>
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Ponencia</p>
+                <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.titulo }}</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary">category</span>
+              </div>
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Tipo</p>
+                <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.tipo|default:"No especificado" }}</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary">progress_activity</span>
+              </div>
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Avance documental</p>
+                <p class="text-sm font-semibold text-slate-900">{{ ponencia_sel.porcentaje_documentacion }}%</p>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Sugerencia</p>
+              <p class="text-sm text-slate-700 mt-1">Mantén tus archivos actualizados para facilitar la validación del coordinador y la programación de tu participación.</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </form>
   {% else %}
-  <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
-    <h3 class="text-lg font-bold text-slate-900">Aún no tienes ponencias registradas</h3>
-    <p class="mt-2 text-sm text-slate-500">
-      Primero registra una ponencia y después podrás gestionar tu documentación.
-    </p>
-    <a href="{% url 'ponente:inscripcion' %}"
-       class="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
-      <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
-      Ir a inscripción
-    </a>
-  </div>
+    <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+      <h3 class="text-lg font-bold text-slate-900">Aún no tienes ponencias registradas</h3>
+      <p class="mt-2 text-sm text-slate-500">
+        Primero registra una ponencia y después podrás gestionar tu documentación.
+      </p>
+      <a href="{% url 'ponente:inscripcion' %}"
+         class="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
+        <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+        Ir a inscripción
+      </a>
+    </div>
   {% endif %}
 </div>
 {% endblock %}

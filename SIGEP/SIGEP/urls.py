@@ -1,27 +1,22 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
-from django.shortcuts import redirect
-
-def root_redirect(request):
-    # Landing del sistema (puedes cambiarlo a donde tú quieras)
-    return redirect("principal:login")
+from django.urls import include, path
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
     
-     path("", include("home.urls")),
+    path("admin/", admin.site.urls),
+    path("", include("home.urls")),
 
-    # ✅ raíz del sitio
-    path("", root_redirect),
-
-    # ✅ apps (rutas por módulo)
-    path("principal/", include("principal.urls")),
+    path("django-admin/", admin.site.urls),
+    path("", include("principal.urls")),
     path("administrador/", include("administrador.urls")),
     path("coordinador/", include("coordinador.urls")),
     path("evaluador/", include("evaluador.urls")),
     path("ponente/", include("ponente.urls")),
-
-    # Si ya tienes estos módulos creados y con urls.py, descomenta:
-    # path("participante/", include("participante.urls")),
-
+    path("participante/", include("participante.urls")),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

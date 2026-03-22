@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import os
-import uuid
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
@@ -10,25 +7,34 @@ from django.db import models
 from django.utils import timezone
 
 EVENTO_MODEL = "administrador.Evento"
+EVALUACION_PROYECTO_MODEL = "evaluador.EvaluacionProyecto"
 
 
-def validate_file_size(file, max_mb: int, label: str):
-    max_bytes = max_mb * 1024 * 1024
+def _validate_file_size(file, max_mb: int, label: str):
     size = int(getattr(file, "size", 0) or 0)
+    max_bytes = max_mb * 1024 * 1024
     if size > max_bytes:
-        raise ValidationError(f"{label} excede el tamaño permitido de {max_mb} MB.")
+        raise ValidationError(f"{label} excede el tamaño permitido ({max_mb} MB).")
 
 
-def validate_avatar_file(file):
-    ext = os.path.splitext(getattr(file, "name", ""))[1].lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-        raise ValidationError("La imagen debe estar en formato JPG, JPEG, PNG o WebP.")
-    validate_file_size(file, 5, "La foto de perfil")
+def validate_presentacion_size(file):
+    _validate_file_size(file, 25, "La presentación del proyecto")
+
+
+def validate_informe_size(file):
+    _validate_file_size(file, 15, "El informe del proyecto")
+
+
+def upload_presentacion(instance, filename: str) -> str:
+    return f"participante/presentaciones/evento_{instance.evento_id}/user_{instance.participante_id}/{filename}"
+
+
+def upload_informe(instance, filename: str) -> str:
+    return f"participante/informes/evento_{instance.evento_id}/user_{instance.participante_id}/{filename}"
 
 
 def upload_avatar(instance, filename: str) -> str:
-    ext = os.path.splitext(filename)[1].lower() or ".jpg"
-    return f"participante/avatar/user_{instance.user_id}/{uuid.uuid4().hex}{ext}"
+    return f"participante/perfil/user_{instance.usuario_id}/{filename}"
 
 
 class TimeStampedModel(models.Model):
@@ -40,155 +46,150 @@ class TimeStampedModel(models.Model):
 
 
 class PerfilParticipante(TimeStampedModel):
-    user = models.OneToOneField(
+    usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="perfilparticipante",
+        related_name="perfil_participante",
     )
-    telefono = models.CharField(max_length=30, blank=True, default="")
+    telefono = models.CharField(max_length=20, blank=True, default="")
     institucion = models.CharField(max_length=180, blank=True, default="")
-    carrera = models.CharField(max_length=180, blank=True, default="")
-    bio = models.TextField(blank=True, default="")
-    avatar = models.FileField(
-        upload_to=upload_avatar,
-        null=True,
-        blank=True,
-        validators=[
-            FileExtensionValidator(["jpg", "jpeg", "png", "webp"]),
-            validate_avatar_file,
-        ],
-    )
+    biografia = models.TextField(blank=True, default="")
+    avatar = models.ImageField(upload_to=upload_avatar, blank=True, null=True)
 
     class Meta:
         verbose_name = "Perfil de participante"
         verbose_name_plural = "Perfiles de participantes"
 
-    def __str__(self):
-        return f"Perfil participante - {self.user}"
+    def __str__(self) -> str:
+        return f"Perfil participante: {self.usuario}"
 
 
-class InscripcionParticipante(TimeStampedModel):
-    ESTADO_PREINSCRITO = "PREINSCRITO"
-    ESTADO_CONFIRMADO = "CONFIRMADO"
-    ESTADO_CANCELADO = "CANCELADO"
+class ProyectoParticipante(TimeStampedModel):
+    CAT_TECNOLOGIA = "TECNOLOGIA"
+    CAT_INNOVACION = "INNOVACION"
+    CAT_INVESTIGACION = "INVESTIGACION"
+    CAT_SOCIAL = "SOCIAL"
+    CAT_EMPRESARIAL = "EMPRESARIAL"
+
+    CATEGORIAS = (
+        (CAT_TECNOLOGIA, "Tecnología"),
+        (CAT_INNOVACION, "Innovación"),
+        (CAT_INVESTIGACION, "Investigación"),
+        (CAT_SOCIAL, "Impacto social"),
+        (CAT_EMPRESARIAL, "Emprendimiento"),
+    )
+
+    ESTADO_REGISTRADO = "REGISTRADO"
+    ESTADO_EN_REVISION = "EN_REVISION"
+    ESTADO_ACEPTADO = "ACEPTADO"
     ESTADO_RECHAZADO = "RECHAZADO"
 
-    ESTADOS_INSCRIPCION = (
-        (ESTADO_PREINSCRITO, "Preinscrito"),
-        (ESTADO_CONFIRMADO, "Confirmado"),
-        (ESTADO_CANCELADO, "Cancelado"),
+    ESTADOS = (
+        (ESTADO_REGISTRADO, "Registrado"),
+        (ESTADO_EN_REVISION, "En revisión"),
+        (ESTADO_ACEPTADO, "Aceptado"),
         (ESTADO_RECHAZADO, "Rechazado"),
     )
 
-    participante = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="inscripciones_participante",
+    PROG_PENDIENTE = "PENDIENTE"
+    PROG_PROGRAMADO = "PROGRAMADO"
+    PROG_FINALIZADO = "FINALIZADO"
+    PROG_CANCELADO = "CANCELADO"
+
+    ESTADOS_PROGRAMACION = (
+        (PROG_PENDIENTE, "Pendiente"),
+        (PROG_PROGRAMADO, "Programado"),
+        (PROG_FINALIZADO, "Finalizado"),
+        (PROG_CANCELADO, "Cancelado"),
     )
+
     evento = models.ForeignKey(
         EVENTO_MODEL,
         on_delete=models.CASCADE,
-        related_name="inscripciones_participantes",
+        related_name="proyectos_participantes",
+    )
+    participante = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="proyectos_participante",
+    )
+    evaluacion_proyecto = models.OneToOneField(
+        EVALUACION_PROYECTO_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="proyecto_real",
+        blank=True,
+        null=True,
     )
 
-    estado_inscripcion = models.CharField(
-        max_length=20,
-        choices=ESTADOS_INSCRIPCION,
-        default=ESTADO_PREINSCRITO,
+    nombre_participante = models.CharField(max_length=180)
+    correo = models.EmailField()
+    telefono = models.CharField(max_length=20)
+    institucion_empresa = models.CharField(max_length=200)
+    nombre_proyecto = models.CharField(max_length=220)
+    categoria = models.CharField(max_length=20, choices=CATEGORIAS)
+    numero_integrantes = models.PositiveIntegerField(default=1)
+    resumen = models.TextField(blank=True, default="")
+    presentacion = models.FileField(
+        upload_to=upload_presentacion,
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(["pdf", "ppt", "pptx"]), validate_presentacion_size],
     )
+    informe = models.FileField(
+        upload_to=upload_informe,
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(["pdf", "doc", "docx"]), validate_informe_size],
+    )
+    requerimientos_tecnicos = models.TextField(blank=True, default="")
 
-    folio_inscripcion = models.CharField(max_length=50, blank=True, default="")
-    codigo_pase = models.CharField(max_length=80, blank=True, default="")
-    tipo_acceso = models.CharField(max_length=100, blank=True, default="Participante")
-    pase_generado_en = models.DateTimeField(null=True, blank=True)
-
-    asistencia_confirmada = models.BooleanField(default=False)
-
-    constancia_habilitada = models.BooleanField(default=False)
-    folio_constancia = models.CharField(max_length=50, blank=True, default="")
-    constancia_generada_en = models.DateTimeField(null=True, blank=True)
-
-    observaciones = models.TextField(blank=True, default="")
+    estado = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_REGISTRADO)
+    fecha_programada = models.DateField(blank=True, null=True)
+    hora_inicio = models.TimeField(blank=True, null=True)
+    hora_fin = models.TimeField(blank=True, null=True)
+    espacio_asignado = models.CharField(max_length=180, blank=True, default="")
+    estado_programacion = models.CharField(max_length=20, choices=ESTADOS_PROGRAMACION, default=PROG_PENDIENTE)
 
     class Meta:
-        verbose_name = "Inscripción de participante"
-        verbose_name_plural = "Inscripciones de participantes"
-        ordering = ["-actualizado_en", "-id"]
-        indexes = [
-            models.Index(fields=["participante", "evento"]),
-            models.Index(fields=["estado_inscripcion"]),
-            models.Index(fields=["constancia_habilitada"]),
-            models.Index(fields=["asistencia_confirmada"]),
-        ]
+        verbose_name = "Proyecto participante"
+        verbose_name_plural = "Proyectos participantes"
+        ordering = ["-creado_en", "-id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["participante", "evento"],
-                name="uq_inscripcion_participante_evento",
+                fields=["evento", "participante"],
+                name="unique_proyecto_por_evento_y_participante",
             )
         ]
+        indexes = [
+            models.Index(fields=["evento", "estado"]),
+            models.Index(fields=["participante", "evento"]),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.numero_integrantes < 1:
+            raise ValidationError({"numero_integrantes": "Debe haber al menos un integrante."})
+
+        if self.hora_inicio and self.hora_fin and self.hora_fin <= self.hora_inicio:
+            raise ValidationError({"hora_fin": "La hora fin debe ser mayor que la hora inicio."})
+
+    def __str__(self) -> str:
+        return f"{self.nombre_proyecto} - {self.evento_id}"
 
     def nombre_evento(self) -> str:
-        if hasattr(self.evento, "nombre") and self.evento.nombre:
-            return self.evento.nombre
-        if hasattr(self.evento, "titulo") and self.evento.titulo:
-            return self.evento.titulo
-        return "Evento"
+        return getattr(self.evento, "titulo", None) or getattr(self.evento, "nombre", "Evento")
 
-    def fecha_evento(self):
-        if hasattr(self.evento, "fecha") and self.evento.fecha:
-            return self.evento.fecha
-        if hasattr(self.evento, "fecha_inicio") and self.evento.fecha_inicio:
-            return self.evento.fecha_inicio
-        return None
+    def tiene_programacion(self) -> bool:
+        return bool(self.fecha_programada and self.hora_inicio and self.hora_fin)
 
-    def fecha_fin_evento(self):
-        if hasattr(self.evento, "fecha_fin") and self.evento.fecha_fin:
-            return self.evento.fecha_fin
-        if hasattr(self.evento, "fecha") and self.evento.fecha:
-            return self.evento.fecha
-        if hasattr(self.evento, "fecha_inicio") and self.evento.fecha_inicio:
-            return self.evento.fecha_inicio
-        return None
+    def porcentaje_documentacion(self) -> int:
+        total = 3
+        completos = sum([
+            bool(self.resumen.strip()),
+            bool(self.presentacion),
+            bool(self.informe),
+        ])
+        return int((completos / total) * 100)
 
-    def lugar_evento(self) -> str:
-        if hasattr(self.evento, "lugar") and self.evento.lugar:
-            return self.evento.lugar
-        if hasattr(self.evento, "ubicacion") and self.evento.ubicacion:
-            return self.evento.ubicacion
-        if hasattr(self.evento, "sede") and self.evento.sede:
-            return self.evento.sede
-        return "Por definir"
-
-    def evento_finalizado(self) -> bool:
-        fecha_fin = self.fecha_fin_evento()
-        if not fecha_fin:
-            return False
-        return fecha_fin <= timezone.localdate()
-
-    def puede_descargar_pase(self) -> bool:
-        return self.estado_inscripcion in {
-            self.ESTADO_PREINSCRITO,
-            self.ESTADO_CONFIRMADO,
-        }
-
-    def puede_descargar_constancia(self) -> bool:
-        return (
-            self.estado_inscripcion == self.ESTADO_CONFIRMADO
-            and self.asistencia_confirmada
-            and (self.constancia_habilitada or self.evento_finalizado())
-        )
-
-    def generar_folio_inscripcion(self) -> str:
-        fecha = timezone.localdate().strftime("%Y%m%d")
-        return f"INS-PAR-{fecha}-{self.id:06d}"
-
-    def generar_codigo_pase(self) -> str:
-        fecha = timezone.localdate().strftime("%Y%m%d")
-        return f"PASE-PAR-{fecha}-{self.id:06d}"
-
-    def generar_folio_constancia(self) -> str:
-        fecha = timezone.localdate().strftime("%Y%m%d")
-        return f"CONST-PAR-{fecha}-{self.id:06d}"
-
-    def __str__(self):
-        return f"{self.participante} - {self.nombre_evento()}"
+    def puede_editar(self) -> bool:
+        return self.estado in {self.ESTADO_REGISTRADO, self.ESTADO_EN_REVISION}

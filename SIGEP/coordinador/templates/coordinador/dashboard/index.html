@@ -7,24 +7,20 @@
   <div class="flex flex-col gap-2">
     <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Panel de coordinación</h1>
     <p class="text-slate-500 dark:text-slate-400 text-base">
-      Selecciona un evento para gestionarlo o crea uno nuevo desde aquí.
+      Vista operativa de tus eventos, registros, rúbricas y asignaciones. El alcance se limita a los eventos que gestionas.
     </p>
   </div>
 
-  <!-- selector + gestionar -->
-  <div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-slate-200 dark:border-border-dark p-6 space-y-4">
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
-
-      <div class="lg:col-span-2">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-end">
+      <div class="xl:col-span-2">
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Evento</label>
-
         <form method="POST" action="{% url 'coordinador:evento_seleccionar' %}" class="flex flex-col sm:flex-row gap-3">
           {% csrf_token %}
           <div class="relative flex-1">
             <select name="evento_id"
-                    class="w-full h-12 pl-4 pr-10 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border-dark text-slate-700 dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary block appearance-none font-medium">
-              <option value="" disabled {% if not evento %}selected{% endif %}>Selecciona un evento...</option>
+                    class="w-full h-12 pl-4 pr-10 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-primary focus:border-primary block appearance-none font-medium">
+              <option value="" disabled {% if not evento %}selected{% endif %}>Selecciona un evento…</option>
               {% for e in eventos %}
                 <option value="{{ e.id }}" {% if evento and evento.id == e.id %}selected{% endif %}>{{ e.titulo }}</option>
               {% endfor %}
@@ -33,18 +29,10 @@
               <span class="material-symbols-outlined text-xl">expand_more</span>
             </div>
           </div>
-
-          <button type="submit"
-                  class="h-12 px-6 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-white rounded-lg text-sm font-bold">
+          <button type="submit" class="h-12 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold">
             Seleccionar
           </button>
         </form>
-
-        {% if evento %}
-          <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
-            Evento actual: <b>{{ evento.titulo }}</b>
-          </p>
-        {% endif %}
       </div>
 
       <div class="flex gap-3 justify-end">
@@ -56,24 +44,155 @@
         </button>
 
         <a href="{% url 'coordinador:gestion_evento' %}"
-           class="h-12 px-6 rounded-lg text-sm font-bold flex items-center gap-2
-                  {% if not evento %}pointer-events-none opacity-50 bg-slate-200 text-slate-500{% else %}bg-slate-900 hover:bg-black text-white{% endif %}">
+           class="h-12 px-6 rounded-lg text-sm font-bold flex items-center gap-2 {% if not evento %}pointer-events-none opacity-50 bg-slate-200 text-slate-500{% else %}bg-slate-900 hover:bg-black text-white{% endif %}">
           <span class="material-symbols-outlined">settings</span>
           Gestionar
         </a>
       </div>
+    </div>
 
+    {% if evento_actual_stats %}
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 xl:col-span-2">
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Evento actual</p>
+          <p class="text-lg font-black text-slate-900 mt-1">{{ evento_actual_stats.titulo }}</p>
+          <div class="flex flex-wrap gap-2 mt-3 text-xs">
+            <span class="px-2 py-1 rounded-full bg-white border border-slate-200 font-semibold text-slate-700">{{ evento_actual_stats.estado }}</span>
+            {% if evento_actual_stats.fecha %}<span class="px-2 py-1 rounded-full bg-white border border-slate-200 font-semibold text-slate-700">{{ evento_actual_stats.fecha|date:"d/m/Y" }}</span>{% endif %}
+            {% if evento_actual_stats.lugar %}<span class="px-2 py-1 rounded-full bg-white border border-slate-200 font-semibold text-slate-700">{{ evento_actual_stats.lugar }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Proyectos</p>
+          <p class="text-2xl font-black text-slate-900 mt-1">{{ evento_actual_stats.proyectos }}</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Ponencias</p>
+          <p class="text-2xl font-black text-slate-900 mt-1">{{ evento_actual_stats.ponencias }}</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Rúbricas / Espacios</p>
+          <p class="text-2xl font-black text-slate-900 mt-1">{{ evento_actual_stats.rubricas }} / {{ evento_actual_stats.espacios }}</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    {% for card in summary_cards %}
+      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">{{ card.label }}</p>
+            <p class="text-3xl font-black text-slate-900 mt-2">{{ card.value|default:0 }}</p>
+            <p class="text-xs text-slate-500 mt-1">{{ card.help }}</p>
+          </div>
+          <div class="size-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-primary">{{ card.icon }}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">KPIs clasificados</h2>
+          <p class="text-sm text-slate-500">Resumen de {{ scope_label }} del coordinador.</p>
+        </div>
+      </div>
+      <div class="space-y-4">
+        {% for group in kpi_groups %}
+          <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+            <h3 class="text-base font-bold text-slate-900">{{ group.title }}</h3>
+            <p class="text-sm text-slate-500 mt-1">{{ group.description }}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              {% for item in group.items %}
+                <div class="rounded-xl bg-white border border-slate-100 px-4 py-3 min-h-[74px] flex flex-col justify-center">
+                  <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">{{ item.label }}</p>
+                  <p class="text-2xl font-black text-slate-900 mt-1 break-words">{{ item.value|default:"0" }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Estado de eventos</h2>
+            <p class="text-sm text-slate-500">Distribución de tus eventos por estado.</p>
+          </div>
+        </div>
+        <div class="h-[280px] relative">
+          <canvas id="eventosEstadoChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Actividad reciente</h2>
+            <p class="text-sm text-slate-500">Últimos movimientos registrados de tu operación.</p>
+          </div>
+        </div>
+        <div class="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+          {% if actividad_reciente %}
+            {% for log in actividad_reciente %}
+              <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-bold text-slate-900">{{ log.accion }}</p>
+                    <p class="text-xs text-slate-500 mt-1">
+                      {{ log.modulo|default:"GENERAL" }}{% if log.accion_tipo %} · {{ log.accion_tipo }}{% endif %}
+                    </p>
+                  </div>
+                  <span class="text-xs text-slate-500 whitespace-nowrap">{{ log.fecha|date:"d/m H:i" }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+              Aún no hay movimientos recientes para mostrar.
+            </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- MODAL crear evento -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 xl:col-span-1">
+      <h2 class="text-lg font-bold text-slate-900">Registros del alcance actual</h2>
+      <p class="text-sm text-slate-500 mb-4">Comparativa entre inscripciones, proyectos y ponencias.</p>
+      <div class="h-[280px] relative"><canvas id="registrosScopeChart"></canvas></div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 xl:col-span-1">
+      <h2 class="text-lg font-bold text-slate-900">Rúbricas y logística</h2>
+      <p class="text-sm text-slate-500 mb-4">Indicadores operativos para programación del evento.</p>
+      <div class="h-[280px] relative"><canvas id="logisticaChart"></canvas></div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 xl:col-span-1">
+      <h2 class="text-lg font-bold text-slate-900">Actividad últimos 7 días</h2>
+      <p class="text-sm text-slate-500 mb-4">Trazabilidad reciente de uso del módulo coordinador.</p>
+      <div class="h-[280px] relative"><canvas id="actividad7dChart"></canvas></div>
+    </div>
+  </div>
+
   <div id="modalCreateEvent" class="fixed inset-0 z-[70] hidden">
     <div class="absolute inset-0 bg-black/40" onclick="closeModal()"></div>
     <div class="absolute inset-0 flex items-center justify-center p-4">
-      <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white">Crear evento</h3>
-          <button class="text-slate-400 hover:text-slate-700 dark:hover:text-white" onclick="closeModal()">
+      <div class="w-full max-w-xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-slate-900">Crear evento</h3>
+          <button type="button" class="text-slate-400 hover:text-slate-700" onclick="closeModal()">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -82,34 +201,32 @@
           {% csrf_token %}
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título *</label>
-            <input name="titulo" required class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
+            <input name="titulo" required class="w-full h-11 rounded-lg border-slate-300"/>
           </div>
 
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha *</label>
-            <input name="fecha" type="date" required class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
+            <input name="fecha" type="date" required class="w-full h-11 rounded-lg border-slate-300"/>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar</label>
-              <input name="lugar" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
+              <input name="lugar" class="w-full h-11 rounded-lg border-slate-300"/>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cupo</label>
-              <input name="cupo" type="number" min="0" class="w-full h-11 rounded-lg border-slate-300 dark:bg-slate-800"/>
+              <input name="cupo" type="number" min="0" class="w-full h-11 rounded-lg border-slate-300"/>
             </div>
           </div>
 
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción</label>
-            <textarea name="descripcion" rows="3" class="w-full rounded-lg border-slate-300 dark:bg-slate-800"></textarea>
+            <textarea name="descripcion" rows="3" class="w-full rounded-lg border-slate-300"></textarea>
           </div>
 
           <div class="flex justify-end gap-2 pt-2">
-            <button type="button"
-                    class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white text-sm font-semibold"
-                    onclick="closeModal()">
+            <button type="button" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold" onclick="closeModal()">
               Cancelar
             </button>
             <button class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold">
@@ -117,22 +234,80 @@
             </button>
           </div>
         </form>
-
       </div>
     </div>
   </div>
-
 </div>
 
+{{ charts_data|json_script:"coord-dashboard-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const modal = document.getElementById("modalCreateEvent");
 document.getElementById("openCreateEvent")?.addEventListener("click", () => {
   modal.classList.remove("hidden");
-  document.body.style.overflow="hidden";
+  document.body.style.overflow = "hidden";
 });
 function closeModal(){
   modal.classList.add("hidden");
-  document.body.style.overflow="";
+  document.body.style.overflow = "";
 }
+
+const chartPayload = JSON.parse(document.getElementById("coord-dashboard-data").textContent || "{}");
+
+function tooltipLabel(context) {
+  const label = context.label || '';
+  const value = context.raw || 0;
+  const data = context.dataset.data || [];
+  const total = data.reduce((a, b) => a + b, 0);
+  const percent = total ? ((value * 100) / total).toFixed(1) : 0;
+  return `${label}: ${value} (${percent}%)`;
+}
+
+function renderDoughnut(id, payload) {
+  const ctx = document.getElementById(id);
+  if (!ctx || !payload) return;
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: payload.labels,
+      datasets: [{ data: payload.values, borderWidth: 1 }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: tooltipLabel } }
+      }
+    }
+  });
+}
+
+function renderBar(id, payload) {
+  const ctx = document.getElementById(id);
+  if (!ctx || !payload) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: payload.labels,
+      datasets: [{ data: payload.values, borderRadius: 8, maxBarThickness: 42 }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: tooltipLabel } }
+      },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+renderDoughnut('eventosEstadoChart', chartPayload.eventos_estado);
+renderBar('registrosScopeChart', chartPayload.registros_alcance);
+renderBar('logisticaChart', chartPayload.logistica);
+renderBar('actividad7dChart', chartPayload.actividad_7d);
 </script>
 {% endblock %}

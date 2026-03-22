@@ -3,25 +3,80 @@
 {% block title %}Admin: Usuarios - SIGEP{% endblock %}
 
 {% block content %}
-<div class="p-6 lg:p-10 flex flex-col gap-6">
+<div class="max-w-[1400px] mx-auto p-6 lg:p-10 space-y-6">
 
-  <div class="w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:p-8">
-
-    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
-      <div class="flex flex-col gap-1">
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Gestión de Usuarios</h1>
-        <p class="text-sm text-slate-500">Administra usuarios, roles y estado de acceso.</p>
-      </div>
+  <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Gestión de Usuarios</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Control centralizado de usuarios, roles, estado de acceso y consistencia de registros.
+      </p>
     </div>
 
-    <!-- Filtros (tipo video) -->
-    <form method="get" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end mb-6">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'administrador:dashboard' %}"
+         class="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold text-sm hover:bg-slate-50 transition">
+        Volver al panel
+      </a>
+      <button type="button"
+              onclick="openCreateModal()"
+              class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+        + Nuevo usuario
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Usuarios registrados</p>
+      <p class="text-3xl font-black text-slate-900 mt-2">{{ usuarios_total|default:0 }}</p>
+      <p class="text-xs text-slate-500 mt-1">Base general de cuentas del sistema</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Usuarios activos</p>
+      <p class="text-3xl font-black text-emerald-700 mt-2">{{ usuarios_activos|default:0 }}</p>
+      <p class="text-xs text-slate-500 mt-1">Cuentas con acceso habilitado</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Usuarios inactivos</p>
+      <p class="text-3xl font-black text-rose-700 mt-2">{{ usuarios_inactivos|default:0 }}</p>
+      <p class="text-xs text-slate-500 mt-1">Cuentas suspendidas o deshabilitadas</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Resultado actual</p>
+      <p class="text-3xl font-black text-slate-900 mt-2">{{ usuarios_filtrados|default:0 }}</p>
+      <p class="text-xs text-slate-500 mt-1">Registros visibles con los filtros aplicados</p>
+    </div>
+
+    <div class="rounded-2xl border shadow-sm p-5 {% if duplicate_groups_total %}border-amber-200 bg-amber-50{% else %}border-emerald-200 bg-emerald-50{% endif %}">
+      <p class="text-[11px] uppercase tracking-wide font-bold {% if duplicate_groups_total %}text-amber-700{% else %}text-emerald-700{% endif %}">
+        Integridad de registros
+      </p>
+      <p class="text-3xl font-black mt-2 {% if duplicate_groups_total %}text-amber-800{% else %}text-emerald-800{% endif %}">
+        {{ duplicate_groups_total|default:0 }}
+      </p>
+      <p class="text-xs mt-1 {% if duplicate_groups_total %}text-amber-700{% else %}text-emerald-700{% endif %}">
+        {% if duplicate_groups_total %}
+          Se detectaron grupos con posible duplicidad por correo o username.
+        {% else %}
+          No se detectaron duplicidades por correo ni username.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:p-8 space-y-6">
+
+    <form method="get" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
       <div class="md:col-span-6">
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar</label>
         <div class="relative">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">search</span>
           <input name="q" value="{{ q }}"
-                 class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-slate-200 transition-colors"
+                 class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-transparent rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-primary/10 focus:border-primary transition-colors"
                  placeholder="Nombre, correo o username">
         </div>
       </div>
@@ -30,7 +85,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rol</label>
         <div class="relative">
           <select name="rol"
-                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200 appearance-none cursor-pointer">
+                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-transparent rounded-xl py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-2 focus:ring-primary/10 focus:border-primary appearance-none cursor-pointer">
             <option value="">Todos</option>
             {% for r in roles %}
               <option value="{{ r }}" {% if rol_filter == r %}selected{% endif %}>{{ r }}</option>
@@ -44,7 +99,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado</label>
         <div class="relative">
           <select name="estado"
-                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border-none rounded-lg py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-1 focus:ring-slate-200 appearance-none cursor-pointer">
+                  class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-transparent rounded-xl py-2.5 pl-4 pr-10 text-sm text-slate-700 focus:ring-2 focus:ring-primary/10 focus:border-primary appearance-none cursor-pointer">
             <option value="">Todos</option>
             <option value="activos" {% if estado == "activos" %}selected{% endif %}>Activos</option>
             <option value="inactivos" {% if estado == "inactivos" %}selected{% endif %}>Inactivos</option>
@@ -65,142 +120,194 @@
       </div>
     </form>
 
-    <!-- Tabla -->
-    <div class="w-full overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead>
-          <tr class="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-400">
-            <th class="px-2 py-4 font-semibold" scope="col">Nombre</th>
-            <th class="px-2 py-4 font-semibold" scope="col">Correo</th>
-            <th class="px-2 py-4 font-semibold" scope="col">Rol</th>
-            <th class="px-2 py-4 font-semibold" scope="col">Estado</th>
-            <th class="px-2 py-4 font-semibold text-right" scope="col">Acciones</th>
-          </tr>
-        </thead>
+    <div class="overflow-hidden rounded-2xl border border-slate-100">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm min-w-[980px]">
+          <thead class="bg-slate-50">
+            <tr class="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <th class="px-4 py-4 font-semibold">Usuario</th>
+              <th class="px-4 py-4 font-semibold">Correo</th>
+              <th class="px-4 py-4 font-semibold">Rol</th>
+              <th class="px-4 py-4 font-semibold">Estado</th>
+              <th class="px-4 py-4 font-semibold">Registro</th>
+              <th class="px-4 py-4 font-semibold text-right">Acciones</th>
+            </tr>
+          </thead>
 
-        <tbody class="divide-y divide-slate-100/60">
-          {% for u in usuarios %}
-            {% with nombre=u.get_full_name|default:u.first_name|default:u.username %}
-            {% with iniciales=nombre|slice:":1"|upper %}
-
-            <tr class="group hover:bg-slate-50/50 transition-colors">
-              <td class="px-2 py-5">
-                <div class="flex items-center gap-3">
-                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-sm">
-                    {{ iniciales }}
+          <tbody class="divide-y divide-slate-100 bg-white">
+            {% for u in usuarios %}
+              {% firstof u.get_full_name u.first_name u.username as nombre %}
+              {% with inicial=nombre|slice:":1"|upper %}
+              <tr class="hover:bg-slate-50/70 transition-colors align-top">
+                <td class="px-4 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-sm">
+                      {{ inicial|upper }}
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="font-bold text-slate-900 text-[14px] truncate max-w-[240px]">{{ nombre }}</span>
+                      <span class="text-xs text-slate-500">@{{ u.username }}</span>
+                    </div>
                   </div>
-                  <div class="flex flex-col">
-                    <span class="font-bold text-slate-900 text-[14px]">{{ nombre }}</span>
-                    <span class="text-xs text-slate-500">@{{ u.username }}</span>
-                  </div>
-                </div>
-              </td>
+                </td>
 
-              <td class="px-2 py-5 text-slate-500">{{ u.email }}</td>
+                <td class="px-4 py-4 text-slate-600 whitespace-nowrap">{{ u.email }}</td>
 
-              <td class="px-2 py-5">
-                <form method="post" action="{% url 'administrador:usuarios' %}" class="flex items-center gap-2">
-                  {% csrf_token %}
-                  <input type="hidden" name="accion" value="rol">
-                  <input type="hidden" name="user_id" value="{{ u.id }}">
-
-                  <select name="rol" class="h-9 rounded-lg border-slate-200 text-sm bg-white">
-                    <option value="ADMIN" {% if u.rol == 'ADMIN' %}selected{% endif %}>ADMIN</option>
-                    <option value="COOR" {% if u.rol == 'COOR' %}selected{% endif %}>COOR</option>
-                    <option value="EVAL" {% if u.rol == 'EVAL' %}selected{% endif %}>EVAL</option>
-                    <option value="PON"  {% if u.rol == 'PON'  %}selected{% endif %}>PON</option>
-                    <option value="PART" {% if u.rol == 'PART' %}selected{% endif %}>PART</option>
-                  </select>
-
-                  <button type="submit"
-                          class="h-9 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition">
-                    Guardar
-                  </button>
-                </form>
-              </td>
-
-              <td class="px-2 py-5">
-                <div class="flex items-center gap-2">
-                  <span class="h-2 w-2 rounded-full {% if u.is_active %}bg-emerald-500{% else %}bg-red-500{% endif %}"></span>
-                  <span class="font-semibold text-xs {% if u.is_active %}text-emerald-700{% else %}text-red-700{% endif %}">
-                    {% if u.is_active %}Activo{% else %}Inactivo{% endif %}
-                  </span>
-                </div>
-              </td>
-
-              <td class="px-2 py-5 text-right">
-                <div class="inline-flex items-center gap-2 justify-end">
-
-                  <!-- Activar/Desactivar -->
-                  <form method="post" action="{% url 'administrador:usuarios' %}" class="inline-flex">
+                <td class="px-4 py-4">
+                  <form method="post" action="{% url 'administrador:usuarios' %}" class="flex items-center gap-2">
                     {% csrf_token %}
-                    <input type="hidden" name="accion" value="toggle">
+                    <input type="hidden" name="accion" value="rol">
                     <input type="hidden" name="user_id" value="{{ u.id }}">
+
+                    <select name="rol" class="h-10 rounded-xl border-slate-200 text-sm bg-white focus:border-primary focus:ring-primary">
+                      {% for r in roles %}
+                        <option value="{{ r }}" {% if u.rol == r %}selected{% endif %}>{{ r }}</option>
+                      {% endfor %}
+                    </select>
+
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold
-                                   hover:border-primary hover:text-primary transition"
-                            title="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
-                      <span class="material-symbols-outlined text-[18px]">
-                        {% if u.is_active %}block{% else %}check_circle{% endif %}
-                      </span>
+                            class="h-10 px-3 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition">
+                      Guardar
                     </button>
                   </form>
+                </td>
 
-                  <!-- Editar (icono) -->
-                  <button type="button"
-                          class="inline-flex items-center px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold
-                                 hover:border-amber-300 hover:text-amber-700 transition"
-                          title="Editar"
-                          onclick="openEditModal(
-                            '{{ u.id }}',
-                            '{{ nombre|escapejs }}',
-                            '{{ u.email|escapejs }}',
-                            '{{ u.username|escapejs }}',
-                            '{{ u.rol|escapejs }}'
-                          )">
-                    <span class="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
+                <td class="px-4 py-4">
+                  <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold {% if u.is_active %}bg-emerald-50 text-emerald-700{% else %}bg-red-50 text-red-700{% endif %}">
+                    <span class="h-2 w-2 rounded-full {% if u.is_active %}bg-emerald-500{% else %}bg-red-500{% endif %}"></span>
+                    {% if u.is_active %}Activo{% else %}Inactivo{% endif %}
+                  </div>
+                </td>
 
-                  <!-- Eliminar (icono) -->
-                  <button type="button"
-                          class="inline-flex items-center px-3 py-2 rounded-lg border border-red-200 text-xs font-bold text-red-600
-                                 hover:bg-red-50 transition"
-                          title="Eliminar"
-                          onclick="openDeleteModal('{{ u.id }}', '{{ nombre|escapejs }}')">
-                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
+                <td class="px-4 py-4 text-slate-500 text-xs whitespace-nowrap">
+                  {% if u.date_joined %}
+                    {{ u.date_joined|date:"d/m/Y H:i" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
 
-                </div>
-              </td>
-            </tr>
+                <td class="px-4 py-4 text-right">
+                  <div class="inline-flex items-center gap-2 justify-end">
 
-            {% endwith %}
-            {% endwith %}
-          {% empty %}
-            <tr>
-              <td colspan="5" class="px-2 py-10 text-center text-slate-500">
-                No hay usuarios registrados con los filtros actuales.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                    <form method="post" action="{% url 'administrador:usuarios' %}" class="inline-flex">
+                      {% csrf_token %}
+                      <input type="hidden" name="accion" value="toggle">
+                      <input type="hidden" name="user_id" value="{{ u.id }}">
+                      <button type="submit"
+                              class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold hover:border-primary hover:text-primary transition"
+                              title="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
+                        <span class="material-symbols-outlined text-[18px]">
+                          {% if u.is_active %}block{% else %}check_circle{% endif %}
+                        </span>
+                      </button>
+                    </form>
+
+                    <button type="button"
+                            class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold hover:border-amber-300 hover:text-amber-700 transition"
+                            title="Editar"
+                            onclick="openEditModal('{{ u.id }}','{{ nombre|escapejs }}','{{ u.email|escapejs }}','{{ u.username|escapejs }}','{{ u.rol|escapejs }}')">
+                      <span class="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+
+                    <button type="button"
+                            class="inline-flex items-center px-3 py-2 rounded-xl border border-red-200 text-xs font-bold text-red-600 hover:bg-red-50 transition"
+                            title="Eliminar"
+                            onclick="openDeleteModal('{{ u.id }}', '{{ nombre|escapejs }}')">
+                      <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endwith %}
+            {% empty %}
+              <tr>
+                <td colspan="6" class="px-4 py-12 text-center text-slate-500">
+                  No hay usuarios registrados con los filtros actuales.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-
   </div>
 </div>
 
-<!-- =========================
-     MODAL EDITAR USUARIO
-     ========================= -->
+<div id="createBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+  <div class="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900">Nuevo usuario</h3>
+        <p class="text-sm text-slate-500">Crea una cuenta única y envía el enlace para establecer contraseña.</p>
+      </div>
+      <button type="button" class="text-slate-500 hover:text-slate-900" onclick="closeCreateModal()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'administrador:usuarios' %}" class="mt-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="crear">
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Nombre completo</label>
+        <input name="nombre" required
+               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary"
+               placeholder="Ej. María López Hernández">
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-bold text-slate-600 uppercase">Correo</label>
+          <input name="email" type="email" required
+                 class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary"
+                 placeholder="usuario@institucion.edu">
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-600 uppercase">Username</label>
+          <input name="username"
+                 class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary"
+                 placeholder="Opcional; si lo dejas vacío se genera automáticamente">
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600 uppercase">Rol</label>
+        <select name="rol" required class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
+          {% for r in roles %}
+            <option value="{{ r }}" {% if r == 'PART' %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+        El usuario se crea con contraseña no utilizable y recibirá un correo para establecerla de forma segura.
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" onclick="closeCreateModal()"
+                class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+          Guardar usuario
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="editBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
   <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
-    <div class="flex items-start justify-between">
+    <div class="flex items-start justify-between gap-4">
       <div>
         <h3 class="text-xl font-bold text-slate-900">Editar usuario</h3>
-        <p class="text-sm text-slate-500">Actualiza datos básicos y rol.</p>
+        <p class="text-sm text-slate-500">Actualiza datos básicos, credenciales visibles y rol operativo.</p>
       </div>
-      <button class="text-slate-500 hover:text-slate-900" onclick="closeEditModal()">
+      <button type="button" class="text-slate-500 hover:text-slate-900" onclick="closeEditModal()">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
@@ -232,21 +339,17 @@
         <label class="text-xs font-bold text-slate-600 uppercase">Rol</label>
         <select name="rol" id="edit_rol" required
                 class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
-          <option value="ADMIN">ADMIN</option>
-          <option value="COOR">COOR</option>
-          <option value="EVAL">EVAL</option>
-          <option value="PON">PON</option>
-          <option value="PART">PART</option>
+          {% for r in roles %}
+            <option value="{{ r }}">{{ r }}</option>
+          {% endfor %}
         </select>
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-2">
-        <button type="button"
-                onclick="closeEditModal()"
+        <button type="button" onclick="closeEditModal()"
                 class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">
           Cancelar
         </button>
-
         <button type="submit"
                 class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
           Guardar cambios
@@ -256,17 +359,14 @@
   </div>
 </div>
 
-<!-- =========================
-     MODAL ELIMINAR USUARIO
-     ========================= -->
 <div id="deleteBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
   <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
-    <div class="flex items-start justify-between">
+    <div class="flex items-start justify-between gap-4">
       <div>
         <h3 class="text-xl font-bold text-slate-900">Eliminar usuario</h3>
         <p class="text-sm text-slate-500">Esta acción no se puede deshacer.</p>
       </div>
-      <button class="text-slate-500 hover:text-slate-900" onclick="closeDeleteModal()">
+      <button type="button" class="text-slate-500 hover:text-slate-900" onclick="closeDeleteModal()">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
@@ -280,12 +380,10 @@
       <input type="hidden" name="accion" value="eliminar">
       <input type="hidden" name="user_id" id="delete_user_id">
 
-      <button type="button"
-              onclick="closeDeleteModal()"
+      <button type="button" onclick="closeDeleteModal()"
               class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">
         Cancelar
       </button>
-
       <button type="submit"
               class="h-10 px-4 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition shadow">
         Eliminar
@@ -295,46 +393,60 @@
 </div>
 
 <script>
+  const createBackdrop = document.getElementById("createBackdrop");
   const editBackdrop = document.getElementById("editBackdrop");
   const deleteBackdrop = document.getElementById("deleteBackdrop");
 
-  function openEditModal(id, nombre, email, username, rol){
+  function openCreateModal() {
+    createBackdrop.classList.remove("hidden");
+    createBackdrop.classList.add("flex");
+  }
+
+  function closeCreateModal() {
+    createBackdrop.classList.add("hidden");
+    createBackdrop.classList.remove("flex");
+  }
+
+  function openEditModal(id, nombre, email, username, rol) {
     document.getElementById("edit_user_id").value = id;
     document.getElementById("edit_nombre").value = nombre;
     document.getElementById("edit_email").value = email;
     document.getElementById("edit_username").value = username;
     document.getElementById("edit_rol").value = rol;
-
     editBackdrop.classList.remove("hidden");
     editBackdrop.classList.add("flex");
   }
-  function closeEditModal(){
+
+  function closeEditModal() {
     editBackdrop.classList.add("hidden");
     editBackdrop.classList.remove("flex");
   }
 
-  function openDeleteModal(id, nombre){
+  function openDeleteModal(id, nombre) {
     document.getElementById("delete_user_id").value = id;
     document.getElementById("delete_nombre").textContent = nombre;
-
     deleteBackdrop.classList.remove("hidden");
     deleteBackdrop.classList.add("flex");
   }
-  function closeDeleteModal(){
+
+  function closeDeleteModal() {
     deleteBackdrop.classList.add("hidden");
     deleteBackdrop.classList.remove("flex");
   }
 
-  // cerrar al hacer click fuera
-  editBackdrop.addEventListener("click", (e) => { if(e.target === editBackdrop) closeEditModal(); });
-  deleteBackdrop.addEventListener("click", (e) => { if(e.target === deleteBackdrop) closeDeleteModal(); });
+  [createBackdrop, editBackdrop, deleteBackdrop].forEach((modal) => {
+    modal.addEventListener("click", (e) => {
+      if (e.target !== modal) return;
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    });
+  });
 
-  // cerrar con ESC
   document.addEventListener("keydown", (e) => {
-    if(e.key === "Escape"){
-      closeEditModal();
-      closeDeleteModal();
-    }
+    if (e.key !== "Escape") return;
+    closeCreateModal();
+    closeEditModal();
+    closeDeleteModal();
   });
 </script>
 {% endblock %}

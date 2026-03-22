@@ -1,342 +1,280 @@
 {% extends "base_eval.html" %}
-{% block title %}Evaluador: Formulario de Evaluación - SIGEP{% endblock %}
-
-{% block extra_head %}
-<style>
-  .rating-input:checked + .rating-label {
-    background-color: #137fec;
-    color: white;
-    border-color: #137fec;
-  }
-</style>
-{% endblock %}
+{% block title %}Evaluador: Mi Horario Asignado - SIGEP{% endblock %}
 
 {% block content %}
-<div class="flex-1 w-full py-8 px-4 md:px-8 bg-background-light">
-  <div class="w-full max-w-[960px] mx-auto flex flex-col gap-6">
+<main class="flex-1 overflow-y-auto bg-background-light p-4 sm:p-6 lg:p-8">
+  <div class="max-w-[1280px] mx-auto flex flex-col gap-6">
 
-    <!-- Encabezado -->
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div class="flex flex-col gap-1">
-        <p class="text-3xl md:text-4xl font-black leading-tight tracking-tight text-slate-900">
-          Evaluación en curso
-        </p>
-        <p class="text-slate-500 text-base font-normal">
-          Complete la rúbrica para el proyecto asignado a continuación.
-        </p>
-      </div>
-
-      <div class="flex items-center gap-2">
-        {# Estado visual según asignación #}
-        {% if asignacion and asignacion.estado == "enviada" %}
-          <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-full border border-emerald-200">
-            Enviada
-          </span>
-        {% elif asignacion and asignacion.estado == "en_revision" %}
-          <span class="px-3 py-1 bg-amber-50 text-amber-700 text-sm font-semibold rounded-full border border-amber-200">
-            En Progreso
-          </span>
-        {% else %}
-          <span class="px-3 py-1 bg-blue-50 text-primary text-sm font-semibold rounded-full border border-blue-100">
-            En Progreso
-          </span>
-        {% endif %}
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Mi Horario Asignado</h1>
+        <p class="mt-1 text-slate-500">Consulta la agenda oficial que te asignó coordinación para evaluar proyectos y ponencias.</p>
       </div>
     </div>
 
-    <!-- Card del proyecto -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="flex flex-col gap-1">
-          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Título del Proyecto</span>
-          <p class="text-slate-900 text-lg font-semibold leading-snug">
-            {{ proyecto.titulo|default:proyecto.nombre|default:"—" }}
-          </p>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Asignaciones</p>
+        <p class="mt-2 text-3xl font-extrabold text-slate-900">{{ kpi_total|default:0 }}</p>
+        <p class="mt-1 text-sm text-slate-500">Registros en tu agenda actual.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Programadas</p>
+        <p class="mt-2 text-3xl font-extrabold text-emerald-600">{{ kpi_programadas|default:0 }}</p>
+        <p class="mt-1 text-sm text-slate-500">Ya cuentan con horario y espacio.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Con rúbrica</p>
+        <p class="mt-2 text-3xl font-extrabold text-blue-600">{{ kpi_con_rubrica|default:0 }}</p>
+        <p class="mt-1 text-sm text-slate-500">Listas para iniciar evaluación.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Pendientes</p>
+        <p class="mt-2 text-3xl font-extrabold text-amber-600">{{ kpi_pendientes|default:0 }}</p>
+        <p class="mt-1 text-sm text-slate-500">Sin programación final completa.</p>
+      </div>
+    </div>
 
-        <div class="flex flex-col gap-1">
-          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Evento</span>
-          <p class="text-slate-900 text-base font-medium">
-            {{ proyecto.evento.nombre|default:proyecto.evento|default:"—" }}
-          </p>
-        </div>
+    <div class="w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50/50">
+              <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[220px]">Evento</th>
+              <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-36">Tipo</th>
+              <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[320px]">Registro evaluable</th>
+              <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-40">Fecha</th>
+              <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-48">Hora</th>
+              <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[200px]">Espacio</th>
+              <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-44">Estado</th>
+            </tr>
+          </thead>
 
-        <div class="flex flex-col gap-1">
-          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ponente</span>
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-slate-400 text-lg">person</span>
-            <p class="text-slate-900 text-base font-medium">
-              {{ proyecto.ponente.nombre|default:proyecto.ponente|default:proyecto.autor|default:"—" }}
-            </p>
-          </div>
-        </div>
+          <tbody class="divide-y divide-slate-200">
+            {% if asignaciones %}
+              {% for h in asignaciones %}
+              <tr class="group hover:bg-slate-50 transition-colors cursor-pointer"
+                  data-action="ver"
+                  data-evento="{{ h.evento|default:'—' }}"
+                  data-tipo="{{ h.tipo|default:'Evaluación' }}"
+                  data-titulo="{{ h.titulo|default:'—' }}"
+                  data-codigo="{{ h.codigo|default:'—' }}"
+                  data-responsable="{{ h.responsable|default:'—' }}"
+                  data-fecha="{% if h.fecha %}{{ h.fecha|date:'d/m/Y' }}{% else %}—{% endif %}"
+                  data-hora="{% if h.hora_inicio and h.hora_fin %}{{ h.hora_inicio }} - {{ h.hora_fin }}{% else %}—{% endif %}"
+                  data-espacio="{{ h.espacio|default:'—' }}"
+                  data-estado="{{ h.estado|default:'—' }}"
+                  data-rubrica="{{ h.rubrica|default:'No asignada' }}"
+                  data-notas="{{ h.notas|default:'Sin notas.' }}">
 
-        <div class="flex flex-col gap-1">
-          <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Tipo</span>
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-slate-400 text-lg">mic</span>
-            <p class="text-slate-900 text-base font-medium">
-              {{ proyecto.tipo|default:"Ponencia" }}
-            </p>
-          </div>
-        </div>
+                <td class="px-6 py-4">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-slate-900">{{ h.evento|default:"—" }}</span>
+                    <span class="text-xs text-slate-500">Código: {{ h.codigo|default:"—" }}</span>
+                  </div>
+                </td>
+
+                <td class="px-6 py-4">
+                  {% if h.tipo == "Ponencia" %}
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                      <span class="size-1.5 rounded-full bg-purple-500"></span>
+                      Ponencia
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                      <span class="size-1.5 rounded-full bg-blue-500"></span>
+                      Proyecto
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td class="px-6 py-4">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-slate-900 font-medium text-sm">{{ h.titulo|default:"—" }}</span>
+                    <span class="text-slate-500 text-xs">Responsable: {{ h.responsable|default:"—" }}</span>
+                    {% if h.rubrica_asignada %}
+                      <span class="inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="material-symbols-outlined text-sm">fact_check</span>
+                        Rúbrica asignada
+                      </span>
+                    {% else %}
+                      <span class="inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="material-symbols-outlined text-sm">hourglass_top</span>
+                        Sin rúbrica
+                      </span>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <td class="px-6 py-4 text-slate-600 text-sm font-medium tabular-nums">
+                  {% if h.fecha %}{{ h.fecha|date:"d/m/Y" }}{% else %}—{% endif %}
+                </td>
+
+                <td class="px-6 py-4 text-slate-600 text-sm font-medium tabular-nums">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-slate-400 text-base">schedule</span>
+                    {% if h.hora_inicio and h.hora_fin %}
+                      {{ h.hora_inicio }} - {{ h.hora_fin }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </div>
+                </td>
+
+                <td class="px-6 py-4">
+                  <div class="flex flex-col gap-1 text-sm text-slate-600">
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-slate-400 text-base">
+                        {% if h.modo == "Virtual" %}laptop_chromebook{% else %}meeting_room{% endif %}
+                      </span>
+                      <span>{{ h.espacio|default:"—" }}</span>
+                    </div>
+                    <span class="text-xs text-slate-500">{{ h.modo|default:"—" }}</span>
+                  </div>
+                </td>
+
+                <td class="px-6 py-4">
+                  {% if h.estado == "Evaluación enviada" %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">{{ h.estado }}</span>
+                  {% elif h.estado == "Pendiente de programación" %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">{{ h.estado }}</span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">{{ h.estado }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="7" class="px-6 py-16 text-center">
+                  <div class="max-w-md mx-auto">
+                    <div class="mx-auto size-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                      <span class="material-symbols-outlined text-slate-500">event_busy</span>
+                    </div>
+                    <p class="mt-3 font-extrabold text-slate-900">Aún no tienes horarios asignados</p>
+                    <p class="text-sm text-slate-600">Cuando coordinación programe tus evaluaciones, aparecerán aquí con su fecha, hora y espacio.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
       </div>
 
-      <div class="bg-slate-50 border-t border-slate-200 px-6 py-3 flex gap-4">
-        <button type="button"
-                class="text-primary text-sm font-medium flex items-center gap-1 hover:underline"
-                onclick="openModal('modalResumen')">
-          <span class="material-symbols-outlined text-lg">visibility</span>
-          Ver resumen
-        </button>
+      <div class="flex items-center justify-between border-t border-slate-200 px-6 py-3 bg-slate-50/50">
+        <p class="text-sm text-slate-500">
+          Mostrando
+          <span class="font-medium text-slate-900">{{ page_start|default:0 }}</span>
+          a
+          <span class="font-medium text-slate-900">{{ page_end|default:0 }}</span>
+          de
+          <span class="font-medium text-slate-900">{{ asignaciones|length }}</span>
+          resultados
+        </p>
 
-        {% if proyecto.pdf_url %}
-          <a class="text-primary text-sm font-medium flex items-center gap-1 hover:underline"
-             href="{{ proyecto.pdf_url }}" target="_blank" rel="noopener">
-            <span class="material-symbols-outlined text-lg">download</span>
-            Descargar PDF
-          </a>
-        {% else %}
+        <div class="flex gap-2">
           <button type="button"
-                  class="text-primary text-sm font-medium flex items-center gap-1 hover:underline"
-                  onclick="openModal('modalPdf')">
-            <span class="material-symbols-outlined text-lg">download</span>
-            Descargar PDF
+                  class="px-3 py-1 rounded border border-slate-200 text-slate-400 text-sm font-medium disabled:cursor-not-allowed"
+                  {% if not has_prev %}disabled{% endif %}>
+            Anterior
           </button>
-        {% endif %}
+          <button type="button"
+                  class="px-3 py-1 rounded border border-slate-200 text-slate-400 text-sm font-medium disabled:cursor-not-allowed"
+                  {% if not has_next %}disabled{% endif %}>
+            Siguiente
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Rúbrica -->
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center justify-between px-2 pt-2">
-        <h2 class="text-slate-900 text-[22px] font-bold leading-tight">
-          Rúbrica de Evaluación
-          {% if rubrica and rubrica.nombre %}<span class="text-slate-400 font-medium text-base">— {{ rubrica.nombre }}</span>{% endif %}
-        </h2>
-        <span class="text-slate-500 text-sm">Escala: 1 (Deficiente) - 5 (Excelente)</span>
-      </div>
-
-      <form method="POST" action="" id="formEvaluacion">
-        {% csrf_token %}
-        <input type="hidden" name="accion" id="accionInput" value="guardar">
-
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
-
-          {% if criterios %}
-            {% for c in criterios %}
-              <div class="p-6 hover:bg-slate-50 transition-colors" data-criterio-row>
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                  <div class="flex-1">
-                    <h3 class="text-slate-900 text-lg font-bold mb-1">
-                      {{ forloop.counter }}. {{ c.titulo|default:c.nombre|default:"Criterio" }}
-                      {% if c.peso %}
-                        <span class="text-xs font-semibold text-slate-400">({{ c.peso }}%)</span>
-                      {% endif %}
-                    </h3>
-                    <p class="text-slate-500 text-sm leading-relaxed">
-                      {{ c.descripcion|default:"" }}
-                    </p>
-                  </div>
-
-                  <div class="flex items-center gap-2 md:gap-3 shrink-0 self-start lg:self-center">
-                    {% for v in "12345" %}
-                      {% with vv=v|stringformat:"s" %}
-                      <label class="cursor-pointer group relative">
-                        <input class="peer sr-only rating-input"
-                               name="criterio_{{ c.id }}"
-                               type="radio"
-                               value="{{ vv }}"
-                               data-rating
-                               {% if valores and valores.c %}
-                               {% endif %}
-                               {% if valores and valores|get_item:c.id == vv %}checked{% endif %} />
-                        <div class="rating-label w-10 h-10 md:w-12 md:h-12 rounded-full border border-slate-300
-                                    flex items-center justify-center text-slate-600 font-bold transition-all
-                                    hover:border-primary hover:text-primary bg-white">
-                          {{ vv }}
-                        </div>
-                      </label>
-                      {% endwith %}
-                    {% endfor %}
-                  </div>
-                </div>
-
-                {# Observación por criterio (opcional pero recomendable) #}
-                <div class="mt-4">
-                  <label class="text-xs font-semibold uppercase tracking-wider text-slate-500">Observación</label>
-                  <textarea name="obs_{{ c.id }}"
-                            rows="2"
-                            class="mt-2 w-full p-3 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-sm
-                                   focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-y
-                                   placeholder:text-slate-400"
-                            placeholder="Comentario breve para este criterio...">{% if observaciones and observaciones|get_item:c.id %}{{ observaciones|get_item:c.id }}{% endif %}</textarea>
-                </div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <div class="p-10 text-center">
-              <p class="font-extrabold text-slate-900">No hay rúbrica asignada</p>
-              <p class="text-sm text-slate-600 mt-1">
-                El coordinador debe asignar una rúbrica a este proyecto para que puedas evaluar.
-              </p>
-            </div>
-          {% endif %}
-
-        </div>
-
-        <!-- Observaciones generales + acciones -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8 mt-6">
-          <h3 class="text-slate-900 text-lg font-bold mb-4">Observaciones Generales</h3>
-
-          <textarea id="obsGeneral"
-                    name="observaciones_generales"
-                    maxlength="500"
-                    class="w-full min-h-[140px] p-4 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-sm
-                           focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-y
-                           placeholder:text-slate-400"
-                    placeholder="Escriba aquí sus comentarios cualitativos, fortalezas y áreas de mejora para el ponente...">{{ obs_general|default:"" }}</textarea>
-
-          <div class="flex justify-end mt-2">
-            <span id="counter" class="text-xs text-slate-400">0 / 500 caracteres</span>
-          </div>
-
-          <div class="my-6 border-t border-slate-200"></div>
-
-          <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="flex items-center gap-3 bg-blue-50 px-4 py-3 rounded-lg border border-blue-100 w-full md:w-auto">
-              <span class="text-blue-900 text-sm font-semibold">Puntaje Total Provisorio:</span>
-              <span id="totalScore" class="text-primary text-xl font-black">0/20</span>
-            </div>
-
-            <div class="flex items-center gap-3 w-full md:w-auto">
-              <a href="{% url 'evaluador:proyectos' %}"
-                 class="flex-1 md:flex-none px-6 py-3 rounded-lg border border-slate-300 text-slate-700 font-semibold
-                        hover:bg-slate-50 transition-colors text-center">
-                Cancelar
-              </a>
-
-              {% if criterios %}
-              <button type="submit"
-                      onclick="document.getElementById('accionInput').value='guardar';"
-                      class="flex-1 md:flex-none px-6 py-3 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold
-                             hover:bg-slate-50 transition-colors">
-                Guardar borrador
-              </button>
-
-              <button type="button"
-                      onclick="openModal('modalConfirmEnviar')"
-                      class="flex-1 md:flex-none px-8 py-3 rounded-lg bg-primary hover:bg-blue-600 text-white font-semibold
-                             shadow-md shadow-blue-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                <span>Enviar evaluación</span>
-                <span class="material-symbols-outlined text-sm">send</span>
-              </button>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </form>
+    <div class="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+      <span class="material-symbols-outlined text-primary mt-0.5">info</span>
+      <p class="text-sm text-slate-600 leading-relaxed">
+        <strong>Nota importante:</strong> Tu horario se alimenta desde las asignaciones que realiza coordinación. Si detectas un conflicto o faltan datos de fecha, hora o espacio, repórtalo para que lo corrijan antes de evaluar.
+      </p>
     </div>
 
   </div>
-</div>
+</main>
 {% endblock %}
 
 {% block modals %}
-<!-- Modal: Resumen del proyecto -->
-<div id="modalResumen" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalResumen')"></div>
-  <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
-        <h3 class="text-lg font-bold text-slate-900">Resumen</h3>
-        <button type="button"
-                onclick="closeModal('modalResumen')"
-                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
-                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
-          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
-        </button>
-      </div>
-      <div class="p-5">
-        <p class="text-sm text-slate-700 leading-relaxed">
-          {{ proyecto.resumen|default:proyecto.descripcion|default:"Sin resumen disponible." }}
-        </p>
-      </div>
-      <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
-        <button type="button"
-                onclick="closeModal('modalResumen')"
-                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
-          Entendido
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<div id="modalHorarioDetalle" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalHorarioDetalle')"></div>
 
-<!-- Modal: PDF no disponible -->
-<div id="modalPdf" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalPdf')"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+    <div class="w-full max-w-3xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
       <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
-        <h3 class="text-lg font-bold text-slate-900">PDF no disponible</h3>
-        <button type="button"
-                onclick="closeModal('modalPdf')"
-                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
-                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
-          <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
-        </button>
-      </div>
-      <div class="p-5">
-        <p class="text-sm text-slate-700">Este proyecto aún no tiene un PDF cargado.</p>
-      </div>
-      <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
-        <button type="button"
-                onclick="closeModal('modalPdf')"
-                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
-          Entendido
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+        <h3 class="text-lg font-bold text-slate-900">Detalle del horario</h3>
 
-<!-- Modal: Confirmar Envío -->
-<div id="modalConfirmEnviar" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalConfirmEnviar')"></div>
-  <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="w-full max-w-xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-      <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
-        <h3 class="text-lg font-bold text-slate-900">Confirmar envío</h3>
         <button type="button"
-                onclick="closeModal('modalConfirmEnviar')"
-                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
-                       bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
+                onclick="closeModal('modalHorarioDetalle')"
+                class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 hover:bg-rose-100 transition-colors group"
+                aria-label="Cerrar modal">
           <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
         </button>
       </div>
 
       <div class="p-5 space-y-3">
-        <p class="text-sm text-slate-700">
-          Al enviar la evaluación, quedará registrada y <span class="font-bold">no podrás editarla</span> (según la regla del sistema).
-        </p>
-        <p class="text-xs text-slate-500">
-          Verifica que hayas calificado todos los criterios antes de enviar.
-        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Evento</p>
+            <p id="dEvento" class="mt-1 font-extrabold text-slate-900">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</p>
+            <p id="dTipo" class="mt-1 font-extrabold text-slate-900">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Código</p>
+            <p id="dCodigo" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Responsable</p>
+            <p id="dResponsable" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Fecha</p>
+            <p id="dFecha" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Hora</p>
+            <p id="dHora" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-4">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Registro evaluable</p>
+          <p id="dTitulo" class="mt-1 font-extrabold text-slate-900">—</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Espacio asignado</p>
+            <p id="dEspacio" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Estado</p>
+            <p id="dEstado" class="mt-1 font-bold text-slate-800">—</p>
+          </div>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-4 bg-slate-50">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Rúbrica asignada</p>
+          <p id="dRubrica" class="mt-2 text-sm text-slate-700">—</p>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-4 bg-slate-50">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Notas</p>
+          <p id="dNotas" class="mt-2 text-sm text-slate-700">—</p>
+        </div>
       </div>
 
-      <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-2">
+      <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
         <button type="button"
-                onclick="closeModal('modalConfirmEnviar')"
-                class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition">
-          Cancelar
-        </button>
-
-        <button type="button"
-                onclick="submitEnviar()"
-                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition inline-flex items-center gap-2">
-          <span class="material-symbols-outlined text-[18px]">send</span>
-          Confirmar envío
+                onclick="closeModal('modalHorarioDetalle')"
+                class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
+          Cerrar
         </button>
       </div>
     </div>
@@ -346,92 +284,23 @@
 
 {% block extra_js %}
 <script>
-  // ---- Contador observaciones generales ----
-  const obs = document.getElementById("obsGeneral");
-  const counter = document.getElementById("counter");
-  function updateCounter(){
-    if (!obs || !counter) return;
-    counter.textContent = `${obs.value.length} / 500 caracteres`;
-  }
-  document.addEventListener("DOMContentLoaded", updateCounter);
-  obs && obs.addEventListener("input", updateCounter);
+  document.addEventListener("click", function (e) {
+    const row = e.target.closest("tr[data-action='ver']");
+    if (!row) return;
 
-  // ---- Score total provisorio (sumatoria 1-5 por criterio) ----
-  const totalEl = document.getElementById("totalScore");
-  function computeTotal(){
-    if (!totalEl) return;
-    const rows = document.querySelectorAll("[data-criterio-row]");
-    let total = 0;
-    rows.forEach(row => {
-      const checked = row.querySelector("input[data-rating]:checked");
-      if (checked) total += parseInt(checked.value, 10);
-    });
-    // total máximo = criterios * 5
-    const max = rows.length * 5;
-    totalEl.textContent = `${total}/${max || 0}`;
-  }
-  document.addEventListener("change", function(e){
-    if (e.target && e.target.matches("input[data-rating]")) computeTotal();
+    document.getElementById("dEvento").textContent = row.dataset.evento || "—";
+    document.getElementById("dTipo").textContent = row.dataset.tipo || "—";
+    document.getElementById("dTitulo").textContent = row.dataset.titulo || "—";
+    document.getElementById("dCodigo").textContent = row.dataset.codigo || "—";
+    document.getElementById("dResponsable").textContent = row.dataset.responsable || "—";
+    document.getElementById("dFecha").textContent = row.dataset.fecha || "—";
+    document.getElementById("dHora").textContent = row.dataset.hora || "—";
+    document.getElementById("dEspacio").textContent = row.dataset.espacio || "—";
+    document.getElementById("dEstado").textContent = row.dataset.estado || "—";
+    document.getElementById("dRubrica").textContent = row.dataset.rubrica || "No asignada";
+    document.getElementById("dNotas").textContent = row.dataset.notas || "Sin notas.";
+
+    openModal("modalHorarioDetalle");
   });
-  document.addEventListener("DOMContentLoaded", computeTotal);
-
-  // ---- Enviar evaluación (POST con accion=enviar) ----
-  function submitEnviar(){
-    const form = document.getElementById("formEvaluacion");
-    const accion = document.getElementById("accionInput");
-    if (!form || !accion) return;
-
-    // Validación mínima: asegurar todos los criterios calificados
-    const rows = document.querySelectorAll("[data-criterio-row]");
-    let ok = true;
-    rows.forEach(row => {
-      const checked = row.querySelector("input[data-rating]:checked");
-      if (!checked) ok = false;
-    });
-
-    if (!ok) {
-      // Si quieres, aquí puedes disparar messages desde backend; por ahora modal simple:
-      closeModal("modalConfirmEnviar");
-      openModal("modalFaltan");
-      return;
-    }
-
-    accion.value = "enviar";
-    form.submit();
-  }
-
-  // Modal simple si faltan criterios
-  function ensureModalFaltan(){
-    if (document.getElementById("modalFaltan")) return;
-    const html = `
-      <div id="modalFaltan" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalFaltan')"></div>
-        <div class="absolute inset-0 flex items-center justify-center p-4">
-          <div class="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-            <div class="p-5 border-b border-slate-100 flex items-center justify-between relative">
-              <h3 class="text-lg font-bold text-slate-900">Faltan criterios</h3>
-              <button type="button"
-                      onclick="closeModal('modalFaltan')"
-                      class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full
-                             bg-slate-100 hover:bg-rose-100 transition-colors group" aria-label="Cerrar">
-                <span class="material-symbols-outlined text-slate-600 group-hover:text-rose-600">close</span>
-              </button>
-            </div>
-            <div class="p-5">
-              <p class="text-sm text-slate-700">Debes calificar todos los criterios antes de enviar.</p>
-            </div>
-            <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
-              <button type="button"
-                      onclick="closeModal('modalFaltan')"
-                      class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition">
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    document.body.insertAdjacentHTML("beforeend", html);
-  }
-  document.addEventListener("DOMContentLoaded", ensureModalFaltan);
 </script>
 {% endblock %}

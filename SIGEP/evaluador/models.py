@@ -255,6 +255,41 @@ class EvaluacionEntrega(TimeStampedModel):
         return f"Entrega({self.asignacion_id}) - {self.estado}"
 
 
+
+class EvaluacionRespuestaCriterio(TimeStampedModel):
+    """
+    Respuesta individual por criterio para una entrega de evaluación.
+    Mantiene el detalle sin romper la estructura existente del módulo.
+    """
+    entrega = models.ForeignKey(
+        "EvaluacionEntrega",
+        on_delete=models.CASCADE,
+        related_name="respuestas",
+    )
+    criterio = models.ForeignKey(
+        "RubricaCriterio",
+        on_delete=models.CASCADE,
+        related_name="respuestas_evaluador",
+    )
+    valor = models.PositiveSmallIntegerField(default=1)
+    observacion = models.TextField(blank=True, default="")
+
+    class Meta:
+        unique_together = ("entrega", "criterio")
+        ordering = ["criterio__orden", "criterio_id", "id"]
+        indexes = [
+            models.Index(fields=["entrega", "criterio"]),
+            models.Index(fields=["criterio"]),
+        ]
+
+    def clean(self):
+        if self.valor < 1 or self.valor > 5:
+            raise ValidationError("La calificación por criterio debe estar entre 1 y 5.")
+
+    def __str__(self):
+        return f"Respuesta(entrega={self.entrega_id}, criterio={self.criterio_id}, valor={self.valor})"
+
+
 # =========================
 # RÚBRICAS
 # =========================

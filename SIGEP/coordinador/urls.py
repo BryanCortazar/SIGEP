@@ -6,9 +6,13 @@ app_name = "coordinador"
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
 
+    path("eventos/", views.eventos, name="eventos"),
+    path("evento/guardar/", views.evento_guardar, name="evento_guardar"),
     path("evento/crear/", views.evento_crear, name="evento_crear"),
     path("evento/seleccionar/", views.evento_seleccionar, name="evento_seleccionar"),
-
+    path("evento/<int:pk>/seleccionar/", views.evento_seleccionar_directo, name="evento_seleccionar_directo"),
+    path("evento/<int:pk>/estado/", views.evento_cambiar_estado, name="evento_cambiar_estado"),
+    path("evento/<int:pk>/eliminar/", views.evento_eliminar, name="evento_eliminar"),
     path("gestion/", views.gestion_evento, name="gestion_evento"),
 
     path("cronograma/", views.cronograma, name="cronograma"),
@@ -39,5 +43,7 @@ urlpatterns = [
 
     path("rubricas/", views.rubricas, name="rubricas"),
     path("rubricas/guardar/", views.rubrica_guardar, name="rubrica_guardar"),
+    path("rubricas/adjuntos/<int:pk>/descargar/", views.rubrica_adjunto_descargar, name="rubrica_adjunto_descargar"),
+    path("rubricas/adjuntos/<int:pk>/eliminar/", views.rubrica_adjunto_eliminar, name="rubrica_adjunto_eliminar"),
     path("rubricas/<int:pk>/eliminar/", views.rubrica_eliminar, name="rubrica_eliminar"),
 ]

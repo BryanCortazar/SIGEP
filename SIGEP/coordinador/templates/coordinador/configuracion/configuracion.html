@@ -24,7 +24,7 @@
             "avatar-blue": "#5C6BC0",
           },
           fontFamily: { display: ["Inter","sans-serif"], body: ["Inter","sans-serif"] },
-          boxShadow: { 'card': '0 2px 8px rgba(0, 0, 0, 0.05)' }
+          boxShadow: { card: "0 2px 8px rgba(0, 0, 0, 0.05)" }
         },
       },
     };
@@ -35,12 +35,12 @@
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    .field-error { border-color: rgb(239 68 68) !important; background-color: rgb(254 242 242) !important; }
+    .modal-backdrop { backdrop-filter: blur(4px); }
   </style>
 </head>
 
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 h-screen flex overflow-hidden">
-
-  <!-- Sidebar -->
   <aside class="w-72 bg-sidebar-dark text-white flex flex-col flex-shrink-0 transition-colors duration-300 relative z-20">
     <div class="h-16 flex items-center px-6 border-b border-gray-700/50">
       <div class="flex items-center gap-3">
@@ -59,32 +59,26 @@
         <i class="fa-regular fa-calendar-days w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
         <span class="ml-3 text-sm font-medium">Cronograma de Actividades</span>
       </a>
-
       <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group" href="{% url 'coordinador:inscripciones' %}">
         <i class="fa-solid fa-users w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
         <span class="ml-3 text-sm font-medium">Gestión de Inscripciones</span>
       </a>
-
       <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group" href="{% url 'coordinador:evaluadores' %}">
         <i class="fa-solid fa-id-badge w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
         <span class="ml-3 text-sm font-medium">Asignación de Evaluadores</span>
       </a>
-
       <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group" href="{% url 'coordinador:rubricas' %}">
         <i class="fa-solid fa-list-check w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
         <span class="ml-3 text-sm font-medium">Gestión de Rúbricas</span>
       </a>
-
       <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group" href="{% url 'coordinador:espacios' %}">
         <i class="fa-solid fa-door-open w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
         <span class="ml-3 text-sm font-medium">Asignación de Espacios</span>
       </a>
-
       <a class="flex items-center px-6 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group" href="{% url 'coordinador:reportes' %}">
         <i class="fa-solid fa-chart-simple w-6 text-lg group-hover:text-blue-400 transition-colors"></i>
         <span class="ml-3 text-sm font-medium">Reportes del Evento</span>
       </a>
-
       <div class="px-3 mt-1">
         <a class="flex items-center px-4 py-3 bg-primary text-white rounded-lg shadow-lg shadow-blue-900/50 transition-all" href="{% url 'coordinador:configuracion' %}">
           <i class="fa-solid fa-gear w-6 text-lg"></i>
@@ -94,7 +88,6 @@
     </nav>
 
     <div class="p-6 border-t border-gray-700/50">
-      <!-- Ajusta esto a tu logout real -->
       <a class="flex items-center text-gray-400 hover:text-white transition-colors gap-3" href="{% url 'principal:logout' %}">
         <i class="fa-solid fa-arrow-right-from-bracket text-lg transform rotate-180"></i>
         <span class="text-sm font-medium">Cerrar sesión</span>
@@ -102,13 +95,11 @@
     </div>
   </aside>
 
-  <!-- Main -->
   <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
     <header class="h-16 bg-white dark:bg-card-dark border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 flex-shrink-0 z-10">
       <div class="text-gray-500 dark:text-gray-400 text-sm font-medium truncate max-w-xl">
         {{ evento.titulo|default:"SIGEP" }}
       </div>
-
       <div class="flex items-center gap-3 pl-4">
         <div class="text-right hidden sm:block">
           <div class="text-sm font-bold text-gray-800 dark:text-gray-200 leading-none mb-1">
@@ -126,52 +117,57 @@
       <div class="max-w-6xl mx-auto">
         <div class="mb-8">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Configuración del Perfil</h1>
-          <p class="text-gray-500 dark:text-gray-400">Gestione sus datos personales y preferencias de la cuenta.</p>
+          <p class="text-gray-500 dark:text-gray-400">Gestione sus datos personales, archivos y credenciales de acceso.</p>
         </div>
 
-        {% if messages %}
-          <div class="space-y-2 mb-6">
-            {% for m in messages %}
-              <div class="px-4 py-3 rounded-lg border text-sm
-                {% if m.tags == 'success' %} bg-green-50 border-green-200 text-green-800
-                {% elif m.tags == 'error' %} bg-red-50 border-red-200 text-red-800
-                {% else %} bg-slate-50 border-slate-200 text-slate-800 {% endif %}">
-                {{ m }}
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <!-- Card izquierda -->
           <div class="lg:col-span-4">
             <div class="bg-white dark:bg-card-dark rounded-xl shadow-card p-8 flex flex-col items-center text-center h-full border border-gray-100 dark:border-gray-700">
-              {% if perfil.avatar %}
-                <img src="{{ perfil.avatar.url }}" class="w-32 h-32 rounded-full object-cover mb-6 shadow-md ring-2 ring-white dark:ring-gray-800" alt="Avatar"/>
-              {% else %}
-                <div class="w-32 h-32 rounded-full bg-avatar-blue flex items-center justify-center text-white text-4xl font-light mb-6 shadow-md">
-                  {{ request.user.first_name|default:"U"|slice:":1" }}{{ request.user.last_name|default:""|slice:":1" }}
-                </div>
-              {% endif %}
+              <div class="relative mb-6">
+                {% if perfil.avatar %}
+                  <img
+                    id="avatarPreview"
+                    src="{{ perfil.avatar.url }}{% if perfil.actualizado_en %}?v={{ perfil.actualizado_en|date:'U' }}{% endif %}"
+                    class="w-32 h-32 rounded-full object-cover shadow-md ring-2 ring-white dark:ring-gray-800"
+                    alt="Avatar"
+                    onerror="handleAvatarError(this)"
+                  />
+                  <div id="avatarFallback" class="hidden w-32 h-32 rounded-full bg-avatar-blue items-center justify-center text-white text-4xl font-light shadow-md">
+                    {{ request.user.first_name|default:'U'|slice:':1' }}{{ request.user.last_name|default:''|slice:':1' }}
+                  </div>
+                {% else %}
+                  <img id="avatarPreview" src="" class="hidden w-32 h-32 rounded-full object-cover shadow-md ring-2 ring-white dark:ring-gray-800" alt="Avatar" />
+                  <div id="avatarFallback" class="flex w-32 h-32 rounded-full bg-avatar-blue items-center justify-center text-white text-4xl font-light shadow-md">
+                    {{ request.user.first_name|default:"U"|slice:":1" }}{{ request.user.last_name|default:""|slice:":1" }}
+                  </div>
+                {% endif %}
+                <label for="id_avatar" class="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-lg cursor-pointer transition-all" title="Cambiar foto">
+                  <i class="fa-solid fa-camera"></i>
+                </label>
+              </div>
 
               <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">
                 {{ request.user.get_full_name|default:request.user.email }}
               </h2>
-              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4 font-medium">
-                COORDINATOR
-              </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4 font-medium">COORDINADOR</p>
 
-              {% if perfil.cv %}
-                <a href="{{ perfil.cv.url }}" class="text-sm font-medium text-primary hover:text-primary-hover transition-colors" target="_blank" rel="noopener">
-                  Ver CV actual (PDF)
-                </a>
-              {% else %}
-                <p class="text-xs text-gray-500 dark:text-gray-400">Sin CV cargado</p>
-              {% endif %}
+              <div class="w-full space-y-3 text-left">
+                <div class="rounded-lg bg-slate-50 dark:bg-slate-800/70 p-3 border border-slate-200 dark:border-slate-700">
+                  <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Correo actual</p>
+                  <p class="text-sm font-medium text-slate-800 dark:text-slate-200 break-all">{{ request.user.email }}</p>
+                </div>
+                <div class="rounded-lg bg-slate-50 dark:bg-slate-800/70 p-3 border border-slate-200 dark:border-slate-700">
+                  <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Currículum</p>
+                  {% if perfil.cv %}
+                    <a href="{{ perfil.cv.url }}" class="text-sm font-medium text-primary hover:text-primary-hover transition-colors" target="_blank" rel="noopener">Ver CV actual (PDF)</a>
+                  {% else %}
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Sin CV cargado</p>
+                  {% endif %}
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Form derecha -->
           <div class="lg:col-span-8">
             <div class="bg-white dark:bg-card-dark rounded-xl shadow-card p-8 h-full flex flex-col border border-gray-100 dark:border-gray-700">
               <div class="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100 dark:border-gray-700">
@@ -179,102 +175,104 @@
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Información General</h3>
               </div>
 
-              <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+              <form id="configForm" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1" novalidate>
                 {% csrf_token %}
 
-                <!-- Cuenta -->
                 <div class="space-y-2">
-                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Nombres</label>
-                  <input name="nombres" value="{{ cuenta_form.nombres.value|default:'' }}"
-                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Nombres <span class="text-red-500">*</span></label>
+                  <input id="id_nombres" name="nombres" value="{{ cuenta_form.nombres.value|default:'' }}" maxlength="150"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border {% if cuenta_form.nombres.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                   {% for e in cuenta_form.nombres.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
                 <div class="space-y-2">
-                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Apellidos</label>
-                  <input name="apellidos" value="{{ cuenta_form.apellidos.value|default:'' }}"
-                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Apellidos <span class="text-red-500">*</span></label>
+                  <input id="id_apellidos" name="apellidos" value="{{ cuenta_form.apellidos.value|default:'' }}" maxlength="150"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border {% if cuenta_form.apellidos.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                   {% for e in cuenta_form.apellidos.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
                 <div class="space-y-2">
-                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Correo</label>
-                  <input name="correo" value="{{ cuenta_form.correo.value|default:'' }}"
-                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Correo <span class="text-red-500">*</span></label>
+                  <input id="id_correo" type="email" name="correo" value="{{ cuenta_form.correo.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border {% if cuenta_form.correo.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                   {% for e in cuenta_form.correo.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
-                <!-- Perfil -->
                 <div class="space-y-2">
                   <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Institución</label>
-                  <input name="institucion" value="{{ perfil_form.institucion.value|default:'' }}"
-                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  <input id="id_institucion" name="institucion" value="{{ perfil_form.institucion.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border {% if perfil_form.institucion.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                   {% for e in perfil_form.institucion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
                 <div class="space-y-2">
                   <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Puesto</label>
-                  <input name="puesto" value="{{ perfil_form.puesto.value|default:'' }}"
-                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  <input id="id_puesto" name="puesto" value="{{ perfil_form.puesto.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border {% if perfil_form.puesto.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                   {% for e in perfil_form.puesto.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
                 <div class="space-y-2">
                   <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Teléfono</label>
-                  <input name="telefono" value="{{ perfil_form.telefono.value|default:'' }}"
-                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                  <input id="id_telefono" name="telefono" value="{{ perfil_form.telefono.value|default:'' }}"
+                         class="w-full bg-gray-50 dark:bg-gray-800 border {% if perfil_form.telefono.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                   {% for e in perfil_form.telefono.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
                 <div class="md:col-span-2 space-y-2">
                   <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Bio / Descripción</label>
-                  <textarea name="bio" rows="3"
-                            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">{{ perfil_form.bio.value|default:'' }}</textarea>
+                  <textarea id="id_bio" name="bio" rows="3"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border {% if perfil_form.bio.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">{{ perfil_form.bio.value|default:'' }}</textarea>
                   {% for e in perfil_form.bio.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
                 <div class="space-y-2">
                   <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Foto (JPG/PNG/WebP, máx 5MB)</label>
-                  <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp"
-                         class="w-full text-sm">
+                  <input id="id_avatar" type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                         class="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2 {% if perfil_form.avatar.errors %}field-error{% endif %}">
+                  <p id="avatarFileName" class="text-xs text-slate-500 dark:text-slate-400">
+                    {% if perfil.avatar %}Foto actual cargada{% else %}No has seleccionado una nueva foto{% endif %}
+                  </p>
                   {% for e in perfil_form.avatar.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
                 <div class="space-y-2">
                   <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">CV (PDF, máx 15MB)</label>
-                  <input type="file" name="cv" accept=".pdf" class="w-full text-sm">
+                  <input id="id_cv" type="file" name="cv" accept=".pdf,application/pdf" class="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2 {% if perfil_form.cv.errors %}field-error{% endif %}">
+                  <p id="cvFileName" class="text-xs text-slate-500 dark:text-slate-400">
+                    {% if perfil.cv %}CV actual cargado{% else %}No has seleccionado un nuevo CV{% endif %}
+                  </p>
                   {% for e in perfil_form.cv.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                 </div>
 
-                <!-- Password -->
                 <div class="md:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700">
                   <h4 class="font-bold text-gray-900 dark:text-white mb-3">Cambiar contraseña (opcional)</h4>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="space-y-2">
                       <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Contraseña actual</label>
-                      <input type="password" name="password_actual" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                      <input id="id_password_actual" type="password" name="password_actual" class="w-full bg-gray-50 dark:bg-gray-800 border {% if cuenta_form.password_actual.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                       {% for e in cuenta_form.password_actual.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                     </div>
                     <div class="space-y-2">
                       <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Nueva contraseña</label>
-                      <input type="password" name="password_nueva" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                      <input id="id_password_nueva" type="password" name="password_nueva" class="w-full bg-gray-50 dark:bg-gray-800 border {% if cuenta_form.password_nueva.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                       {% for e in cuenta_form.password_nueva.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                     </div>
                     <div class="space-y-2">
                       <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Confirmación</label>
-                      <input type="password" name="password_confirmacion" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm">
+                      <input id="id_password_confirmacion" type="password" name="password_confirmacion" class="w-full bg-gray-50 dark:bg-gray-800 border {% if cuenta_form.password_confirmacion.errors %}border-red-500 bg-red-50{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary">
                       {% for e in cuenta_form.password_confirmacion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
                     </div>
                   </div>
                 </div>
 
-                <div class="md:col-span-2 flex justify-end mt-2 pt-4">
-                  <button class="bg-primary hover:bg-primary-hover text-white font-medium py-2.5 px-6 rounded-lg shadow-lg shadow-blue-500/30 transition-all hover:shadow-blue-500/50 active:scale-95 text-sm" type="submit">
+                <div class="md:col-span-2 flex justify-end mt-2 pt-4 gap-3">
+                  <button id="openConfirmBtn" class="bg-primary hover:bg-primary-hover text-white font-medium py-2.5 px-6 rounded-lg shadow-lg shadow-blue-500/30 transition-all hover:shadow-blue-500/50 active:scale-95 text-sm" type="button">
                     Guardar Cambios
                   </button>
                 </div>
               </form>
-
             </div>
           </div>
         </div>
@@ -282,5 +280,302 @@
     </main>
   </div>
 
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/60 modal-backdrop p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white dark:bg-card-dark shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Confirmar cambios</h3>
+        <button type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" data-close="confirmModal"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="px-6 py-5">
+        <p class="text-sm text-slate-600 dark:text-slate-300">Se actualizarán tus datos de perfil y archivos. Verifica que la información sea correcta antes de guardar.</p>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 flex justify-end gap-3">
+        <button type="button" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-medium" data-close="confirmModal">Cancelar</button>
+        <button id="confirmSubmitBtn" type="button" class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium">Sí, guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="validationModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/60 modal-backdrop p-4">
+    <div class="w-full max-w-xl rounded-2xl bg-white dark:bg-card-dark shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-300">
+            <i class="fa-solid fa-circle-exclamation"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">Corrige la información</h3>
+        </div>
+        <button type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" data-close="validationModal"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="px-6 py-5">
+        <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">No se puede guardar hasta corregir los siguientes puntos:</p>
+        <ul id="validationList" class="list-disc pl-5 space-y-2 text-sm text-slate-700 dark:text-slate-200"></ul>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 flex justify-end">
+        <button type="button" class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium" data-close="validationModal">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="messageModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/60 modal-backdrop p-4">
+    <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-card-dark shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-3">
+          <div id="messageIconWrap" class="w-10 h-10 rounded-full flex items-center justify-center"></div>
+          <h3 id="messageTitle" class="text-lg font-bold text-slate-900 dark:text-white"></h3>
+        </div>
+        <button type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" data-close="messageModal"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="px-6 py-5">
+        <div id="messageBody" class="space-y-3 text-sm text-slate-700 dark:text-slate-200"></div>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 flex justify-end">
+        <button type="button" class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium" data-close="messageModal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const configForm = document.getElementById('configForm');
+    const confirmModal = document.getElementById('confirmModal');
+    const validationModal = document.getElementById('validationModal');
+    const messageModal = document.getElementById('messageModal');
+    const validationList = document.getElementById('validationList');
+
+    function openModal(modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function closeModal(modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      if (![confirmModal, validationModal, messageModal].some(m => !m.classList.contains('hidden'))) {
+        document.body.classList.remove('overflow-hidden');
+      }
+    }
+
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(document.getElementById(btn.dataset.close)));
+    });
+
+    [confirmModal, validationModal, messageModal].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal(modal);
+      });
+    });
+
+    function handleAvatarError(img) {
+      img.classList.add('hidden');
+      const fallback = document.getElementById('avatarFallback');
+      if (fallback) {
+        fallback.classList.remove('hidden');
+        fallback.classList.add('flex');
+      }
+    }
+
+    window.handleAvatarError = handleAvatarError;
+
+    function showValidationModal(errors) {
+      validationList.innerHTML = '';
+      errors.forEach(error => {
+        const li = document.createElement('li');
+        li.textContent = error;
+        validationList.appendChild(li);
+      });
+      openModal(validationModal);
+    }
+
+    function showMessageModal(type, title, messages) {
+      const titleEl = document.getElementById('messageTitle');
+      const bodyEl = document.getElementById('messageBody');
+      const iconWrap = document.getElementById('messageIconWrap');
+
+      titleEl.textContent = title;
+      bodyEl.innerHTML = '';
+      messages.forEach(msg => {
+        const p = document.createElement('p');
+        p.textContent = msg;
+        bodyEl.appendChild(p);
+      });
+
+      if (type === 'success') {
+        iconWrap.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300';
+        iconWrap.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      } else {
+        iconWrap.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300';
+        iconWrap.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+      }
+      openModal(messageModal);
+    }
+
+    function resetClientErrors() {
+      document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+    }
+
+    function markError(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('field-error');
+    }
+
+    function validateConfigForm() {
+      resetClientErrors();
+      const errors = [];
+
+      const nombres = document.getElementById('id_nombres');
+      const apellidos = document.getElementById('id_apellidos');
+      const correo = document.getElementById('id_correo');
+      const passActual = document.getElementById('id_password_actual');
+      const passNueva = document.getElementById('id_password_nueva');
+      const passConfirm = document.getElementById('id_password_confirmacion');
+      const avatar = document.getElementById('id_avatar');
+      const cv = document.getElementById('id_cv');
+
+      if (!nombres.value.trim()) {
+        errors.push('El campo Nombres es obligatorio.');
+        markError('id_nombres');
+      }
+      if (!apellidos.value.trim()) {
+        errors.push('El campo Apellidos es obligatorio.');
+        markError('id_apellidos');
+      }
+      if (!correo.value.trim()) {
+        errors.push('El campo Correo es obligatorio.');
+        markError('id_correo');
+      } else {
+        const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.value.trim());
+        if (!emailOk) {
+          errors.push('El correo no tiene un formato válido.');
+          markError('id_correo');
+        }
+      }
+
+      const passwordAttempt = passActual.value || passNueva.value || passConfirm.value;
+      if (passwordAttempt) {
+        if (!passActual.value) {
+          errors.push('Debes indicar tu contraseña actual para cambiar la contraseña.');
+          markError('id_password_actual');
+        }
+        if (!passNueva.value) {
+          errors.push('Debes ingresar una nueva contraseña.');
+          markError('id_password_nueva');
+        }
+        if (!passConfirm.value) {
+          errors.push('Debes confirmar la nueva contraseña.');
+          markError('id_password_confirmacion');
+        }
+        if (passNueva.value && passConfirm.value && passNueva.value !== passConfirm.value) {
+          errors.push('La nueva contraseña y su confirmación no coinciden.');
+          markError('id_password_nueva');
+          markError('id_password_confirmacion');
+        }
+      }
+
+      if (avatar.files.length) {
+        const file = avatar.files[0];
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowed.includes(file.type)) {
+          errors.push('La foto debe ser JPG, PNG o WebP.');
+          markError('id_avatar');
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          errors.push('La foto no puede exceder 5 MB.');
+          markError('id_avatar');
+        }
+      }
+
+      if (cv.files.length) {
+        const file = cv.files[0];
+        if (file.type !== 'application/pdf') {
+          errors.push('El CV debe estar en formato PDF.');
+          markError('id_cv');
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          errors.push('El CV no puede exceder 15 MB.');
+          markError('id_cv');
+        }
+      }
+
+      return errors;
+    }
+
+    document.getElementById('openConfirmBtn').addEventListener('click', () => {
+      const errors = validateConfigForm();
+      if (errors.length) {
+        showValidationModal(errors);
+        return;
+      }
+      openModal(confirmModal);
+    });
+
+    document.getElementById('confirmSubmitBtn').addEventListener('click', () => {
+      closeModal(confirmModal);
+      configForm.submit();
+    });
+
+    const avatarInput = document.getElementById('id_avatar');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const avatarFallback = document.getElementById('avatarFallback');
+    const avatarFileName = document.getElementById('avatarFileName');
+
+    avatarInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        avatarFileName.textContent = '{% if perfil.avatar %}Foto actual cargada{% else %}No has seleccionado una nueva foto{% endif %}';
+        return;
+      }
+      avatarFileName.textContent = `Nueva foto seleccionada: ${file.name}`;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        avatarPreview.src = ev.target.result;
+        avatarPreview.classList.remove('hidden');
+        if (avatarFallback) {
+          avatarFallback.classList.add('hidden');
+          avatarFallback.classList.remove('flex');
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('id_cv').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      document.getElementById('cvFileName').textContent = file ? `Nuevo CV seleccionado: ${file.name}` : '{% if perfil.cv %}CV actual cargado{% else %}No has seleccionado un nuevo CV{% endif %}';
+    });
+
+    (function openBackendMessageModal() {
+      const backendErrors = [];
+      {% for e in cuenta_form.nombres.errors %}backendErrors.push('Nombres: {{ e|escapejs }}');{% endfor %}
+      {% for e in cuenta_form.apellidos.errors %}backendErrors.push('Apellidos: {{ e|escapejs }}');{% endfor %}
+      {% for e in cuenta_form.correo.errors %}backendErrors.push('Correo: {{ e|escapejs }}');{% endfor %}
+      {% for e in cuenta_form.password_actual.errors %}backendErrors.push('Contraseña actual: {{ e|escapejs }}');{% endfor %}
+      {% for e in cuenta_form.password_nueva.errors %}backendErrors.push('Nueva contraseña: {{ e|escapejs }}');{% endfor %}
+      {% for e in cuenta_form.password_confirmacion.errors %}backendErrors.push('Confirmación: {{ e|escapejs }}');{% endfor %}
+      {% for e in perfil_form.institucion.errors %}backendErrors.push('Institución: {{ e|escapejs }}');{% endfor %}
+      {% for e in perfil_form.puesto.errors %}backendErrors.push('Puesto: {{ e|escapejs }}');{% endfor %}
+      {% for e in perfil_form.telefono.errors %}backendErrors.push('Teléfono: {{ e|escapejs }}');{% endfor %}
+      {% for e in perfil_form.bio.errors %}backendErrors.push('Bio: {{ e|escapejs }}');{% endfor %}
+      {% for e in perfil_form.avatar.errors %}backendErrors.push('Foto: {{ e|escapejs }}');{% endfor %}
+      {% for e in perfil_form.cv.errors %}backendErrors.push('CV: {{ e|escapejs }}');{% endfor %}
+
+      const djangoMsgs = [];
+      {% if messages %}
+        {% for m in messages %}
+          djangoMsgs.push({ tags: '{{ m.tags|escapejs }}', text: '{{ m|escapejs }}' });
+        {% endfor %}
+      {% endif %}
+
+      if (backendErrors.length) {
+        showMessageModal('error', 'No fue posible guardar la configuración', backendErrors);
+        return;
+      }
+
+      if (djangoMsgs.length) {
+        const hasError = djangoMsgs.some(m => (m.tags || '').includes('error'));
+        const title = hasError ? 'Se detectaron observaciones' : 'Configuración actualizada';
+        showMessageModal(hasError ? 'error' : 'success', title, djangoMsgs.map(m => m.text));
+      }
+    })();
+  </script>
 </body>
 </html>

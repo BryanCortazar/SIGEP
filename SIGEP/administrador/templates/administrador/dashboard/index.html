@@ -2,122 +2,214 @@
 {% block title %}Admin: Panel de Control - SIGEP{% endblock %}
 
 {% block content %}
-<div class="max-w-[1400px] mx-auto space-y-6">
-
+<div class="max-w-[1500px] mx-auto space-y-6">
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">Bienvenido, Administrador</h1>
-      <p class="text-sm text-slate-500">Panel de control y métricas del sistema.</p>
+      <p class="text-sm text-slate-500">Panel de control con indicadores clasificados, visualización ejecutiva y trazabilidad operativa del sistema.</p>
     </div>
 
     <div class="flex items-center gap-3">
-      <a href="{% url 'administrador:reporte_csv' %}"
-         class="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold text-sm hover:bg-slate-50 transition">
-        Generar Reporte
+      <a href="{% url 'administrador:reporte_csv' %}" class="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold text-sm hover:bg-slate-50 transition">
+        Generar reporte
       </a>
-
-      <button type="button"
-              onclick="openModal()"
-              class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
-        + Nuevo Usuario
+      <button type="button" onclick="openModal()" class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
+        + Nuevo usuario
       </button>
     </div>
   </div>
 
-  <!-- KPIs (clickeables) -->
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-
-    <a href="{% url 'administrador:usuarios' %}"
-       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Total de usuarios</p>
-          <p class="text-3xl font-black text-slate-900 mt-2">{{ total_usuarios|default:0 }}</p>
-          <p class="text-xs text-slate-500 mt-1">Usuarios registrados en el sistema</p>
+    {% for card in summary_cards %}
+      {% if card.url %}<a href="{{ card.url }}" class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">{% else %}<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">{% endif %}
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">{{ card.label }}</p>
+            <p class="text-3xl font-black text-slate-900 mt-2">{{ card.value|default:0 }}</p>
+            <p class="text-xs text-slate-500 mt-1">{{ card.help }}</p>
+          </div>
+          <div class="size-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-primary">{{ card.icon }}</span>
+          </div>
         </div>
-        <div class="size-10 rounded-xl bg-blue-50 flex items-center justify-center">
-          <span class="material-symbols-outlined text-primary">person</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="{% url 'administrador:eventos' %}"
-       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Eventos activos</p>
-          <p class="text-3xl font-black text-slate-900 mt-2">{{ eventos_activos|default:0 }}</p>
-          <p class="text-xs text-slate-500 mt-1">Publicados</p>
-        </div>
-        <div class="size-10 rounded-xl bg-violet-50 flex items-center justify-center">
-          <span class="material-symbols-outlined text-violet-600">event</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="{% url 'administrador:roles' %}"
-       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Roles configurados</p>
-          <p class="text-3xl font-black text-slate-900 mt-2">{{ roles_configurados|default:0 }}</p>
-          <p class="text-xs text-slate-500 mt-1">ADMIN, COOR, EVAL, PON, PART</p>
-        </div>
-        <div class="size-10 rounded-xl bg-amber-50 flex items-center justify-center">
-          <span class="material-symbols-outlined text-amber-600">shield</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="{% url 'administrador:auditoria' %}"
-       class="block bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition">
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-[11px] uppercase tracking-wide text-slate-500 font-bold">Solicitudes pendientes</p>
-          <p class="text-3xl font-black text-slate-900 mt-2">{{ solicitudes_pendientes|default:0 }}</p>
-          <p class="text-xs text-slate-500 mt-1">Por atender (fase siguiente)</p>
-        </div>
-        <div class="size-10 rounded-xl bg-rose-50 flex items-center justify-center">
-          <span class="material-symbols-outlined text-rose-600">pending</span>
-        </div>
-      </div>
-    </a>
-
+      {% if card.url %}</a>{% else %}</div>{% endif %}
+    {% endfor %}
   </div>
 
-  <!-- Actividad reciente -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-5">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">Visualización ejecutiva</h2>
+        <p class="text-sm text-slate-500">Gráficas diseñadas para comparar, distribuir y explicar la información crítica del sistema.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-semibold">
+        <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1"><span class="size-2 rounded-full bg-blue-600"></span>Distribución</span>
+        <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1"><span class="size-2 rounded-full bg-emerald-600"></span>Estado</span>
+        <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1"><span class="size-2 rounded-full bg-violet-600"></span>Comparación</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">{{ charts_data.usuarios_por_rol.title }}</h3>
+            <p class="text-sm text-slate-500">{{ charts_data.usuarios_por_rol.help }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Total</p>
+            <p class="text-2xl font-black text-slate-900">{{ charts_data.usuarios_por_rol.total }}</p>
+          </div>
+        </div>
+        <div class="relative h-[300px]">
+          <canvas id="usuariosRolChart"></canvas>
+          <div id="usuariosRolEmpty" class="absolute inset-0 hidden items-center justify-center text-sm text-slate-400">Sin datos disponibles.</div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-blue-600"></span><span class="text-sm text-slate-700">Administradores</span></div><span class="font-bold text-slate-900">{{ charts_data.usuarios_por_rol.values.0|default:0 }}</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-teal-600"></span><span class="text-sm text-slate-700">Coordinadores</span></div><span class="font-bold text-slate-900">{{ charts_data.usuarios_por_rol.values.1|default:0 }}</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-violet-600"></span><span class="text-sm text-slate-700">Evaluadores</span></div><span class="font-bold text-slate-900">{{ charts_data.usuarios_por_rol.values.2|default:0 }}</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-amber-500"></span><span class="text-sm text-slate-700">Ponentes</span></div><span class="font-bold text-slate-900">{{ charts_data.usuarios_por_rol.values.3|default:0 }}</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between sm:col-span-2">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-rose-500"></span><span class="text-sm text-slate-700">Participantes</span></div><span class="font-bold text-slate-900">{{ charts_data.usuarios_por_rol.values.4|default:0 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">{{ charts_data.eventos_por_estado.title }}</h3>
+            <p class="text-sm text-slate-500">{{ charts_data.eventos_por_estado.help }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Total</p>
+            <p class="text-2xl font-black text-slate-900">{{ charts_data.eventos_por_estado.total }}</p>
+          </div>
+        </div>
+        <div class="relative h-[300px]">
+          <canvas id="eventosEstadoChart"></canvas>
+          <div id="eventosEstadoEmpty" class="absolute inset-0 hidden items-center justify-center text-sm text-slate-400">Sin datos disponibles.</div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-amber-500"></span><span class="text-sm text-slate-700">Borrador</span></div><span class="font-bold text-slate-900">{{ charts_data.eventos_por_estado.values.0|default:0 }}</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-emerald-600"></span><span class="text-sm text-slate-700">Publicado</span></div><span class="font-bold text-slate-900">{{ charts_data.eventos_por_estado.values.1|default:0 }}</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-slate-500"></span><span class="text-sm text-slate-700">Cerrado</span></div><span class="font-bold text-slate-900">{{ charts_data.eventos_por_estado.values.2|default:0 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">{{ charts_data.operacion_intermodular.title }}</h3>
+            <p class="text-sm text-slate-500">{{ charts_data.operacion_intermodular.help }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Total</p>
+            <p class="text-2xl font-black text-slate-900">{{ charts_data.operacion_intermodular.total }}</p>
+          </div>
+        </div>
+        <div class="relative h-[320px]">
+          <canvas id="operacionChart"></canvas>
+          <div id="operacionChartEmpty" class="absolute inset-0 hidden items-center justify-center text-sm text-slate-400">Sin datos disponibles.</div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">{{ charts_data.actividad_ultimos_7_dias.title }}</h3>
+            <p class="text-sm text-slate-500">{{ charts_data.actividad_ultimos_7_dias.help }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Total</p>
+            <p class="text-2xl font-black text-slate-900">{{ charts_data.actividad_ultimos_7_dias.total }}</p>
+          </div>
+        </div>
+        <div class="relative h-[320px]">
+          <canvas id="actividadChart"></canvas>
+          <div id="actividadChartEmpty" class="absolute inset-0 hidden items-center justify-center text-sm text-slate-400">Sin datos disponibles.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-lg font-bold text-slate-900">KPIs clasificados</h2>
+        <p class="text-sm text-slate-500">Información general consolidada de lo que gestiona el módulo administrador.</p>
+      </div>
+      <a href="{% url 'administrador:auditoria' %}" class="text-sm font-semibold text-primary hover:underline">Ver auditoría</a>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      {% for group in kpi_groups %}
+        <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+          <div class="mb-4">
+            <h3 class="text-base font-bold text-slate-900">{{ group.title }}</h3>
+            <p class="text-sm text-slate-500 mt-1">{{ group.description }}</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% for item in group.items %}
+              <div class="rounded-xl bg-white border border-slate-100 px-4 py-3">
+                <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">{{ item.label }}</p>
+                <p class="text-2xl font-black text-slate-900 mt-1">{{ item.value|default:0 }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
   <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-bold text-slate-900">Actividad reciente</h2>
-      <a href="{% url 'administrador:auditoria' %}" class="text-sm font-semibold text-primary hover:underline">
-        Ver auditoría
-      </a>
+      <div>
+        <h2 class="text-lg font-bold text-slate-900">Últimos movimientos del sistema</h2>
+        <p class="text-sm text-slate-500">Bitácora reciente basada en auditoría real.</p>
+      </div>
+      <a href="{% url 'administrador:auditoria' %}" class="text-sm font-semibold text-primary hover:underline">Ver detalle completo</a>
     </div>
 
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-left text-slate-500 border-b">
-            <th class="py-2">Fecha</th>
-            <th>Usuario</th>
-            <th>Acción</th>
-            <th>Detalle</th>
+            <th class="py-3 pr-4">Fecha</th>
+            <th class="py-3 pr-4">Usuario</th>
+            <th class="py-3 pr-4">Acción</th>
+            <th class="py-3 pr-4">IP</th>
+            <th class="py-3">Navegador / Agente</th>
           </tr>
         </thead>
-        <tbody class="divide-y">
+        <tbody class="divide-y divide-slate-100">
           {% if actividad %}
             {% for log in actividad %}
-              <tr class="text-slate-700">
-                <td class="py-2 whitespace-nowrap">{{ log.action_time }}</td>
-                <td class="whitespace-nowrap">{{ log.user }}</td>
-                <td class="whitespace-nowrap">{{ log.get_action_flag_display }}</td>
-                <td class="max-w-[520px] truncate">{{ log.change_message }}</td>
+              <tr class="text-slate-700 align-top">
+                <td class="py-3 pr-4 whitespace-nowrap">{{ log.fecha|date:"d/m/Y H:i" }}</td>
+                <td class="py-3 pr-4 whitespace-nowrap">{% if log.usuario %}{% firstof log.usuario.get_full_name log.usuario.username log.usuario.email %}{% else %}Sistema{% endif %}</td>
+                <td class="py-3 pr-4 min-w-[280px]"><span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{{ log.accion }}</span></td>
+                <td class="py-3 pr-4 whitespace-nowrap">{{ log.ip_origen|default:"-" }}</td>
+                <td class="py-3 max-w-[360px] truncate">{{ log.user_agent|default:"-" }}</td>
               </tr>
             {% endfor %}
           {% else %}
-            <tr>
-              <td colspan="4" class="py-4 text-slate-500">Sin actividad registrada.</td>
-            </tr>
+            <tr><td colspan="5" class="py-4 text-slate-500">Sin actividad registrada.</td></tr>
           {% endif %}
         </tbody>
       </table>
@@ -125,80 +217,126 @@
   </div>
 </div>
 
-<!-- MODAL: Nuevo Usuario -->
 <div id="modalBackdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
   <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
     <div class="flex items-start justify-between">
       <div>
-        <h3 class="text-xl font-bold text-slate-900">Nuevo Usuario</h3>
+        <h3 class="text-xl font-bold text-slate-900">Nuevo usuario</h3>
         <p class="text-sm text-slate-500">Captura los datos y asigna el rol.</p>
       </div>
-      <button class="text-slate-500 hover:text-slate-900" onclick="closeModal()">
+      <button type="button" class="text-slate-500 hover:text-slate-900" onclick="closeModal()">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
 
     <form method="post" action="{% url 'administrador:crear_usuario' %}" class="mt-5 space-y-4">
       {% csrf_token %}
-
       <div>
         <label class="text-xs font-bold text-slate-600 uppercase">Nombre completo</label>
-        <input name="nombre" required
-               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary"
-               placeholder="Ej. Juan Pérez">
+        <input name="nombre" required class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary" placeholder="Ej. Juan Pérez">
       </div>
-
       <div>
         <label class="text-xs font-bold text-slate-600 uppercase">Email institucional</label>
-        <input name="email" type="email" required
-               class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary"
-               placeholder="Ej. juan@institucion.edu">
+        <input name="email" type="email" required class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary" placeholder="Ej. juan@institucion.edu">
       </div>
-
       <div>
         <label class="text-xs font-bold text-slate-600 uppercase">Rol asignado</label>
-        <select name="rol" required
-                class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
-          <option value="PARTICIPANTE" selected>Participante</option>
-          <option value="PONENTE">Ponente</option>
-          <option value="EVALUADOR">Evaluador / Jurado</option>
-          <option value="COORDINADOR">Coordinador</option>
+        <select name="rol" required class="mt-1 w-full h-11 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
+          <option value="PART" selected>Participante</option>
+          <option value="PON">Ponente</option>
+          <option value="EVAL">Evaluador / Jurado</option>
+          <option value="COOR">Coordinador</option>
           <option value="ADMIN">Administrador</option>
         </select>
       </div>
-
       <div class="flex items-center justify-end gap-3 pt-2">
-        <button type="button"
-                onclick="closeModal()"
-                class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">
-          Cancelar
-        </button>
-
-        <button type="submit"
-                class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">
-          Guardar Usuario
-        </button>
+        <button type="button" onclick="closeModal()" class="h-10 px-4 rounded-xl border border-slate-200 font-semibold text-sm hover:bg-slate-50">Cancelar</button>
+        <button type="submit" class="h-10 px-4 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition shadow">Guardar usuario</button>
       </div>
     </form>
   </div>
 </div>
 
+{{ charts_data.usuarios_por_rol|json_script:"dashboard-usuarios-data" }}
+{{ charts_data.eventos_por_estado|json_script:"dashboard-eventos-data" }}
+{{ charts_data.operacion_intermodular|json_script:"dashboard-operacion-data" }}
+{{ charts_data.actividad_ultimos_7_dias|json_script:"dashboard-actividad-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const modal = document.getElementById("modalBackdrop");
-
-  function openModal(){
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
+  function openModal() { modal.classList.remove("hidden"); modal.classList.add("flex"); }
+  function closeModal() { modal.classList.add("hidden"); modal.classList.remove("flex"); }
+  if (modal) {
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
   }
 
-  function closeModal(){
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
+  function readJsonScript(id) {
+    const el = document.getElementById(id);
+    return el ? JSON.parse(el.textContent) : null;
   }
 
-  // cerrar al hacer click fuera
-  modal.addEventListener("click", (e) => {
-    if(e.target === modal) closeModal();
-  });
+  function tooltipWithPercent(context) {
+    const label = context.label || '';
+    const value = Number(context.raw || 0);
+    const dataset = context.dataset?.data || [];
+    const total = dataset.reduce((acc, item) => acc + Number(item || 0), 0);
+    const percent = total ? ((value * 100) / total).toFixed(1) : '0.0';
+    return `${label}: ${value} (${percent}%)`;
+  }
+
+  function renderEmpty(targetId) {
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.classList.remove('hidden');
+      target.classList.add('flex');
+    }
+  }
+
+  function createChart(canvasId, payload, type, emptyId, palette, axis = 'y') {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !payload) return;
+    const labels = payload.labels || [];
+    const values = (payload.values || []).map(v => Number(v || 0));
+    const total = values.reduce((acc, item) => acc + item, 0);
+    if (!labels.length || total <= 0) {
+      renderEmpty(emptyId);
+      return;
+    }
+    new Chart(canvas, {
+      type,
+      data: {
+        labels,
+        datasets: [{
+          label: payload.title || '',
+          data: values,
+          backgroundColor: palette,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          borderRadius: type === 'bar' ? 10 : 0,
+          maxBarThickness: type === 'bar' ? 52 : undefined,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: type !== 'bar', position: 'bottom' },
+          tooltip: { callbacks: { label: tooltipWithPercent } }
+        },
+        scales: type === 'bar' ? {
+          x: axis === 'x' ? { beginAtZero: true, ticks: { precision: 0 } } : { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } },
+          y: axis === 'x' ? { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } } : { beginAtZero: true, ticks: { precision: 0 } }
+        } : {}
+      }
+    });
+  }
+
+  createChart('usuariosRolChart', readJsonScript('dashboard-usuarios-data'), 'doughnut', 'usuariosRolEmpty', ['#2563eb', '#0f766e', '#7c3aed', '#f59e0b', '#f43f5e']);
+  createChart('eventosEstadoChart', readJsonScript('dashboard-eventos-data'), 'doughnut', 'eventosEstadoEmpty', ['#f59e0b', '#16a34a', '#64748b']);
+  createChart('operacionChart', readJsonScript('dashboard-operacion-data'), 'bar', 'operacionChartEmpty', ['#8b5cf6', '#3b82f6', '#14b8a6', '#f59e0b', '#10b981', '#ef4444']);
+  createChart('actividadChart', readJsonScript('dashboard-actividad-data'), 'bar', 'actividadChartEmpty', ['#2563eb', '#2563eb', '#2563eb', '#2563eb', '#2563eb', '#2563eb', '#2563eb']);
 </script>
 {% endblock %}
