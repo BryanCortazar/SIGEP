@@ -6,7 +6,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from .models import Ponencia
+from .models import Ponencia, PerfilPonente
 
 User = get_user_model()
 
@@ -228,6 +228,12 @@ class PonentePerfilForm(forms.Form):
             self.fields["telefono"].initial = getattr(profile, "telefono", "")
             self.fields["bio"].initial = getattr(profile, "bio", "")
 
+    def clean_telefono(self):
+        telefono = "".join(ch for ch in (self.cleaned_data.get("telefono") or "") if ch.isdigit())
+        if telefono and len(telefono) != 10:
+            raise ValidationError("El teléfono debe contener exactamente 10 dígitos.")
+        return telefono
+
     def clean_avatar(self):
         avatar = self.cleaned_data.get("avatar")
         if avatar:
@@ -243,6 +249,10 @@ class PonentePerfilForm(forms.Form):
     def save(self):
         profile = self.profile
         user = self.user
+
+        if profile is None and user is not None:
+            profile = PerfilPonente.objects.create(usuario=user)
+            self.profile = profile
 
         simple_fields = ["institucion", "especialidad", "telefono", "bio"]
         file_fields = ["avatar", "cv"]

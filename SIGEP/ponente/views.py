@@ -26,7 +26,7 @@ from .forms import (
     PonenteCuentaForm,
     PonentePerfilForm,
 )
-from .models import Ponencia
+from .models import Ponencia, PerfilPonente
 
 
 def _generar_folio_constancia(ponencia: Ponencia) -> str:
@@ -36,29 +36,147 @@ def _generar_folio_constancia(ponencia: Ponencia) -> str:
 
 def _resolve_ponente_profile(user):
     """
-    Intenta localizar un objeto de perfil del ponente sin depender
-    de un único nombre de relación.
+    Obtiene o crea un perfil persistente del ponente sin depender de un
+    nombre de relación externo al módulo.
     """
-    candidate_attrs = [
-        "perfilponente",
-        "perfil_ponente",
-        "ponenteperfil",
-        "perfil",
+    perfil, created = PerfilPonente.objects.get_or_create(usuario=user)
+
+    if created:
+        seeded = False
+        for attr in ["institucion", "especialidad", "telefono", "bio"]:
+            value = getattr(user, attr, "")
+            if value:
+                setattr(perfil, attr, value)
+                seeded = True
+
+        avatar = getattr(user, "avatar", None)
+        if avatar:
+            perfil.avatar = avatar
+            seeded = True
+
+        cv = getattr(user, "cv", None)
+        if cv:
+            perfil.cv = cv
+            seeded = True
+
+        if seeded:
+            perfil.save()
+
+    return perfil
+
+
+def _resumen_evaluacion_ponencia(ponencia: Ponencia | None) -> dict:
+    resumen = {
+        "promedio_general": Decimal("0.0"),
+        "total_evaluaciones": 0,
+        "evaluaciones_asignadas": 0,
+        "avance_porcentaje": 0,
+        "estado_resultado": "Sin evaluación",
+        "comentarios": [],
+        "evaluadores_estado": [],
+        "evaluacion_completa": False,
+    }
+
+    if not ponencia or not ponencia.evaluacion_proyecto:
+        return resumen
+
+    proyecto = ponencia.evaluacion_proyecto
+
+    asignaciones_qs = (
+        EvaluacionAsignacion.objects
+        .select_related("evaluador")
+        .filter(proyecto=proyecto)
+        .order_by("evaluador__first_name", "evaluador__last_name", "evaluador__email", "id")
+    )
+
+    entregas_qs = (
+        EvaluacionEntrega.objects
+        .select_related("asignacion", "asignacion__evaluador")
+        .filter(asignacion__proyecto=proyecto)
+        .order_by("asignacion_id", "-fecha_envio", "-actualizado_en", "-id")
+    )
+
+    entregas_map = {}
+    for entrega in entregas_qs:
+        entregas_map.setdefault(entrega.asignacion_id, entrega)
+
+    entregas_enviadas = [
+        entrega
+        for entrega in entregas_map.values()
+        if entrega.estado == EvaluacionEntrega.ESTADO_ENVIADA
     ]
 
-    for attr in candidate_attrs:
-        obj = getattr(user, attr, None)
-        if obj is not None:
-            return obj
+    resumen["evaluaciones_asignadas"] = asignaciones_qs.count()
+    resumen["total_evaluaciones"] = len(entregas_enviadas)
 
-    return SimpleNamespace(
-        institucion=getattr(user, "institucion", ""),
-        especialidad=getattr(user, "especialidad", ""),
-        telefono=getattr(user, "telefono", ""),
-        bio=getattr(user, "bio", ""),
-        avatar=getattr(user, "avatar", None),
-        cv=getattr(user, "cv", None),
-    )
+    if resumen["evaluaciones_asignadas"] > 0:
+        resumen["avance_porcentaje"] = int(
+            (resumen["total_evaluaciones"] / resumen["evaluaciones_asignadas"]) * 100
+        )
+
+    if entregas_enviadas:
+        promedio_db = (
+            EvaluacionEntrega.objects
+            .filter(pk__in=[ent.pk for ent in entregas_enviadas])
+            .aggregate(promedio=Avg("calificacion"))["promedio"]
+        )
+        if promedio_db is not None:
+            resumen["promedio_general"] = Decimal(str(promedio_db)).quantize(Decimal("0.1"))
+
+    if resumen["evaluaciones_asignadas"] == 0:
+        resumen["estado_resultado"] = "Pendiente de asignación"
+    elif resumen["total_evaluaciones"] == 0:
+        resumen["estado_resultado"] = "Evaluación no iniciada"
+    elif resumen["total_evaluaciones"] < resumen["evaluaciones_asignadas"]:
+        resumen["estado_resultado"] = "Evaluación en progreso"
+    else:
+        resumen["estado_resultado"] = "Evaluación finalizada"
+        resumen["evaluacion_completa"] = True
+
+    comentarios = []
+    for entrega in entregas_enviadas:
+        if not (entrega.observaciones_generales or "").strip():
+            continue
+        evaluador = entrega.asignacion.evaluador
+        comentarios.append({
+            "evaluador": f"{evaluador.first_name} {evaluador.last_name}".strip() or evaluador.username,
+            "rol": "Evaluador",
+            "comentario": entrega.observaciones_generales,
+            "calificacion": entrega.calificacion,
+            "fecha": entrega.fecha_envio or entrega.actualizado_en,
+        })
+    resumen["comentarios"] = comentarios
+
+    evaluadores_estado = []
+    for asignacion in asignaciones_qs:
+        evaluador = asignacion.evaluador
+        entrega = entregas_map.get(asignacion.id)
+        evaluadores_estado.append({
+            "nombre": f"{evaluador.first_name} {evaluador.last_name}".strip() or evaluador.username,
+            "estado": (
+                "Enviada"
+                if entrega and entrega.estado == EvaluacionEntrega.ESTADO_ENVIADA
+                else "Pendiente"
+            ),
+            "calificacion": (
+                entrega.calificacion
+                if entrega and entrega.estado == EvaluacionEntrega.ESTADO_ENVIADA
+                else None
+            ),
+        })
+    resumen["evaluadores_estado"] = evaluadores_estado
+    return resumen
+
+
+def _constancia_disponible_para_ponencia(ponencia: Ponencia | None, resumen: dict | None = None) -> bool:
+    if not ponencia:
+        return False
+    if ponencia.estado_programacion == Ponencia.PROG_CANCELADO:
+        return False
+    if ponencia.estado == Ponencia.ESTADO_RECHAZADA:
+        return False
+    resumen = resumen or _resumen_evaluacion_ponencia(ponencia)
+    return bool(resumen.get("evaluacion_completa"))
 
 
 def _asegurar_inscripcion_ponente(evento: Evento, usuario) -> Inscripcion:
@@ -406,8 +524,6 @@ def mis_resultados(request):
     )
 
     ponencia_id = request.GET.get("ponencia")
-    ponencia_sel = None
-
     if ponencia_id:
         ponencia_sel = get_object_or_404(
             Ponencia.objects.select_related("evento", "evaluacion_proyecto"),
@@ -417,115 +533,50 @@ def mis_resultados(request):
     else:
         ponencia_sel = ponencias.first()
 
-    promedio_general = Decimal("0.0")
-    total_evaluaciones = 0
-    evaluaciones_asignadas = 0
-    avance_porcentaje = 0
-    estado_resultado = "Sin evaluación"
-    comentarios = []
-    evaluadores_estado = []
-
-    if ponencia_sel and ponencia_sel.evaluacion_proyecto:
-        proyecto = ponencia_sel.evaluacion_proyecto
-
-        asignaciones_qs = (
-            EvaluacionAsignacion.objects
-            .select_related("evaluador")
-            .filter(proyecto=proyecto)
-            .order_by("evaluador__first_name", "evaluador__last_name", "evaluador__email")
-        )
-
-        entregas_qs = (
-            EvaluacionEntrega.objects
-            .select_related("asignacion", "asignacion__evaluador")
-            .filter(asignacion__proyecto=proyecto)
-            .order_by("-fecha_envio", "-actualizado_en")
-        )
-
-        entregas_enviadas = entregas_qs.filter(estado=EvaluacionEntrega.ESTADO_ENVIADA)
-
-        evaluaciones_asignadas = asignaciones_qs.count()
-        total_evaluaciones = entregas_enviadas.count()
-
-        if evaluaciones_asignadas > 0:
-            avance_porcentaje = int((total_evaluaciones / evaluaciones_asignadas) * 100)
-
-        promedio_db = entregas_enviadas.aggregate(promedio=Avg("calificacion"))["promedio"]
-        if promedio_db is not None:
-            promedio_general = Decimal(str(promedio_db)).quantize(Decimal("0.1"))
-
-        if evaluaciones_asignadas == 0:
-            estado_resultado = "Pendiente de asignación"
-        elif total_evaluaciones == 0:
-            estado_resultado = "Evaluación no iniciada"
-        elif total_evaluaciones < evaluaciones_asignadas:
-            estado_resultado = "Evaluación en progreso"
-        else:
-            estado_resultado = "Evaluación finalizada"
-
-        comentarios = [
-            {
-                "evaluador": (
-                    f"{entrega.asignacion.evaluador.first_name} {entrega.asignacion.evaluador.last_name}".strip()
-                    or entrega.asignacion.evaluador.username
-                ),
-                "rol": "Evaluador",
-                "comentario": entrega.observaciones_generales,
-                "calificacion": entrega.calificacion,
-                "fecha": entrega.fecha_envio or entrega.actualizado_en,
-            }
-            for entrega in entregas_enviadas
-            if (entrega.observaciones_generales or "").strip()
-        ]
-
-        entregas_map = {ent.asignacion_id: ent for ent in entregas_qs}
-        for asignacion in asignaciones_qs:
-            entrega = entregas_map.get(asignacion.id)
-            nombre_evaluador = (
-                f"{asignacion.evaluador.first_name} {asignacion.evaluador.last_name}".strip()
-                or asignacion.evaluador.username
-            )
-
-            evaluadores_estado.append({
-                "nombre": nombre_evaluador,
-                "estado": (
-                    "Enviada"
-                    if entrega and entrega.estado == EvaluacionEntrega.ESTADO_ENVIADA
-                    else "Pendiente"
-                ),
-                "calificacion": entrega.calificacion if entrega and entrega.estado == EvaluacionEntrega.ESTADO_ENVIADA else None,
-            })
+    resumen = _resumen_evaluacion_ponencia(ponencia_sel)
 
     return render(request, "ponente/resultados/resultados.html", {
         "active": "resultados",
         "ponencias": ponencias,
         "ponencia_sel": ponencia_sel,
-        "promedio_general": promedio_general,
-        "total_evaluaciones": total_evaluaciones,
-        "evaluaciones_asignadas": evaluaciones_asignadas,
-        "avance_porcentaje": avance_porcentaje,
-        "estado_resultado": estado_resultado,
-        "comentarios": comentarios[:10],
-        "evaluadores_estado": evaluadores_estado,
+        "promedio_general": resumen["promedio_general"],
+        "total_evaluaciones": resumen["total_evaluaciones"],
+        "evaluaciones_asignadas": resumen["evaluaciones_asignadas"],
+        "avance_porcentaje": resumen["avance_porcentaje"],
+        "estado_resultado": resumen["estado_resultado"],
+        "comentarios": resumen["comentarios"][:10],
+        "evaluadores_estado": resumen["evaluadores_estado"],
+        "documentacion_porcentaje": ponencia_sel.porcentaje_documentacion() if ponencia_sel else 0,
+        "estado_ponencia_label": ponencia_sel.get_estado_display() if ponencia_sel else "",
+        "estado_programacion_label": ponencia_sel.get_estado_programacion_display() if ponencia_sel else "",
+        "constancia_disponible": _constancia_disponible_para_ponencia(ponencia_sel, resumen),
     })
 
 
 @login_required
 def historial(request):
-    hoy = timezone.localdate()
-
     items = (
-        Ponencia.objects.select_related("evento")
-        .filter(
-            ponente=request.user,
-            fecha_programada__isnull=False,
-        )
-        .filter(
-            Q(fecha_programada__lt=hoy) |
-            Q(estado_programacion=Ponencia.PROG_CANCELADO)
-        )
+        Ponencia.objects.select_related("evento", "evaluacion_proyecto")
+        .filter(ponente=request.user)
         .order_by("-fecha_programada", "-hora_inicio", "-id")
     )
+
+    for item in items:
+        resumen = _resumen_evaluacion_ponencia(item)
+        if item.estado_programacion == Ponencia.PROG_CANCELADO:
+            item.historial_estado = "Cancelado"
+            item.historial_badge = "bg-red-50 text-red-700 border-red-100"
+        elif not item.fecha_programada:
+            item.historial_estado = "Pendiente"
+            item.historial_badge = "bg-slate-100 text-slate-700 border-slate-200"
+        elif item.participacion_finalizada():
+            item.historial_estado = "Participó"
+            item.historial_badge = "bg-green-50 text-green-700 border-green-100"
+        else:
+            item.historial_estado = "Próximo"
+            item.historial_badge = "bg-blue-50 text-blue-700 border-blue-100"
+
+        item.constancia_disponible = _constancia_disponible_para_ponencia(item, resumen)
 
     return render(request, "ponente/historial/historial.html", {
         "active": "historial",
@@ -539,13 +590,22 @@ def generar_constancia(request):
     q = (request.GET.get("q") or "").strip().lower()
 
     ponencias_qs = (
-        Ponencia.objects.select_related("evento")
+        Ponencia.objects.select_related("evento", "evaluacion_proyecto")
         .filter(ponente=request.user)
         .exclude(estado_programacion=Ponencia.PROG_CANCELADO)
         .order_by("-fecha_programada", "-id")
     )
 
-    ponencias_disponibles = [p for p in ponencias_qs if p.puede_generar_constancia()]
+    ponencias_disponibles = []
+    for ponencia in ponencias_qs:
+        resumen = _resumen_evaluacion_ponencia(ponencia)
+        ponencia.evaluaciones_asignadas = resumen["evaluaciones_asignadas"]
+        ponencia.evaluaciones_enviadas = resumen["total_evaluaciones"]
+        ponencia.promedio_general = resumen["promedio_general"]
+        ponencia.constancia_disponible = _constancia_disponible_para_ponencia(ponencia, resumen)
+        if not ponencia.constancia_disponible:
+            continue
+        ponencias_disponibles.append(ponencia)
 
     if q:
         ponencias_disponibles = [
@@ -560,12 +620,16 @@ def generar_constancia(request):
 
     if ponencia_id:
         ponencia_sel = get_object_or_404(
-            Ponencia.objects.select_related("evento"),
+            Ponencia.objects.select_related("evento", "evaluacion_proyecto"),
             pk=ponencia_id,
             ponente=request.user
         )
-        if not ponencia_sel.puede_generar_constancia():
-            messages.error(request, "Esta constancia aún no está disponible para descarga.")
+        resumen_sel = _resumen_evaluacion_ponencia(ponencia_sel)
+        ponencia_sel.evaluaciones_asignadas = resumen_sel["evaluaciones_asignadas"]
+        ponencia_sel.evaluaciones_enviadas = resumen_sel["total_evaluaciones"]
+        ponencia_sel.promedio_general = resumen_sel["promedio_general"]
+        if not _constancia_disponible_para_ponencia(ponencia_sel, resumen_sel):
+            messages.error(request, "Esta constancia aún no está disponible. Deben concluirse todas las evaluaciones asignadas.")
             return redirect("ponente:constancia")
     elif ponencias_disponibles:
         ponencia_sel = ponencias_disponibles[0]
@@ -582,19 +646,21 @@ def generar_constancia(request):
 @login_required
 def descargar_constancia_pdf(request, ponencia_id):
     ponencia = get_object_or_404(
-        Ponencia.objects.select_related("evento"),
+        Ponencia.objects.select_related("evento", "evaluacion_proyecto"),
         pk=ponencia_id,
         ponente=request.user
     )
 
-    if not ponencia.puede_generar_constancia():
+    resumen = _resumen_evaluacion_ponencia(ponencia)
+    if not _constancia_disponible_para_ponencia(ponencia, resumen):
         messages.error(request, "La constancia no está habilitada para esta participación.")
         return redirect("ponente:constancia")
 
     if not ponencia.folio_constancia:
         ponencia.folio_constancia = _generar_folio_constancia(ponencia)
         ponencia.constancia_generada_en = timezone.now()
-        ponencia.save(update_fields=["folio_constancia", "constancia_generada_en"])
+        ponencia.constancia_habilitada = True
+        ponencia.save(update_fields=["folio_constancia", "constancia_generada_en", "constancia_habilitada"])
 
     template = get_template("ponente/constancia/constancia_pdf.html")
     html = template.render({

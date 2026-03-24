@@ -88,6 +88,34 @@
               <p class="mt-2 text-base font-bold text-slate-900">{{ ponencia_sel.titulo }}</p>
               <p class="mt-1 text-sm text-slate-500">{{ ponencia_sel.evento.nombre|default:ponencia_sel.evento.titulo }}</p>
             </div>
+
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-xs uppercase tracking-wide text-slate-400 font-bold">Estado actual</span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">{{ estado_ponencia_label }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-xs uppercase tracking-wide text-slate-400 font-bold">Programación</span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">{{ estado_programacion_label|default:"Pendiente" }}</span>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs uppercase tracking-wide text-slate-400 font-bold">Avance documental</span>
+                  <span class="text-sm font-bold text-slate-700">{{ documentacion_porcentaje }}%</span>
+                </div>
+                <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                  <div class="h-full bg-emerald-500 rounded-full" style="width: {{ documentacion_porcentaje }}%;"></div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-xs uppercase tracking-wide text-slate-400 font-bold">Constancia</span>
+                {% if constancia_disponible %}
+                  <a href="{% url 'ponente:constancia' %}?ponencia={{ ponencia_sel.id }}" class="text-sm font-semibold text-primary hover:text-blue-700">Disponible</a>
+                {% else %}
+                  <span class="text-sm font-semibold text-slate-400">Pendiente</span>
+                {% endif %}
+              </div>
+            </div>
           </div>
         </div>
       </div>

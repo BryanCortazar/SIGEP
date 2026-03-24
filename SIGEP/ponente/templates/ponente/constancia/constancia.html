@@ -52,6 +52,9 @@
             <div class="relative z-10">
               <h3 class="text-slate-800 font-bold text-base leading-snug mb-1">{{ item.nombre_evento }}</h3>
               <p class="text-slate-500 text-xs">Rol: <span class="text-slate-700 font-bold">{{ item.tipo|default:"Ponente" }}</span></p>
+              <p class="text-slate-500 text-xs mt-1">
+                Evaluaciones concluidas: <span class="text-slate-700 font-bold">{{ item.evaluaciones_enviadas }}/{{ item.evaluaciones_asignadas }}</span>
+              </p>
             </div>
 
             <div class="relative z-10 mt-1 flex gap-2">
@@ -70,7 +73,7 @@
           </div>
           <h3 class="mt-4 text-base font-bold text-slate-900">No hay constancias disponibles</h3>
           <p class="mt-2 text-sm text-slate-500">
-            Aquí aparecerán las participaciones finalizadas y habilitadas para descarga.
+            Aquí aparecerán las constancias liberadas cuando todas las evaluaciones asignadas estén concluidas.
           </p>
         </div>
       {% endif %}
@@ -138,12 +141,17 @@
               </h2>
               <div class="w-32 h-1 bg-primary mb-6"></div>
 
-              <p class="text-slate-600 max-w-lg leading-relaxed mb-8">
+              <p class="text-slate-600 max-w-lg leading-relaxed mb-5">
                 Por su valiosa participación y destacada ponencia titulada
                 <span class="font-bold text-slate-800">"{{ ponencia_sel.titulo }}"</span>
                 durante el
                 <span class="font-bold text-slate-800">{{ ponencia_sel.nombre_evento }}</span>.
               </p>
+
+              <div class="inline-flex items-center gap-4 px-4 py-2 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600 mb-6">
+                <span>Evaluaciones: <strong class="text-slate-800">{{ ponencia_sel.evaluaciones_enviadas }}/{{ ponencia_sel.evaluaciones_asignadas }}</strong></span>
+                <span>Promedio: <strong class="text-slate-800">{{ ponencia_sel.promedio_general|default:"0.0" }}</strong></span>
+              </div>
 
               <p class="text-slate-400 text-xs mt-auto">
                 Emitida en Ciudad de México, a {{ fecha_emision|date:"d \\d\\e F \\d\\e Y" }}

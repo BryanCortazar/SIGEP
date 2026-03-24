@@ -5,43 +5,34 @@
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>{% block title %}SIGEP - Evaluador{% endblock %}</title>
-
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script id="tailwind-config">
+  <script>
     tailwind.config = {
-      darkMode: "class",
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            "primary": "#137fec",
-            "sidebar": "#101922",
-            "background-light": "#f8fafc",
+            primary: '#137fec',
+            'primary-dark': '#0f6bc7',
+            sidebar: '#101922',
+            'background-light': '#f8fafc',
           },
-          fontFamily: {
-            "display": ["Public Sans", "sans-serif"],
-          },
-        },
-      },
+          fontFamily: { display: ['Public Sans', 'sans-serif'] }
+        }
+      }
     }
   </script>
-
   <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.20); border-radius: 3px; }
   </style>
-
   {% block extra_head %}{% endblock %}
 </head>
-
 <body class="bg-background-light text-slate-900 font-display antialiased h-screen flex overflow-hidden">
-
-  <!-- SIDEBAR -->
   <aside class="w-72 bg-sidebar text-slate-300 flex flex-col shadow-xl z-20 flex-shrink-0">
     <div class="h-20 flex items-center gap-3 px-6 border-b border-slate-800">
       <div class="flex items-center justify-center size-9 bg-primary rounded-lg text-white shadow-lg shadow-primary/30">
@@ -55,138 +46,73 @@
 
     <nav class="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar">
       <ul class="space-y-1">
-
-        <li>
-          <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group
-                    {% if active == 'panel' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}"
-             href="{% url 'evaluador:panel' %}">
-            <span class="material-symbols-outlined {% if active != 'panel' %}group-hover:text-primary transition-colors{% endif %}">dashboard</span>
-            <span class="font-medium">Panel de Evaluación</span>
-          </a>
-        </li>
-
-        <li>
-          <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group
-                    {% if active == 'proyectos' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}"
-             href="{% url 'evaluador:proyectos' %}">
-            <span class="material-symbols-outlined {% if active != 'proyectos' %}group-hover:text-primary transition-colors{% endif %}">assignment</span>
-            <span class="font-medium">Proyectos Asignados</span>
-          </a>
-        </li>
-
-        {# El formulario requiere proyecto_id; por buena UX lo mandamos a pendientes #}
-        <li>
-          <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group
-                    {% if active == 'formulario' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}"
-             href="{% url 'evaluador:proyectos' %}?estado=pendientes">
-            <span class="material-symbols-outlined {% if active != 'formulario' %}group-hover:text-primary transition-colors{% endif %}">edit_document</span>
-            <span class="font-medium">Formulario de Evaluación</span>
-          </a>
-        </li>
-
-        <li>
-          <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group
-                    {% if active == 'horario' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}"
-             href="{% url 'evaluador:horario' %}">
-            <span class="material-symbols-outlined {% if active != 'horario' %}group-hover:text-primary transition-colors{% endif %}">calendar_month</span>
-            <span class="font-medium">Mi Horario Asignado</span>
-          </a>
-        </li>
-
-        <li>
-          <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group
-                    {% if active == 'historial' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}"
-             href="{% url 'evaluador:historial' %}">
-            <span class="material-symbols-outlined {% if active != 'historial' %}group-hover:text-primary transition-colors{% endif %}">history</span>
-            <span class="font-medium">Historial</span>
-          </a>
-        </li>
-
-        <li>
-          <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group
-                    {% if active == 'configuracion' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}"
-             href="{% url 'evaluador:configuracion' %}">
-            <span class="material-symbols-outlined {% if active != 'configuracion' %}group-hover:text-primary transition-colors{% endif %}">settings</span>
-            <span class="font-medium">Configuración</span>
-          </a>
-        </li>
-
+        <li><a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {% if active == 'panel' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}" href="{% url 'evaluador:panel' %}"><span class="material-symbols-outlined">dashboard</span><span class="font-medium">Panel de Evaluación</span></a></li>
+        <li><a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {% if active == 'proyectos' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}" href="{% url 'evaluador:proyectos' %}"><span class="material-symbols-outlined">assignment</span><span class="font-medium">Proyectos Asignados</span></a></li>
+        <li><a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {% if active == 'formulario' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}" href="{% url 'evaluador:proyectos' %}?estado=pendientes"><span class="material-symbols-outlined">edit_document</span><span class="font-medium">Formulario de Evaluación</span></a></li>
+        <li><a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {% if active == 'horario' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}" href="{% url 'evaluador:horario' %}"><span class="material-symbols-outlined">calendar_month</span><span class="font-medium">Mi Horario Asignado</span></a></li>
+        <li><a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {% if active == 'historial' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}" href="{% url 'evaluador:historial' %}"><span class="material-symbols-outlined">history</span><span class="font-medium">Historial</span></a></li>
+        <li><a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {% if active == 'configuracion' %}bg-primary text-white shadow-md shadow-primary/20{% else %}hover:bg-slate-800 hover:text-white{% endif %}" href="{% url 'evaluador:configuracion' %}"><span class="material-symbols-outlined">settings</span><span class="font-medium">Configuración</span></a></li>
       </ul>
     </nav>
 
     <div class="p-4 border-t border-slate-800">
-      <a href="{% url 'principal:logout' %}"
-         class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-red-500/10 hover:text-red-300 transition-colors">
+      <a href="{% url 'principal:logout' %}" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-red-500/10 hover:text-red-300 transition-colors">
         <span class="material-symbols-outlined">logout</span>
         <span class="font-medium">Cerrar sesión</span>
       </a>
     </div>
   </aside>
 
-  <!-- CONTENT -->
   <main class="flex-1 flex flex-col overflow-hidden bg-background-light">
-    <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-end items-center sticky top-0 z-10">
+    <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 font-bold">SIGEP</p>
+        <p class="text-sm text-slate-600">Módulo de evaluador</p>
+      </div>
       <div class="flex items-center gap-4">
         <div class="text-right">
-          <p class="text-sm font-bold text-slate-900 leading-tight">
-            {{ request.user.get_full_name|default:request.user.username }}
-          </p>
+          <p class="text-sm font-bold text-slate-900 leading-tight">{{ request.user.get_full_name|default:request.user.username }}</p>
           <p class="text-xs text-slate-500 font-medium">Evaluador</p>
         </div>
-
         <div class="size-10 rounded-full bg-pink-500 text-white flex items-center justify-center text-sm font-bold shadow-sm border-2 border-white ring-1 ring-slate-100">
-          {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
+          {{ request.user.first_name|default:request.user.username|slice:':1'|upper }}{{ request.user.last_name|slice:':1'|upper }}
         </div>
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto p-8 md:p-12 pt-6">
+    <div class="flex-1 overflow-y-auto p-8 md:p-10 pt-6">
+      {% if messages %}
+        <div class="mb-6 space-y-3">
+          {% for m in messages %}
+            <div class="rounded-xl border px-4 py-3 text-sm {% if m.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% elif m.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-slate-200 bg-white text-slate-700{% endif %}">{{ m }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </div>
   </main>
 
-  <!-- ✅ IMPORTANTE: include corregido a tu estructura -->
-  {% include "components/modal_messages.html" %}
-
   {% block modals %}{% endblock %}
-
   <script>
-    // ===== Toast estándar: overlay + toast y autocierre 5s =====
-    function showToastMessages() {
-      const overlay = document.getElementById("toastOverlay");
-      const toast = document.getElementById("toastMessages");
-      if (!overlay || !toast) return;
-
-      overlay.classList.remove("hidden");
-      toast.classList.remove("hidden");
-      document.body.classList.add("overflow-hidden");
-
-      window.__toastTimer && clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => {
-        hideToastMessages();
-      }, 5000);
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
     }
-
-    function hideToastMessages() {
-      const overlay = document.getElementById("toastOverlay");
-      const toast = document.getElementById("toastMessages");
-      if (!overlay || !toast) return;
-
-      toast.classList.add("hidden");
-      overlay.classList.add("hidden");
-      document.body.classList.remove("overflow-hidden");
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
     }
-
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") hideToastMessages();
-    });
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const hasMessages = {{ messages|length|default:0 }};
-      if (hasMessages) showToastMessages();
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('[id^="modal"]').forEach(el => el.classList.add('hidden'));
+        document.body.classList.remove('overflow-hidden');
+      }
     });
   </script>
-
   {% block extra_js %}{% endblock %}
 </body>
 </html>

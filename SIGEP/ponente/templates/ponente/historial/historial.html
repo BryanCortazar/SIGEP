@@ -57,10 +57,10 @@
                 <td class="px-6 py-4">
                   <div class="flex flex-col">
                     <span class="text-sm text-slate-700">
-                      {{ item.fecha_programada|date:"d M, Y" }}
+                      {% if item.fecha_programada %}{{ item.fecha_programada|date:"d M, Y" }}{% else %}Pendiente por definir{% endif %}
                     </span>
                     <span class="text-xs text-slate-400">
-                      {{ item.rango_horario }}
+                      {% if item.fecha_programada %}{{ item.rango_horario }}{% else %}Sin horario asignado{% endif %}
                     </span>
                   </div>
                 </td>
@@ -72,15 +72,9 @@
                 </td>
 
                 <td class="px-6 py-4 text-center">
-                  {% if item.estado_programacion == 'CANCELADO' %}
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
-                      Cancelado
-                    </span>
-                  {% else %}
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                      Completado
-                    </span>
-                  {% endif %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ item.historial_badge }}">
+                    {{ item.historial_estado }}
+                  </span>
                 </td>
 
                 <td class="px-6 py-4 text-right">
@@ -91,17 +85,17 @@
                       <span class="material-symbols-outlined">visibility</span>
                     </a>
 
-                    {% if item.estado_programacion != 'CANCELADO' %}
+                    {% if item.constancia_disponible %}
                       <a href="{% url 'ponente:constancia' %}?ponencia={{ item.id }}"
                          class="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-primary hover:text-primary transition text-sm font-medium"
-                         title="Descargar constancia">
+                         title="Ver constancia">
                         <span class="material-symbols-outlined text-[18px]">description</span>
                         Constancia
                       </a>
                     {% else %}
                       <button disabled
                               class="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed text-sm font-medium"
-                              title="No disponible">
+                              title="Disponible al concluir todas las evaluaciones">
                         <span class="material-symbols-outlined text-[18px]">description</span>
                         Constancia
                       </button>

@@ -48,12 +48,51 @@ def upload_diapositivas(instance, filename: str) -> str:
     return f"ponente/diapositivas/evento_{instance.evento_id}/user_{instance.ponente_id}/{filename}"
 
 
+def upload_avatar_perfil(instance, filename: str) -> str:
+    return f"ponente/perfil/avatar/user_{instance.usuario_id}/{filename}"
+
+
+def upload_cv_perfil(instance, filename: str) -> str:
+    return f"ponente/perfil/cv/user_{instance.usuario_id}/{filename}"
+
+
 class TimeStampedModel(models.Model):
     creado_en = models.DateTimeField(default=timezone.now, editable=False)
     actualizado_en = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
+
+
+class PerfilPonente(TimeStampedModel):
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="perfil_ponente_sigep",
+    )
+    institucion = models.CharField(max_length=180, blank=True, default="")
+    especialidad = models.CharField(max_length=180, blank=True, default="")
+    telefono = models.CharField(max_length=30, blank=True, default="")
+    bio = models.TextField(blank=True, default="")
+    avatar = models.FileField(
+        upload_to=upload_avatar_perfil,
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+    cv = models.FileField(
+        upload_to=upload_cv_perfil,
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(["pdf"]), validate_pdf_size],
+    )
+
+    class Meta:
+        verbose_name = "Perfil de ponente"
+        verbose_name_plural = "Perfiles de ponentes"
+
+    def __str__(self):
+        return f"Perfil de {self.usuario}"
 
 
 class Ponencia(TimeStampedModel):
