@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGEP | Bienvenido</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#137fec",
+                        "background-light": "#f6f7f8",
+                    },
+                    fontFamily: {
+                        display: ["Public Sans", "sans-serif"],
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-background-light font-display flex items-center justify-center p-4">
+    <div class="w-full max-w-md text-center">
+        <div class="bg-white rounded-2xl shadow-lg p-10">
+            <span class="material-symbols-outlined text-primary text-6xl">hub</span>
+            <h1 class="text-3xl font-bold text-slate-800 mt-4">SIGEP</h1>
+            <p class="text-slate-500 mt-2 text-sm">Sistema Integral de Gestión y Evaluación de Proyectos</p>
+
+            {% if messages %}
+            <div class="mt-5 space-y-2 text-left">
+                {% for message in messages %}
+                <div class="px-4 py-3 rounded-lg text-sm
+                    {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+                    {% elif message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200
+                    {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <p class="text-slate-600 mt-6 text-sm">
+                Tu cuenta no tiene un módulo asignado. Contacta al administrador.
+            </p>
+            <a href="{% url 'principal:salir' %}"
+               class="mt-4 inline-block bg-primary text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors">
+                Cerrar sesión
+            </a>
+            {% else %}
+            <a href="{% url 'principal:login' %}"
+               class="mt-6 inline-block bg-primary text-white px-8 py-2.5 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors">
+                Iniciar sesión
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

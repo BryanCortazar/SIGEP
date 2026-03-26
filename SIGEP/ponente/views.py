@@ -179,6 +179,36 @@ def _constancia_disponible_para_ponencia(ponencia: Ponencia | None, resumen: dic
     return bool(resumen.get("evaluacion_completa"))
 
 
+def _nombre_evento_seguro(evento) -> str:
+    if not evento:
+        return "Evento"
+    return getattr(evento, "nombre", "") or getattr(evento, "titulo", "") or "Evento"
+
+
+def _formatear_hora_segura(valor) -> str:
+    if not valor:
+        return "Por definir"
+    try:
+        return valor.strftime("%H:%M")
+    except Exception:
+        return str(valor)
+
+
+def _formatear_rango_horario(inicio, fin) -> str:
+    if inicio and fin:
+        return f"{_formatear_hora_segura(inicio)} - {_formatear_hora_segura(fin)}"
+    if inicio:
+        return _formatear_hora_segura(inicio)
+    return "Por definir"
+
+
+def _decorar_ponencia_horario(item: Ponencia) -> Ponencia:
+    item.rango_horario = _formatear_rango_horario(item.hora_inicio, item.hora_fin)
+    item.evento_display = _nombre_evento_seguro(item.evento)
+    item.espacio_display = item.espacio_asignado or "Por definir"
+    return item
+
+
 def _asegurar_inscripcion_ponente(evento: Evento, usuario) -> Inscripcion:
     """
     Garantiza que el usuario quede inscrito en el evento como PONENTE

@@ -24,7 +24,5 @@ urlpatterns = [
     path("perfil/password/", views.perfil_cambiar_password, name="perfil_password"),
 
     path("salir/", views.salir, name="salir"),
-    
-    path("perfil/actualizar/", views.perfil_actualizar, name="perfil_actualizar"),
     path("perfil/password/", views.perfil_cambiar_password, name="perfil_cambiar_password"),
 ]

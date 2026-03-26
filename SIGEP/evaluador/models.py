@@ -6,8 +6,7 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+
 
 EVENTO_MODEL = "administrador.Evento"
 
@@ -51,7 +50,6 @@ def _cv_upload_path(instance, filename: str) -> str:
 
 
 class PerfilUsuario(TimeStampedModel):
-    # ✅ related_name único (evita choque con coordinador)
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -90,17 +88,11 @@ class PerfilUsuario(TimeStampedModel):
         return f"PerfilEvaluador({self.usuario_id})"
 
 
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def crear_perfil_usuario(sender, instance, created, **kwargs):
-    if created:
-        PerfilUsuario.objects.create(usuario=instance)
-
 
 # =========================
 # CRONOGRAMA
 # =========================
 class ActividadCronograma(TimeStampedModel):
-    # ✅ related_name único
     evento = models.ForeignKey(
         EVENTO_MODEL,
         on_delete=models.CASCADE,
@@ -143,7 +135,6 @@ class Inscripcion(TimeStampedModel):
         (ROL_PARTICIPANTE, "Participante"),
     )
 
-    # ✅ related_name únicos
     evento = models.ForeignKey(
         EVENTO_MODEL,
         on_delete=models.CASCADE,
@@ -168,7 +159,6 @@ class Inscripcion(TimeStampedModel):
 # EVALUADORES
 # =========================
 class EvaluacionProyecto(TimeStampedModel):
-    # ✅ related_name único
     evento = models.ForeignKey(
         EVENTO_MODEL,
         on_delete=models.CASCADE,
@@ -194,8 +184,6 @@ class EvaluacionProyecto(TimeStampedModel):
 
 class EvaluacionAsignacion(TimeStampedModel):
     proyecto = models.ForeignKey(EvaluacionProyecto, on_delete=models.CASCADE, related_name="asignaciones")
-
-    # ✅ related_name único
     evaluador = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -239,6 +227,16 @@ class EvaluacionEntrega(TimeStampedModel):
         related_name="entrega",
     )
 
+    # Campo temporal de transición hacia el modelo canónico del módulo coordinador.
+    # Se agrega sin eliminar el enlace viejo para no romper evaluaciones ya capturadas.
+    asignacion_canonica = models.OneToOneField(
+        "coordinador.EvaluacionAsignacion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="entrega_evaluador_migrada",
+    )
+
     calificacion = models.DecimalField(max_digits=3, decimal_places=1, default=0.0)
     observaciones_generales = models.TextField(blank=True, default="")
     estado = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_BORRADOR)
@@ -255,12 +253,12 @@ class EvaluacionEntrega(TimeStampedModel):
         return f"Entrega({self.asignacion_id}) - {self.estado}"
 
 
-
 class EvaluacionRespuestaCriterio(TimeStampedModel):
     """
     Respuesta individual por criterio para una entrega de evaluación.
     Mantiene el detalle sin romper la estructura existente del módulo.
     """
+
     entrega = models.ForeignKey(
         "EvaluacionEntrega",
         on_delete=models.CASCADE,
@@ -271,6 +269,16 @@ class EvaluacionRespuestaCriterio(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="respuestas_evaluador",
     )
+
+    # Campo temporal de transición hacia el criterio canónico del módulo coordinador.
+    criterio_canonico = models.ForeignKey(
+        "coordinador.RubricaCriterio",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="respuestas_evaluador_migradas",
+    )
+
     valor = models.PositiveSmallIntegerField(default=1)
     observacion = models.TextField(blank=True, default="")
 
@@ -280,6 +288,7 @@ class EvaluacionRespuestaCriterio(TimeStampedModel):
         indexes = [
             models.Index(fields=["entrega", "criterio"]),
             models.Index(fields=["criterio"]),
+            models.Index(fields=["criterio_canonico"]),
         ]
 
     def clean(self):

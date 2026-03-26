@@ -7,16 +7,6 @@
 {% block content %}
 <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6">
   <section class="space-y-6">
-    {% if messages %}
-      <div class="space-y-3">
-        {% for message in messages %}
-          <div class="rounded-2xl border px-4 py-3 text-sm {% if message.tags == 'success' %}border-green-200 bg-green-50 text-green-700{% elif message.tags == 'error' %}border-red-200 bg-red-50 text-red-700{% else %}border-blue-200 bg-blue-50 text-blue-700{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -150,10 +140,14 @@
                         Editar
                       </button>
                     {% endif %}
-                    <form method="post" action="{% url 'participante:eliminar_proyecto' proyecto.id %}" onsubmit="return confirm('¿Deseas eliminar este proyecto?');">
-                      {% csrf_token %}
-                      <button type="submit" class="px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100">Eliminar</button>
-                    </form>
+                    <button
+                      type="button"
+                      class="openDeleteModal px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+                      data-delete-url="{% url 'participante:eliminar_proyecto' proyecto.id %}"
+                      data-proyecto-label="{{ proyecto.nombre_proyecto|escape }}"
+                    >
+                      Eliminar
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -208,7 +202,7 @@
     <div class="w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
       <div class="flex items-start justify-between gap-4 px-6 py-5 border-b border-slate-200 shrink-0">
         <div>
-          <h2 id="modalTitle" class="text-2xl font-bold text-slate-900">Registro de proyecto al evento</h2>
+          <h2 id="modalTitle" class="text-2xl font-bold text-slate-900">{% if modal_action == "editar" %}Editar proyecto registrado{% else %}Registro de proyecto al evento{% endif %}</h2>
           <p class="text-sm text-slate-500 mt-1">Completa la información requerida para formalizar tu participación.</p>
         </div>
         <button type="button" class="h-10 w-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 shrink-0" data-close-modal="registroModal">
@@ -238,9 +232,9 @@
           <section class="p-6">
             <form method="post" enctype="multipart/form-data" id="registroForm" class="space-y-6">
               {% csrf_token %}
-              <input type="hidden" name="action" id="actionField" value="registrar">
+              <input type="hidden" name="action" id="actionField" value="{{ modal_action|default:'registrar' }}">
               <input type="hidden" name="evento_id" id="eventoSeleccionado" value="{% if evento_modal %}{{ evento_modal.id }}{% endif %}">
-              <input type="hidden" name="proyecto_id" id="proyectoIdField" value="">
+              <input type="hidden" name="proyecto_id" id="proyectoIdField" value="{{ proyecto_modal_id|default:'' }}">
 
               {% if form.non_field_errors %}
                 <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -320,6 +314,33 @@
     </div>
   </div>
 </div>
+
+<div id="deleteProjectModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" data-close-modal="deleteProjectModal"></div>
+  <div class="relative min-h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-slate-200 flex items-start justify-between gap-4">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Eliminar proyecto</h3>
+          <p class="text-sm text-slate-500 mt-1">Esta acción quitará el proyecto del evento seleccionado.</p>
+        </div>
+        <button type="button" class="h-10 w-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500" data-close-modal="deleteProjectModal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="px-6 py-5">
+        <p class="text-sm text-slate-600">¿Deseas eliminar el proyecto <span id="deleteProjectLabel" class="font-semibold text-slate-900"></span>?</p>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <button type="button" class="h-11 px-5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100" data-close-modal="deleteProjectModal">Cancelar</button>
+        <form method="post" id="deleteProjectForm">
+          {% csrf_token %}
+          <button type="submit" class="h-11 px-5 rounded-xl bg-red-600 text-white hover:bg-red-700 font-medium">Sí, eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -352,6 +373,26 @@
       btn.addEventListener('click', closeRegistro);
     });
 
+    const deleteModal = document.getElementById('deleteProjectModal');
+    const deleteForm = document.getElementById('deleteProjectForm');
+    const deleteLabel = document.getElementById('deleteProjectLabel');
+
+    function openDeleteModal() {
+      if (!deleteModal) return;
+      deleteModal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function closeDeleteModal() {
+      if (!deleteModal) return;
+      deleteModal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    deleteModal?.querySelectorAll('[data-close-modal="deleteProjectModal"]').forEach(btn => {
+      btn.addEventListener('click', closeDeleteModal);
+    });
+
     document.querySelectorAll('.openRegisterModal').forEach(button => {
       button.addEventListener('click', function () {
         if (actionField) actionField.value = 'registrar';
@@ -365,6 +406,14 @@
         if (form) form.reset();
         if (eventoInput) eventoInput.value = this.dataset.eventoId || '';
         openRegistro();
+      });
+    });
+
+    document.querySelectorAll('.openDeleteModal').forEach(button => {
+      button.addEventListener('click', function () {
+        if (deleteForm) deleteForm.action = this.dataset.deleteUrl || '';
+        if (deleteLabel) deleteLabel.textContent = this.dataset.proyectoLabel || 'seleccionado';
+        openDeleteModal();
       });
     });
 

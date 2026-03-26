@@ -7,12 +7,12 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
-from django.db.models import Avg
+from django.db.models import Avg, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from administrador.models import Evento
-from coordinador.models import Inscripcion
+from coordinador.models import Inscripcion, EvaluacionProyecto as CoordEvaluacionProyecto
 from evaluador.models import EvaluacionAsignacion, EvaluacionEntrega
 
 from .forms import (
@@ -58,6 +58,66 @@ def _asegurar_inscripcion_participante(evento: Evento, usuario) -> Inscripcion:
         inscripcion.rol = Inscripcion.ROL_PARTICIPANTE
         inscripcion.save(update_fields=["rol", "actualizado_en"])
     return inscripcion
+
+
+def _sync_project_to_coordinador_record(
+    proyecto: ProyectoParticipante,
+    titulo_anterior: str | None = None,
+) -> CoordEvaluacionProyecto:
+    """
+    Crea o actualiza el registro puente que consume el módulo coordinador.
+    Con esto el proyecto aparece desde el registro inicial en espacios,
+    evaluadores y rúbricas.
+    """
+    titulo = (proyecto.nombre_proyecto or "").strip()
+    responsable = (
+        (proyecto.nombre_participante or "").strip()
+        or proyecto.participante.get_full_name().strip()
+        or getattr(proyecto.participante, "username", "")
+    )
+
+    filtros = Q(titulo__iexact=titulo)
+    if titulo_anterior:
+        filtros |= Q(titulo__iexact=(titulo_anterior or "").strip())
+
+    registro = (
+        CoordEvaluacionProyecto.objects.filter(evento=proyecto.evento)
+        .filter(filtros)
+        .order_by("id")
+        .first()
+    )
+
+    if registro is None:
+        defaults = {
+            "ponente": responsable,
+            # Campos mínimos para no romper la lógica de coordinador;
+            # el horario real se completa cuando el coordinador programa.
+            "inicio": proyecto.hora_inicio or timezone.datetime.strptime("08:00", "%H:%M").time(),
+            "fin": proyecto.hora_fin or timezone.datetime.strptime("08:30", "%H:%M").time(),
+            "lugar": proyecto.espacio_asignado or "",
+        }
+        registro = CoordEvaluacionProyecto.objects.create(
+            evento=proyecto.evento,
+            titulo=titulo,
+            **defaults,
+        )
+    else:
+        changed = False
+        if registro.titulo != titulo:
+            registro.titulo = titulo
+            changed = True
+        if (registro.ponente or "") != responsable:
+            registro.ponente = responsable
+            changed = True
+        if changed:
+            registro.save(update_fields=["titulo", "ponente", "actualizado_en"])
+
+    # OJO: ProyectoParticipante.evaluacion_proyecto apunta a evaluador.EvaluacionProyecto,
+    # no a coordinador.EvaluacionProyecto. Aquí solo creamos/actualizamos el registro
+    # puente del coordinador para que aparezca en espacios/evaluadores/rúbricas.
+    # El enlace a evaluador.EvaluacionProyecto se resuelve después, cuando el
+    # coordinador programa y sincroniza hacia el módulo evaluador.
+    return registro
 
 
 def _limpiar_inscripcion_si_corresponde(evento: Evento, usuario) -> None:
@@ -219,6 +279,8 @@ def elegir_evento(request):
     evento_sel = None
     evento_modal = None
     abrir_modal = False
+    modal_action = "registrar"
+    proyecto_modal_id = ""
 
     evento_id_get = request.GET.get("evento")
     if evento_id_get:
@@ -252,6 +314,8 @@ def elegir_evento(request):
 
         if action == "registrar":
             abrir_modal = True
+            modal_action = "registrar"
+            proyecto_modal_id = ""
             evento_id_post = request.POST.get("evento_id")
             if evento_id_post:
                 try:
@@ -280,6 +344,8 @@ def elegir_evento(request):
                         with transaction.atomic():
                             proyecto.save()
                             _asegurar_inscripcion_participante(evento_modal, request.user)
+                            _sync_project_to_coordinador_record(proyecto)
+
                         registrar_auditoria(
                             request=request,
                             accion=f"PROYECTOS | CREAR | {proyecto.nombre_proyecto}",
@@ -293,7 +359,6 @@ def elegir_evento(request):
                         return redirect(f"{request.path}?evento={evento_modal.id}")
                     except IntegrityError:
                         form.add_error(None, "Ya tienes un proyecto registrado en este evento.")
-                messages.error(request, "No fue posible registrar el proyecto. Verifica la información capturada.")
 
         if action == "editar":
             proyecto = get_object_or_404(ProyectoParticipante, pk=request.POST.get("proyecto_id"), participante=request.user)
@@ -301,16 +366,19 @@ def elegir_evento(request):
             evento_modal = evento_sel
             form = ProyectoParticipanteForm(request.POST, request.FILES, instance=proyecto, evento=evento_sel, usuario=request.user)
             abrir_modal = True
+            modal_action = "editar"
+            proyecto_modal_id = str(proyecto.pk)
             if not proyecto.puede_editar():
                 messages.error(request, "Este proyecto ya no permite edición.")
                 return redirect(f"{request.path}?evento={evento_sel.id}")
             if form.is_valid():
+                titulo_anterior = proyecto.nombre_proyecto
                 with transaction.atomic():
                     proyecto = form.save()
                     _asegurar_inscripcion_participante(evento_sel, request.user)
+                    _sync_project_to_coordinador_record(proyecto, titulo_anterior=titulo_anterior)
                 messages.success(request, "El proyecto fue actualizado correctamente.")
                 return redirect(f"{request.path}?evento={evento_sel.id}")
-            messages.error(request, "No fue posible actualizar el proyecto. Revisa los campos marcados.")
 
     eventos_ya_inscritos = set(proyectos_qs.values_list("evento_id", flat=True))
     return render(request, "participante/evento/elegir_evento.html", {
@@ -323,6 +391,8 @@ def elegir_evento(request):
         "eventos_ya_inscritos": eventos_ya_inscritos,
         "form": form,
         "abrir_modal": abrir_modal,
+        "modal_action": modal_action,
+        "proyecto_modal_id": proyecto_modal_id,
     })
 
 
@@ -336,8 +406,6 @@ def eliminar_proyecto(request, pk: int):
             _limpiar_inscripcion_si_corresponde(proyecto.evento, request.user)
         messages.success(request, "El proyecto fue eliminado correctamente.")
     return redirect(f"/participante/evento/elegir/?evento={evento_id}")
-
-
 
 
 @login_required

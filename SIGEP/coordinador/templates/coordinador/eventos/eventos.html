@@ -111,6 +111,14 @@
               </button>
             </form>
           {% endif %}
+          {% if selected_evento.estado != 'PUBLICADO' %}
+            <button type="button"
+                    onclick="openDeleteEventModal('{{ selected_evento.id }}', '{{ selected_evento.titulo|escapejs }}', '{{ selected_evento.estado }}', '{{ selected_stats.inscripciones }}', '{{ selected_stats.proyectos }}', '{{ selected_stats.ponencias }}', '{{ selected_stats.rubricas }}', '{{ selected_stats.espacios }}', '{{ selected_stats.reportes }}')"
+                    class="h-10 px-4 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-sm font-bold inline-flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+              Eliminar
+            </button>
+          {% endif %}
         </div>
       </div>
 
@@ -196,13 +204,15 @@
             </form>
           {% endif %}
 
-          {% if item.stats.total_relaciones == 1 and item.stats.inscripciones <= 1 and item.obj.estado == 'BORRADOR' %}
-            <form method="post" action="{% url 'coordinador:evento_eliminar' item.obj.id %}" onsubmit="return confirm('¿Seguro que deseas eliminar este evento?');">
-              {% csrf_token %}
-              <button class="h-10 px-4 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-sm font-bold">Eliminar</button>
-            </form>
+          {% if item.obj.estado != 'PUBLICADO' %}
+            <button type="button"
+                    onclick="openDeleteEventModal('{{ item.obj.id }}', '{{ item.obj.titulo|escapejs }}', '{{ item.obj.estado }}', '{{ item.stats.inscripciones }}', '{{ item.stats.proyectos }}', '{{ item.stats.ponencias }}', '{{ item.stats.rubricas }}', '{{ item.stats.espacios }}', '{{ item.stats.reportes }}')"
+                    class="h-10 px-4 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-sm font-bold inline-flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+              Eliminar
+            </button>
           {% else %}
-            <span class="h-10 px-4 rounded-xl border border-slate-200 text-slate-400 text-sm font-bold inline-flex items-center">No eliminable</span>
+            <span class="h-10 px-4 rounded-xl border border-slate-200 text-slate-400 text-sm font-bold inline-flex items-center">Pásalo a borrador o cerrado para eliminarlo</span>
           {% endif %}
         </div>
       </div>
@@ -298,6 +308,70 @@
   function closeEventModal() {
     eventModal.classList.add('hidden');
     document.body.style.overflow = '';
+  }
+</script>
+
+<div id="deleteEventModal" class="fixed inset-0 z-[90] hidden">
+  <div class="absolute inset-0 bg-black/50" onclick="closeDeleteEventModal()"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4">
+        <div>
+          <h3 class="text-lg font-black text-slate-900 dark:text-white">Eliminar evento</h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Esta acción eliminará el evento y sus registros relacionados.</p>
+        </div>
+        <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" onclick="closeDeleteEventModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="px-6 py-5 space-y-4">
+        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm dark:bg-rose-950/30 dark:border-rose-900/40 dark:text-rose-200">
+          <p class="font-bold">Vas a eliminar permanentemente este evento.</p>
+          <p class="mt-1">Usa esta opción solo cuando el evento ya no se publicará o ya no debe conservarse en el sistema.</p>
+        </div>
+        <div>
+          <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Evento</div>
+          <div id="delete_event_title" class="mt-1 text-base font-bold text-slate-900 dark:text-white"></div>
+          <div id="delete_event_state" class="mt-2 text-sm text-slate-500 dark:text-slate-400"></div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><div class="text-xs font-bold uppercase text-slate-500">Inscripciones</div><div id="delete_stat_inscripciones" class="mt-1 font-black text-slate-900 dark:text-white">0</div></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><div class="text-xs font-bold uppercase text-slate-500">Proyectos</div><div id="delete_stat_proyectos" class="mt-1 font-black text-slate-900 dark:text-white">0</div></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><div class="text-xs font-bold uppercase text-slate-500">Ponencias</div><div id="delete_stat_ponencias" class="mt-1 font-black text-slate-900 dark:text-white">0</div></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><div class="text-xs font-bold uppercase text-slate-500">Rúbricas</div><div id="delete_stat_rubricas" class="mt-1 font-black text-slate-900 dark:text-white">0</div></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><div class="text-xs font-bold uppercase text-slate-500">Espacios</div><div id="delete_stat_espacios" class="mt-1 font-black text-slate-900 dark:text-white">0</div></div>
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3"><div class="text-xs font-bold uppercase text-slate-500">Reportes</div><div id="delete_stat_reportes" class="mt-1 font-black text-slate-900 dark:text-white">0</div></div>
+        </div>
+      </div>
+      <form method="post" id="deleteEventForm" data-action-template="{% url 'coordinador:evento_eliminar' 0 %}" class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-3">
+        {% csrf_token %}
+        <button type="button" onclick="closeDeleteEventModal()" class="h-11 px-4 rounded-xl border border-slate-300 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800">Cancelar</button>
+        <button type="submit" class="h-11 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold inline-flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">delete_forever</span>
+          Eliminar definitivamente
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openDeleteEventModal(id, titulo, estado, inscripciones, proyectos, ponencias, rubricas, espacios, reportes) {
+    const modal = document.getElementById('deleteEventModal');
+    const form = document.getElementById('deleteEventForm');
+    form.action = form.dataset.actionTemplate.replace('/0/eliminar/', `/${id}/eliminar/`);
+    document.getElementById('delete_event_title').textContent = titulo;
+    document.getElementById('delete_event_state').textContent = `Estado actual: ${estado}`;
+    document.getElementById('delete_stat_inscripciones').textContent = inscripciones || '0';
+    document.getElementById('delete_stat_proyectos').textContent = proyectos || '0';
+    document.getElementById('delete_stat_ponencias').textContent = ponencias || '0';
+    document.getElementById('delete_stat_rubricas').textContent = rubricas || '0';
+    document.getElementById('delete_stat_espacios').textContent = espacios || '0';
+    document.getElementById('delete_stat_reportes').textContent = reportes || '0';
+    modal.classList.remove('hidden');
+  }
+  function closeDeleteEventModal() {
+    document.getElementById('deleteEventModal').classList.add('hidden');
   }
 </script>
 {% endblock %}

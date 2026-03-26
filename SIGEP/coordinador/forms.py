@@ -368,6 +368,15 @@ class EspacioForm(forms.ModelForm):
             else:
                 cleaned["fin_calculado"] = fin_dt.time()
 
+        # Importante:
+        # Como este formulario es ModelForm y el modelo Espacio valida `fin` en clean(),
+        # debemos dejar la instancia preparada antes de que Django ejecute _post_clean().
+        if hasattr(self, "instance") and self.instance is not None:
+            self.instance.proyecto = cleaned.get("proyecto")
+            self.instance.ponencia = cleaned.get("ponencia")
+            self.instance.inicio = cleaned.get("inicio")
+            self.instance.fin = cleaned.get("fin_calculado")
+
         return cleaned
 
 

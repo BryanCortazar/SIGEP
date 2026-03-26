@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
@@ -7,6 +8,7 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Avg, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -18,6 +20,7 @@ from .models import (
     EvaluacionRespuestaCriterio,
     PerfilUsuario,
     Rubrica as RubricaLocal,
+    RubricaCriterio as RubricaCriterioLocal,
 )
 
 
@@ -46,6 +49,133 @@ def _ponencia_para_proyecto(proyecto):
             .filter(evaluacion_proyecto_id=proyecto.id)
             .first()
         )
+    except Exception:
+        return None
+
+
+def _coord_eval_project_for_eval_project(eval_proyecto, ponencia=None):
+    """
+    Resuelve el registro puente coordinador.EvaluacionProyecto que corresponde al
+    evaluador.EvaluacionProyecto recibido.
+
+    Es necesario porque coordinador.Rubrica.proyecto apunta al modelo del módulo
+    coordinador, no al del módulo evaluador.
+    """
+    CoordEvaluacionProyecto = _get_model("coordinador", "EvaluacionProyecto")
+    if CoordEvaluacionProyecto is None or not getattr(eval_proyecto, "pk", None):
+        return None
+
+    try:
+        qs = CoordEvaluacionProyecto.objects.filter(evento_id=getattr(eval_proyecto, "evento_id", None))
+        titulo = (
+            getattr(ponencia, "titulo", None)
+            or getattr(eval_proyecto, "titulo", None)
+            or ""
+        ).strip()
+
+        if titulo:
+            qs = qs.filter(titulo__iexact=titulo)
+
+        ponente = (
+            getattr(getattr(ponencia, "ponente", None), "get_full_name", lambda: "")() or
+            getattr(eval_proyecto, "ponente", "") or
+            ""
+        ).strip()
+        if ponente:
+            match_ponente = qs.filter(ponente__iexact=ponente).first()
+            if match_ponente is not None:
+                return match_ponente
+
+        inicio = getattr(eval_proyecto, "inicio", None)
+        fin = getattr(eval_proyecto, "fin", None)
+        if inicio is not None and fin is not None:
+            match_horario = qs.filter(inicio=inicio, fin=fin).first()
+            if match_horario is not None:
+                return match_horario
+
+        return qs.order_by("id").first()
+    except Exception:
+        return None
+
+
+def _sync_local_rubrica_from_coord(coord_rubrica, proyecto_eval):
+    """
+    Mantiene una copia compatible en evaluador.Rubrica a partir de la rúbrica
+    canónica del coordinador. Esto evita errores de tipo entre modelos de apps
+    distintas y permite que EvaluacionRespuestaCriterio siga apuntando al modelo
+    local RubricaCriterio.
+    """
+    if coord_rubrica is None or proyecto_eval is None or not getattr(proyecto_eval, "pk", None):
+        return None
+
+    try:
+        local_rubrica = (
+            RubricaLocal.objects
+            .filter(evento_id=getattr(coord_rubrica, "evento_id", getattr(proyecto_eval, "evento_id", None)),
+                    proyecto=proyecto_eval)
+            .order_by("-actualizado_en", "-id")
+            .first()
+        )
+
+        if local_rubrica is None:
+            local_rubrica = RubricaLocal.objects.create(
+                evento_id=getattr(coord_rubrica, "evento_id", getattr(proyecto_eval, "evento_id", None)),
+                proyecto=proyecto_eval,
+                titulo=getattr(coord_rubrica, "titulo", "") or getattr(proyecto_eval, "titulo", ""),
+                estado=getattr(coord_rubrica, "estado", RubricaLocal.ESTADO_BORRADOR),
+            )
+        else:
+            changed = False
+            titulo = getattr(coord_rubrica, "titulo", "") or getattr(proyecto_eval, "titulo", "")
+            estado = getattr(coord_rubrica, "estado", RubricaLocal.ESTADO_BORRADOR)
+            if local_rubrica.titulo != titulo:
+                local_rubrica.titulo = titulo
+                changed = True
+            if getattr(local_rubrica, "estado", None) != estado:
+                local_rubrica.estado = estado
+                changed = True
+            if getattr(local_rubrica, "proyecto_id", None) != getattr(proyecto_eval, "id", None):
+                local_rubrica.proyecto = proyecto_eval
+                changed = True
+            if changed:
+                local_rubrica.save()
+
+        criterios_coord = []
+        try:
+            criterios_coord = list(coord_rubrica.criterios.all().order_by("orden", "id"))
+        except Exception:
+            criterios_coord = list(coord_rubrica.criterios.all()) if hasattr(coord_rubrica, "criterios") else []
+
+        criterios_local = list(local_rubrica.criterios.all().order_by("orden", "id"))
+        needs_rebuild = len(criterios_local) != len(criterios_coord)
+
+        if not needs_rebuild:
+            for local_c, coord_c in zip(criterios_local, criterios_coord):
+                if (
+                    local_c.titulo != getattr(coord_c, "titulo", "")
+                    or (local_c.descripcion or "") != (getattr(coord_c, "descripcion", "") or "")
+                    or int(local_c.puntaje_max or 0) != int(getattr(coord_c, "puntaje_max", 0) or 0)
+                    or int(local_c.orden or 0) != int(getattr(coord_c, "orden", 0) or 0)
+                ):
+                    needs_rebuild = True
+                    break
+
+        if needs_rebuild:
+            local_rubrica.criterios.all().delete()
+            nuevos = []
+            for idx, criterio in enumerate(criterios_coord, start=1):
+                nuevos.append(
+                    RubricaCriterioLocal(
+                        rubrica=local_rubrica,
+                        titulo=getattr(criterio, "titulo", "") or f"Criterio {idx}",
+                        descripcion=getattr(criterio, "descripcion", "") or "",
+                        puntaje_max=int(getattr(criterio, "puntaje_max", 1) or 1),
+                        orden=int(getattr(criterio, "orden", idx) or idx),
+                    )
+                )
+            RubricaCriterioLocal.objects.bulk_create(nuevos)
+
+        return local_rubrica
     except Exception:
         return None
 
@@ -110,41 +240,59 @@ def _guess_mode(espacio_texto: str) -> str:
 
 
 def _rubrica_para_proyecto(proyecto):
+    """
+    Obtiene una rúbrica compatible con el módulo evaluador.
+
+    Importante:
+    - coordinador.Rubrica.proyecto apunta a coordinador.EvaluacionProyecto
+    - evaluador.Rubrica.proyecto apunta a evaluador.EvaluacionProyecto
+
+    Por eso NO se puede consultar coordinador.Rubrica con `proyecto=<eval_proyecto>`
+    directamente, porque Django lanza:
+    `ValueError: Cannot query "...": Must be "EvaluacionProyecto" instance.`
+    """
     ponencia = _ponencia_para_proyecto(proyecto)
-    modelos = []
+
+    # 1) Primero intentamos la rúbrica local compatible con el módulo evaluador.
+    try:
+        qs_local = RubricaLocal.objects.filter(proyecto=proyecto).order_by("-actualizado_en", "-id")
+        rubrica_local = qs_local.filter(estado=RubricaLocal.ESTADO_ACTIVA).first() or qs_local.first()
+        if rubrica_local is not None:
+            return rubrica_local, ponencia
+    except Exception:
+        pass
+
+    # 2) Después intentamos resolver la rúbrica canónica del coordinador.
     RubricaCoord = _get_model("coordinador", "Rubrica")
+    coord_rubrica = None
     if RubricaCoord is not None:
-        modelos.append(RubricaCoord)
-    modelos.append(RubricaLocal)
-
-    for RubricaModel in modelos:
         try:
-            field_names = {f.name for f in RubricaModel._meta.get_fields()}
-        except Exception:
-            field_names = set()
+            filtros = Q()
+            activo = False
 
-        filtros = Q()
-        activo = False
-        if "proyecto" in field_names:
-            filtros |= Q(proyecto=proyecto)
-            activo = True
-        if ponencia is not None and "ponencia" in field_names:
-            filtros |= Q(ponencia=ponencia)
-            activo = True
-        if not activo:
-            continue
+            coord_proyecto = _coord_eval_project_for_eval_project(proyecto, ponencia=ponencia)
+            if coord_proyecto is not None:
+                filtros |= Q(proyecto=coord_proyecto)
+                activo = True
 
-        qs = RubricaModel.objects.filter(filtros).order_by("-actualizado_en", "-id")
-        try:
-            qs = qs.prefetch_related("criterios")
+            if ponencia is not None and any(f.name == "ponencia" for f in RubricaCoord._meta.get_fields()):
+                filtros |= Q(ponencia=ponencia)
+                activo = True
+
+            if activo:
+                qs_coord = RubricaCoord.objects.filter(filtros).order_by("-actualizado_en", "-id")
+                if hasattr(RubricaCoord, "ESTADO_ACTIVA"):
+                    coord_rubrica = qs_coord.filter(estado=RubricaCoord.ESTADO_ACTIVA).first() or qs_coord.first()
+                else:
+                    coord_rubrica = qs_coord.first()
         except Exception:
-            pass
-        if hasattr(RubricaModel, "ESTADO_ACTIVA") and "estado" in field_names:
-            rubrica = qs.filter(estado=RubricaModel.ESTADO_ACTIVA).first() or qs.first()
-        else:
-            rubrica = qs.first()
-        if rubrica is not None:
-            return rubrica, ponencia
+            coord_rubrica = None
+
+    # 3) Si existe una rúbrica canónica, generamos/sincronizamos una copia local.
+    if coord_rubrica is not None:
+        rubrica_local = _sync_local_rubrica_from_coord(coord_rubrica, proyecto)
+        if rubrica_local is not None:
+            return rubrica_local, ponencia
 
     return None, ponencia
 
@@ -293,7 +441,15 @@ def panel(request):
         if fecha and hora_inicio:
             es_futuro = fecha > hoy or (fecha == hoy and hora_inicio >= ahora)
             if es_futuro:
-                item = SimpleNamespace(inicio=hora_inicio, lugar=_display_space(getattr(ponencia, "espacio_asignado", None) or getattr(proyecto, "espacio_asignado", None) or getattr(proyecto, "lugar", None)), fecha=fecha)
+                item = SimpleNamespace(
+                    inicio=hora_inicio,
+                    lugar=_display_space(
+                        getattr(ponencia, "espacio_asignado", None)
+                        or getattr(proyecto, "espacio_asignado", None)
+                        or getattr(proyecto, "lugar", None)
+                    ),
+                    fecha=fecha,
+                )
                 if proxima_sesion is None or (item.fecha, item.inicio) < (proxima_sesion.fecha, proxima_sesion.inicio):
                     proxima_sesion = item
 
@@ -352,6 +508,7 @@ def proyectos_asignados(request):
 
 
 @login_required
+@transaction.atomic
 def formulario(request, proyecto_id):
     asignacion = _get_assignment_or_404(request.user, proyecto_id)
     proyecto = asignacion.proyecto
@@ -372,7 +529,11 @@ def formulario(request, proyecto_id):
             observacion = (request.POST.get(f"observacion_{criterio.id}") or "").strip()
 
             if accion == "enviar" and not valor_raw:
-                incompletos.append(getattr(criterio, "nombre", None) or getattr(criterio, "titulo", None) or f"Criterio {criterio.id}")
+                incompletos.append(
+                    getattr(criterio, "nombre", None)
+                    or getattr(criterio, "titulo", None)
+                    or f"Criterio {criterio.id}"
+                )
                 continue
 
             if valor_raw:
@@ -427,7 +588,11 @@ def formulario(request, proyecto_id):
             "fecha_registro": _fecha_para_asignacion(proyecto, ponencia),
             "hora_inicio": getattr(ponencia, "hora_inicio", None) or getattr(proyecto, "hora_inicio", None) or getattr(proyecto, "inicio", None),
             "hora_fin": getattr(ponencia, "hora_fin", None) or getattr(proyecto, "hora_fin", None) or getattr(proyecto, "fin", None),
-            "espacio": _display_space(getattr(ponencia, "espacio_asignado", None) or getattr(proyecto, "espacio_asignado", None) or getattr(proyecto, "lugar", None)),
+            "espacio": _display_space(
+                getattr(ponencia, "espacio_asignado", None)
+                or getattr(proyecto, "espacio_asignado", None)
+                or getattr(proyecto, "lugar", None)
+            ),
         },
     )
 
@@ -547,6 +712,7 @@ def configuracion(request):
 
             messages.success(request, "La configuración del perfil se actualizó correctamente.")
             return redirect("evaluador:configuracion")
+
         messages.error(request, "No fue posible guardar la configuración. Verifica los datos capturados.")
     else:
         cuenta_form = EvaluadorCuentaForm(request.user)

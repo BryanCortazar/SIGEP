@@ -38,7 +38,7 @@
         <div>Ponencias: {{ resumen_evaluadores.ponencias_total }}</div>
         <div>Proyectos: {{ resumen_evaluadores.proyectos_total }}</div>
       </div>
-      <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">Los proyectos aparecerán automáticamente cuando su registro esté integrado.</p>
+      <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">Los proyectos y ponencias del evento actual se muestran aquí para asignar uno o varios evaluadores sin traslapes.</p>
     </div>
   </div>
 
@@ -75,7 +75,7 @@
     <div class="xl:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
         <h3 class="font-bold text-slate-900 dark:text-white">Registros a evaluar</h3>
-        <p class="text-sm text-slate-500 dark:text-gray-400">Aquí se muestran las ponencias y, cuando estén listas, los proyectos registrados en el evento actual.</p>
+        <p class="text-sm text-slate-500 dark:text-gray-400">Aquí se muestran las ponencias y proyectos registrados del evento actual para asignar uno o varios evaluadores sin traslapes.</p>
       </div>
 
       <div class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -219,7 +219,7 @@
           <div class="max-h-72 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
             {% for card in evaluadores_cards %}
               <label class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                <input type="checkbox" name="evaluadores" value="{{ card.obj.id }}" class="mt-1 rounded border-slate-300 dark:border-slate-700">
+                <input type="checkbox" name="evaluadores" value="{{ card.id }}" class="mt-1 rounded border-slate-300 dark:border-slate-700">
                 <div class="min-w-0 flex-1">
                   <div class="font-semibold text-slate-800 dark:text-slate-200 break-words">{{ card.display_name }}</div>
                   <div class="text-xs text-slate-500 dark:text-gray-400 break-all">{{ card.email|default:'Sin correo' }}</div>
