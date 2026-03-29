@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from decimal import Decimal
 from io import BytesIO
+from types import SimpleNamespace
 
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import get_template
 from django.utils import timezone
 
 from administrador.models import Evento
@@ -41,6 +44,8 @@ try:
     import qrcode.image.svg
 except Exception:  # pragma: no cover
     qrcode = None
+
+from xhtml2pdf import pisa
 
 
 def _resolve_profile(user):
@@ -279,8 +284,6 @@ def elegir_evento(request):
     evento_sel = None
     evento_modal = None
     abrir_modal = False
-    modal_action = "registrar"
-    proyecto_modal_id = ""
 
     evento_id_get = request.GET.get("evento")
     if evento_id_get:
@@ -314,8 +317,6 @@ def elegir_evento(request):
 
         if action == "registrar":
             abrir_modal = True
-            modal_action = "registrar"
-            proyecto_modal_id = ""
             evento_id_post = request.POST.get("evento_id")
             if evento_id_post:
                 try:
@@ -359,6 +360,7 @@ def elegir_evento(request):
                         return redirect(f"{request.path}?evento={evento_modal.id}")
                     except IntegrityError:
                         form.add_error(None, "Ya tienes un proyecto registrado en este evento.")
+                messages.error(request, "No fue posible registrar el proyecto. Verifica la información capturada.")
 
         if action == "editar":
             proyecto = get_object_or_404(ProyectoParticipante, pk=request.POST.get("proyecto_id"), participante=request.user)
@@ -366,8 +368,6 @@ def elegir_evento(request):
             evento_modal = evento_sel
             form = ProyectoParticipanteForm(request.POST, request.FILES, instance=proyecto, evento=evento_sel, usuario=request.user)
             abrir_modal = True
-            modal_action = "editar"
-            proyecto_modal_id = str(proyecto.pk)
             if not proyecto.puede_editar():
                 messages.error(request, "Este proyecto ya no permite edición.")
                 return redirect(f"{request.path}?evento={evento_sel.id}")
@@ -379,6 +379,7 @@ def elegir_evento(request):
                     _sync_project_to_coordinador_record(proyecto, titulo_anterior=titulo_anterior)
                 messages.success(request, "El proyecto fue actualizado correctamente.")
                 return redirect(f"{request.path}?evento={evento_sel.id}")
+            messages.error(request, "No fue posible actualizar el proyecto. Revisa los campos marcados.")
 
     eventos_ya_inscritos = set(proyectos_qs.values_list("evento_id", flat=True))
     return render(request, "participante/evento/elegir_evento.html", {
@@ -391,8 +392,6 @@ def elegir_evento(request):
         "eventos_ya_inscritos": eventos_ya_inscritos,
         "form": form,
         "abrir_modal": abrir_modal,
-        "modal_action": modal_action,
-        "proyecto_modal_id": proyecto_modal_id,
     })
 
 
@@ -536,6 +535,8 @@ def constancia(request):
     contexto = _build_constancia_state(request.user, proyecto)
     contexto.update({
         "active": "constancia",
+        "descarga_disponible": bool(proyecto and contexto["evaluacion_concluida"] and not contexto.get("constancia")),
+        "constancia_emitida": bool(contexto.get("constancia")),
     })
     return render(request, "participante/constancia/constancia.html", contexto)
 
@@ -553,12 +554,58 @@ def constancia_previa(request):
         messages.error(request, "La constancia se habilita cuando todos los evaluadores asignados han enviado su evaluación.")
         return redirect("participante:constancia")
 
-    constancia, _ = ConstanciaParticipante.objects.get_or_create(proyecto=proyecto)
     contexto.update({
-        "constancia": constancia,
-        "auto_print": request.GET.get("print") == "1",
+        "auto_print": False,
+        "descarga_disponible": not bool(contexto.get("constancia")),
+        "constancia_emitida": bool(contexto.get("constancia")),
+        "fecha_emision": timezone.now(),
     })
     return render(request, "participante/constancia/constancia_preview.html", contexto)
+
+
+
+@login_required
+def descargar_constancia_pdf(request):
+    proyecto = _resolve_constancia_project(request.user)
+    contexto = _build_constancia_state(request.user, proyecto)
+
+    if proyecto is None:
+        messages.error(request, "Aún no cuentas con un proyecto registrado para generar la constancia.")
+        return redirect("participante:constancia")
+
+    if not contexto["evaluacion_concluida"]:
+        messages.error(request, "La constancia solo puede descargarse cuando todas las evaluaciones han concluido.")
+        return redirect("participante:constancia")
+
+    if contexto.get("constancia"):
+        messages.error(request, "La constancia ya fue emitida y solo puede descargarse una vez.")
+        return redirect("participante:constancia")
+
+    folio = ConstanciaParticipante._meta.get_field("folio").get_default()
+    emitida_en = timezone.now()
+    constancia_virtual = SimpleNamespace(folio=folio, emitida_en=emitida_en)
+
+    contexto.update({
+        "constancia": constancia_virtual,
+        "fecha_emision": timezone.localdate(),
+    })
+
+    template = get_template("participante/constancia/constancia_pdf.html")
+    html = template.render(contexto)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="constancia_participante_{proyecto.id}.pdf"'
+
+    pisa_status = pisa.CreatePDF(src=html, dest=response, encoding="utf-8")
+    if pisa_status.err:
+        return HttpResponse("No fue posible generar la constancia PDF.", status=500)
+
+    ConstanciaParticipante.objects.create(
+        proyecto=proyecto,
+        folio=folio,
+        emitida_en=emitida_en,
+    )
+    return response
 
 
 @login_required

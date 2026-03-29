@@ -4,156 +4,35 @@
   <meta charset="utf-8">
   <title>Constancia de participación</title>
   <style>
-    @page {
-      size: A4 landscape;
-      margin: 20mm;
-    }
-
-    body {
-      font-family: Helvetica, Arial, sans-serif;
-      color: #1e293b;
-      font-size: 12px;
-      margin: 0;
-      padding: 0;
-    }
-
-    .page {
-      border: 2px solid #dbeafe;
-      padding: 28px;
-      position: relative;
-      min-height: 520px;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .mini {
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #64748b;
-      margin: 0;
-    }
-
-    .title {
-      font-size: 34px;
-      font-weight: bold;
-      letter-spacing: 4px;
-      margin: 10px 0 4px 0;
-      color: #0f172a;
-    }
-
-    .subtitle {
-      font-size: 11px;
-      font-weight: bold;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: #137fec;
-      margin: 0 0 28px 0;
-    }
-
-    .intro {
-      text-align: center;
-      font-style: italic;
-      color: #64748b;
-      margin-bottom: 10px;
-    }
-
-    .name {
-      text-align: center;
-      font-size: 30px;
-      font-weight: bold;
-      margin: 8px 0;
-      color: #0f172a;
-    }
-
-    .divider {
-      width: 120px;
-      height: 4px;
-      background: #137fec;
-      margin: 0 auto 24px auto;
-    }
-
-    .content {
-      text-align: center;
-      font-size: 16px;
-      line-height: 1.7;
-      color: #334155;
-      margin: 0 auto;
-      width: 88%;
-    }
-
-    .content strong {
-      color: #0f172a;
-    }
-
-    .meta {
-      text-align: center;
-      margin-top: 30px;
-      font-size: 11px;
-      color: #64748b;
-    }
-
-    .folio {
-      text-align: right;
-      font-size: 10px;
-      color: #64748b;
-      margin-bottom: 10px;
-    }
-
-    .signatures {
-      margin-top: 46px;
-      width: 100%;
-    }
-
-    .sign-col {
-      width: 45%;
-      text-align: center;
-      display: inline-block;
-      vertical-align: top;
-      margin: 0 2%;
-    }
-
-    .sign-space {
-      height: 40px;
-    }
-
-    .sign-line {
-      border-top: 1px solid #94a3b8;
-      margin-bottom: 6px;
-    }
-
-    .sign-name {
-      font-size: 10px;
-      font-weight: bold;
-      text-transform: uppercase;
-      color: #475569;
-      margin: 0;
-    }
-
-    .sign-role {
-      font-size: 9px;
-      color: #94a3b8;
-      margin: 2px 0 0 0;
-    }
-
-    .footer-bar {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 10px;
-      background: #137fec;
-    }
+    @page { size: A4 landscape; margin: 20mm; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 12px; margin: 0; padding: 0; }
+    .page { border: 2px solid #dbeafe; padding: 28px; position: relative; min-height: 520px; }
+    .header { text-align: center; margin-bottom: 24px; }
+    .mini { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin: 0; }
+    .title { font-size: 34px; font-weight: bold; letter-spacing: 4px; margin: 10px 0 4px 0; color: #0f172a; }
+    .subtitle { font-size: 11px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase; color: #137fec; margin: 0 0 28px 0; }
+    .intro { text-align: center; font-style: italic; color: #64748b; margin-bottom: 10px; }
+    .name { text-align: center; font-size: 30px; font-weight: bold; margin: 8px 0 18px 0; color: #0f172a; }
+    .content { text-align: center; font-size: 16px; line-height: 1.7; color: #334155; margin: 0 auto; width: 88%; }
+    .content strong { color: #0f172a; }
+    .grid { margin-top: 28px; width: 100%; }
+    .card { width: 46%; display: inline-block; vertical-align: top; margin: 0 2% 14px 2%; border: 1px solid #dbeafe; background: #f8fbff; border-radius: 12px; padding: 14px; }
+    .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: #64748b; margin-bottom: 6px; }
+    .value { font-size: 15px; font-weight: bold; color: #0f172a; line-height: 1.5; }
+    .meta { text-align: center; margin-top: 16px; font-size: 11px; color: #64748b; }
+    .folio { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 10px; }
+    .signatures { margin-top: 38px; width: 100%; }
+    .sign-col { width: 45%; text-align: center; display: inline-block; vertical-align: top; margin: 0 2%; }
+    .sign-space { height: 40px; }
+    .sign-line { border-top: 1px solid #94a3b8; margin-bottom: 6px; }
+    .sign-name { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #475569; margin: 0; }
+    .sign-role { font-size: 9px; color: #94a3b8; margin: 2px 0 0 0; }
+    .footer-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: #137fec; }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="folio">
-      Folio: {{ ponencia.folio_constancia }}
-    </div>
+    <div class="folio">Folio: {{ folio_constancia }}</div>
 
     <div class="header">
       <p class="mini">Sistema Integral</p>
@@ -163,21 +42,53 @@
     </div>
 
     <div class="intro">Se otorga la presente a:</div>
-    <div class="name">{{ usuario.get_full_name|default:usuario.username }}</div>
-    <div class="divider"></div>
+    <div class="name">{{ nombre_ponente }}</div>
 
     <div class="content">
       Por su valiosa participación y destacada ponencia titulada
-      <strong>"{{ ponencia.titulo }}"</strong>
-      durante el
-      <strong>{{ ponencia.nombre_evento }}</strong>.
-      {% if ponencia.espacio_asignado %}
-      La participación se llevó a cabo en <strong>{{ ponencia.espacio_asignado }}</strong>.
-      {% endif %}
+      <strong>"{{ titulo_ponencia }}"</strong>
+      durante el <strong>{{ evento_nombre }}</strong>,
+      en la modalidad <strong>{{ tipo_ponencia }}</strong>
+      {% if area_tematica %} dentro del área temática <strong>{{ area_tematica }}</strong>{% endif %},
+      habiendo concluido satisfactoriamente el proceso de evaluación correspondiente.
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Autores</div>
+        <div class="value">{{ autores|default:nombre_ponente }}</div>
+      </div>
+      <div class="card">
+        <div class="label">Promedio final</div>
+        <div class="value">{% if promedio %}{{ promedio }}{% else %}No disponible{% endif %}</div>
+      </div>
+      <div class="card">
+        <div class="label">Evaluaciones concluidas</div>
+        <div class="value">{{ evaluaciones_enviadas }} de {{ total_evaluadores }}</div>
+      </div>
+      <div class="card">
+        <div class="label">Espacio asignado</div>
+        <div class="value">{{ espacio_asignado|default:"Por definir" }}</div>
+      </div>
+      <div class="card">
+        <div class="label">Fecha programada</div>
+        <div class="value">{% if fecha_programada %}{{ fecha_programada|date:"d/m/Y" }}{% else %}Por definir{% endif %}</div>
+      </div>
+      <div class="card">
+        <div class="label">Horario</div>
+        <div class="value">
+          {% if hora_inicio and hora_fin %}
+            {{ hora_inicio|time:"H:i" }} - {{ hora_fin|time:"H:i" }}
+          {% else %}
+            Por definir
+          {% endif %}
+        </div>
+      </div>
     </div>
 
     <div class="meta">
-      Emitida en Ciudad de México, a {{ fecha_emision|date:"d \\d\\e F \\d\\e Y" }}
+      Emitida en Ciudad de México, a {{ fecha_emision|date:"d \d\e F \d\e Y" }}
+      {% if correo_contacto %} · Contacto: {{ correo_contacto }}{% endif %}
     </div>
 
     <div class="signatures">

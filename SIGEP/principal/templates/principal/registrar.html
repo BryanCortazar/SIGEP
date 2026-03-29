@@ -28,11 +28,9 @@
   </script>
 </head>
 
-<body class="font-display bg-background-light antialiased h-screen overflow-hidden">
+<body class="font-display bg-background-light antialiased min-h-screen overflow-y-auto">
 
-<div class="flex h-full">
-
-  <!-- PANEL IZQUIERDO -->
+<div class="flex min-h-screen">
   <div class="hidden lg:flex w-1/2 bg-slate-900 relative">
     <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPtSaUGUy1LaRLkT6zyaE-rlx5D1BsZqb-vfaVqHMeo6AhczUBcpi3CpSo6E_-ZQlvkzRm9DY1uWwEP4rv8c4v7lrG0kMdcmgppAI971QbVADg2VzCPqI_d11dvNHJ1ZZY2tNx8SdRnWRfYOHpsWIGEdY8JC3pdRCPJZEFN0y6Gj5-kAXCD8y8AuJ_BHCVPJEAtmVEEezF4JYsVPXhYWuzOxLO6W-xXb3UaA-mnLR50EZRJGDGVFCbWSMmvV7ww-fHX2BJ9ai89g4"
          class="absolute inset-0 object-cover opacity-60">
@@ -48,7 +46,7 @@
 
       <div>
         <h2 class="text-4xl font-bold mb-4">Sistema Integral de Gestión de Eventos y Ponencias</h2>
-        <p class="text-blue-100">Conectando a la comunidad académica mediante una gestión eficiente.</p>
+        <p class="text-blue-100">Crea tu cuenta y forma parte del ecosistema académico.</p>
       </div>
 
       <div class="text-sm text-blue-200 flex justify-between">
@@ -58,114 +56,99 @@
     </div>
   </div>
 
-  <!-- PANEL DERECHO -->
   <div class="w-full lg:w-1/2 flex justify-center overflow-y-auto px-6 pt-24 pb-10 relative">
-
     <div class="absolute top-6 right-6">
       <a href="{% url 'principal:login' %}"
          class="flex items-center gap-2 px-4 py-2 rounded-full border text-sm text-slate-700 hover:bg-slate-100">
-        ← Volver al login
+        <span class="material-symbols-outlined text-base">arrow_back</span>
+        Volver al login
       </a>
     </div>
 
-    <div class="w-full max-w-sm space-y-4">
-
+    <div class="w-full max-w-md space-y-5">
       <div>
         <h2 class="text-2xl font-bold">Registro de cuenta</h2>
         <p class="text-sm text-slate-500">Complete el formulario para crear su perfil.</p>
       </div>
 
-      <form method="POST" action="{% url 'principal:registrar' %}" class="space-y-3">
+      <form method="POST" action="{% url 'principal:registrar' %}" class="space-y-4">
         {% csrf_token %}
 
-        <div>
-          <label class="text-sm">Nombre completo</label>
-          <input type="text" name="fullname" required class="w-full h-10 rounded-lg border-slate-300">
-        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label class="text-sm font-medium">Nombres</label>
+            <input type="text" name="nombres" value="{{ form_data.nombres|default:'' }}" required class="w-full h-11 rounded-lg border-slate-300">
+          </div>
 
-        <div>
-          <label class="text-sm">Correo electrónico</label>
-          <input type="email" name="email" required class="w-full h-10 rounded-lg border-slate-300">
-        </div>
+          <div>
+            <label class="text-sm font-medium">Apellido paterno</label>
+            <input type="text" name="apellido_paterno" value="{{ form_data.apellido_paterno|default:'' }}" required class="w-full h-11 rounded-lg border-slate-300">
+          </div>
 
-        <div>
-          <label class="text-sm">Tipo de usuario</label>
-          <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
-
-            <label class="border rounded-lg p-2 text-center cursor-pointer">
-              <input type="radio" name="rol" value="PART" class="sr-only" required>
-              Participante
-            </label>
-
-            <label class="border rounded-lg p-2 text-center cursor-pointer">
-              <input type="radio" name="rol" value="PON" class="sr-only">
-              Ponente
-            </label>
-
-            <label class="border rounded-lg p-2 text-center cursor-pointer">
-              <input type="radio" name="rol" value="EVAL" class="sr-only">
-              Evaluador / Jurado
-            </label>
-
-            <label class="border rounded-lg p-2 text-center cursor-pointer">
-              <input type="radio" name="rol" value="ADMIN" class="sr-only">
-              Administrador
-            </label>
-
-            <label class="border rounded-lg p-2 text-center col-span-2 cursor-pointer">
-              <input type="radio" name="rol" value="COOR" class="sr-only">
-              Coordinador
-            </label>
-
+          <div>
+            <label class="text-sm font-medium">Apellido materno</label>
+            <input type="text" name="apellido_materno" value="{{ form_data.apellido_materno|default:'' }}" class="w-full h-11 rounded-lg border-slate-300">
           </div>
         </div>
 
-        <!-- Código maestro (ADMIN y COOR) -->
-        <div id="admin-code-wrap" class="hidden">
-          <label class="text-sm">Código de autorización</label>
+        <div>
+          <label class="text-sm font-medium">Correo electrónico</label>
+          <input type="email" name="email" value="{{ form_data.email|default:'' }}" required class="w-full h-11 rounded-lg border-slate-300">
+        </div>
+
+        <div>
+          <label class="text-sm font-medium">Tipo de usuario</label>
+          <select name="rol" id="rol" required class="mt-1 w-full h-11 rounded-lg border-slate-300 bg-white">
+            {% for value, label in role_options %}
+              <option value="{{ value }}" {% if form_data.rol == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="admin-code-wrap" class="{% if form_data.rol == 'ADMIN' or form_data.rol == 'COOR' %}{% else %}hidden{% endif %}">
+          <label class="text-sm font-medium">Código de autorización</label>
           <input type="password" name="admin_code" id="admin_code"
-                 class="w-full h-10 rounded-lg border-slate-300"
+                 value="{{ form_data.admin_code|default:'' }}"
+                 class="w-full h-11 rounded-lg border-slate-300"
                  placeholder="Ingrese el código de autorización">
           <p class="text-xs text-slate-500 mt-1">
-            Por seguridad, este código es obligatorio para roles con privilegios elevados
-            <span class="font-semibold">(Administrador y Coordinador)</span>.
+            Obligatorio para roles con privilegios elevados: <span class="font-semibold">Administrador y Coordinador</span>.
           </p>
         </div>
 
         <div>
-          <label class="text-sm">Contraseña</label>
-          <input type="password" name="password" required class="w-full h-10 rounded-lg border-slate-300">
+          <label class="text-sm font-medium">Contraseña</label>
+          <input type="password" name="password" required class="w-full h-11 rounded-lg border-slate-300">
         </div>
 
         <div>
-          <label class="text-sm">Confirmar contraseña</label>
-          <input type="password" name="confirm_password" required class="w-full h-10 rounded-lg border-slate-300">
+          <label class="text-sm font-medium">Confirmar contraseña</label>
+          <input type="password" name="confirm_password" required class="w-full h-11 rounded-lg border-slate-300">
         </div>
 
-        <button type="submit" class="w-full mt-4 py-3 rounded-lg bg-primary text-white font-semibold">
+        <button type="submit" class="w-full mt-2 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-blue-600 transition">
           Registrar
         </button>
 
         <div class="text-center text-sm">
-          <a href="{% url 'principal:login' %}" class="text-slate-500">Cancelar</a>
+          <a href="{% url 'principal:login' %}" class="text-slate-500 hover:text-primary">Cancelar</a>
         </div>
       </form>
-
     </div>
   </div>
-
 </div>
 
+{% include "principal/components/message_modal.html" %}
+
 <script>
+  const rolSelect = document.getElementById("rol");
   const codeWrap = document.getElementById("admin-code-wrap");
   const codeInput = document.getElementById("admin_code");
 
   function toggleAccessCode() {
-    const selected = document.querySelector('input[name="rol"]:checked')?.value;
+    const selected = rolSelect?.value;
     const needsCode = (selected === "ADMIN" || selected === "COOR");
-
     codeWrap.classList.toggle("hidden", !needsCode);
-
     if (needsCode) {
       codeInput.setAttribute("required", "required");
     } else {
@@ -174,17 +157,10 @@
     }
   }
 
-  document.querySelectorAll('input[name="rol"]').forEach(r => {
-    r.addEventListener("change", toggleAccessCode);
-  });
-
-  toggleAccessCode();
+  if (rolSelect) {
+    rolSelect.addEventListener("change", toggleAccessCode);
+    toggleAccessCode();
+  }
 </script>
-
-{# ✅ Modal global de mensajes (igual estilo para todo SIGEP) #}
-<a href="{% url 'principal:registrar' %}">
-    Registrarse
-</a>
-
 </body>
 </html>

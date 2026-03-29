@@ -1,7 +1,7 @@
-# principal/models.py
 from __future__ import annotations
 
 import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -9,11 +9,11 @@ from django.utils import timezone
 
 class Usuario(AbstractUser):
     """
-    Modelo de usuario central de SIGEP (entorno real).
-    - Autenticación y control del rol base para redirección por módulo.
-    - Email único (recuperación y comunicación confiable).
-    - Extensible para relaciones futuras sin romper el sistema.
+    Modelo de usuario central de SIGEP.
+    Se mantienen los campos estándar de AbstractUser para compatibilidad y se agregan
+    campos explícitos para nombres y apellidos separados.
     """
+
     foto = models.ImageField(upload_to="perfiles/", null=True, blank=True)
 
     class Rol(models.TextChoices):
@@ -28,14 +28,43 @@ class Usuario(AbstractUser):
         choices=Rol.choices,
         default=Rol.PARTICIPANTE,
         db_index=True,
-        help_text="Rol base operativo (redirección por módulo y control general)."
+        help_text="Rol base operativo (redirección por módulo y control general).",
     )
 
-    # AbstractUser trae email, pero no es único; aquí lo hacemos único (producción)
+    # Nuevos campos explícitos para el registro
+    nombres = models.CharField("nombres", max_length=120, blank=True, default="")
+    apellido_paterno = models.CharField("apellido paterno", max_length=80, blank=True, default="")
+    apellido_materno = models.CharField("apellido materno", max_length=80, blank=True, default="")
+
+    # Email único para autenticación/recuperación
     email = models.EmailField("correo electrónico", unique=True)
 
     telefono = models.CharField("teléfono", max_length=20, blank=True, null=True)
     actualizado_en = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        """
+        Mantiene sincronizados first_name/last_name para no romper compatibilidad
+        con código existente que use get_full_name(), admin o librerías.
+        """
+        self.first_name = (self.nombres or "").strip()
+        self.last_name = " ".join(
+            part for part in [(self.apellido_paterno or "").strip(), (self.apellido_materno or "").strip()] if part
+        ).strip()
+        super().save(*args, **kwargs)
+
+    def get_full_name(self) -> str:
+        parts = [
+            (self.nombres or "").strip(),
+            (self.apellido_paterno or "").strip(),
+            (self.apellido_materno or "").strip(),
+        ]
+        full_name = " ".join(part for part in parts if part).strip()
+        return full_name or super().get_full_name().strip() or self.username
+
+    @property
+    def nombre_completo(self) -> str:
+        return self.get_full_name()
 
     def __str__(self) -> str:
         return f"{self.username} ({self.get_rol_display()})"
@@ -44,10 +73,6 @@ class Usuario(AbstractUser):
 class SolicitudRecuperacionCuenta(models.Model):
     """
     Flujo real de recuperación de cuenta.
-    - Token único UUID
-    - Expira
-    - Se invalida al usarse
-    - Guarda trazabilidad (IP/UA) para auditoría/seguridad
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -55,7 +80,7 @@ class SolicitudRecuperacionCuenta(models.Model):
     usuario = models.ForeignKey(
         "principal.Usuario",
         on_delete=models.CASCADE,
-        related_name="recuperaciones"
+        related_name="recuperaciones",
     )
 
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
@@ -64,11 +89,9 @@ class SolicitudRecuperacionCuenta(models.Model):
     usado_en = models.DateTimeField(blank=True, null=True)
     activo = models.BooleanField(default=True)
 
-    # Seguridad / auditoría
     ip_origen = models.GenericIPAddressField(blank=True, null=True)
     user_agent = models.CharField(max_length=255, blank=True, null=True)
 
-    # Expiración (por ejemplo 30 minutos)
     expira_en = models.DateTimeField()
 
     class Meta:

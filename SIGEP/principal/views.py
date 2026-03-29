@@ -2,17 +2,16 @@ import re
 from datetime import timedelta
 
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
-from django.shortcuts import render, redirect
-from django.urls import reverse, NoReverseMatch
+from django.shortcuts import redirect, render
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 
-# Si tienes el modelo de recuperación, lo usa. Si no, igual muestra mensaje.
 try:
     from .models import SolicitudRecuperacionCuenta
 except Exception:
@@ -21,14 +20,22 @@ except Exception:
 
 User = get_user_model()
 
-# ⚠️ Cambia estos códigos y NO los publiques en repositorios
 ADMIN_CODE = "SIGEP-ADMIN-2026"
 COOR_CODE = "SIGEP-COOR-2026"
 
 
-# -----------------------------
-# Utilidades internas
-# -----------------------------
+def _role_options():
+    if hasattr(User, "Rol"):
+        return list(User.Rol.choices)
+    return [
+        ("PART", "Participante"),
+        ("PON", "Ponente"),
+        ("EVAL", "Evaluador/Jurado"),
+        ("COOR", "Coordinador"),
+        ("ADMIN", "Administrador"),
+    ]
+
+
 def _clean_username(base: str) -> str:
     base = (base or "").strip().lower()
     base = re.sub(r"[^a-z0-9._-]", "", base)
@@ -48,9 +55,6 @@ def _generate_unique_username(email: str) -> str:
 
 
 def _safe_redirect(url_name: str, fallback: str = "principal:dashboard"):
-    """
-    Evita que truene si aún no existe una URL (por ejemplo dashboards aún no creados).
-    """
     try:
         reverse(url_name)
         return redirect(url_name)
@@ -72,129 +76,136 @@ def _redirect_por_rol(user):
     if rol == "PART":
         return _safe_redirect("participante:panel_participante")
 
-    # Si no hay rol definido (o el campo no existe)
     return redirect("principal:dashboard")
 
 
-# -----------------------------
-# ✅ Dashboard principal (para principal/urls.py)
-# -----------------------------
+def _render_login(request, form_data=None):
+    return render(request, "principal/login.html", {
+        "form_data": form_data or {},
+    })
+
+
+def _render_registrar(request, form_data=None):
+    return render(request, "principal/registrar.html", {
+        "form_data": form_data or {},
+        "role_options": _role_options(),
+    })
+
+
+def _render_recuperar(request, form_data=None):
+    return render(request, "principal/recuperar_cuenta.html", {
+        "form_data": form_data or {},
+    })
+
+
 def dashboard(request):
-    """
-    Esta vista existe para que principal/urls.py pueda apuntar a views.dashboard.
-    Cambia la plantilla si tu landing es otra.
-    """
     return render(request, "principal/index.html")
 
 
-# -----------------------------
-# Vistas principales
-# -----------------------------
 def login_view(request):
-    """
-    Login real:
-    - acepta username o email en el input name="username"
-    - valida contraseña
-    - redirige por rol
-    """
     if request.method == "GET":
-        return render(request, "principal/login.html")
+        return _render_login(request)
 
     username_or_email = (request.POST.get("username") or "").strip()
     password = request.POST.get("password") or ""
 
-    if not username_or_email or not password:
-        messages.error(request, "Ingresa tu usuario/correo y tu contraseña.")
-        return render(request, "principal/login.html")
+    form_data = {"username": username_or_email}
 
-    # Login por email o username
+    if not username_or_email or not password:
+        messages.error(request, "Ingresa tu usuario o correo y tu contraseña.")
+        return _render_login(request, form_data)
+
     if "@" in username_or_email:
         user_obj = User.objects.filter(email__iexact=username_or_email).first()
         if not user_obj:
             messages.error(request, "No existe una cuenta asociada a ese correo.")
-            return render(request, "principal/login.html")
+            return _render_login(request, form_data)
         user = authenticate(request, username=user_obj.username, password=password)
     else:
         user = authenticate(request, username=username_or_email, password=password)
 
     if user is None:
         messages.error(request, "Credenciales incorrectas. Verifica tus datos.")
-        return render(request, "principal/login.html")
+        return _render_login(request, form_data)
 
     if not user.is_active:
         messages.error(request, "Tu cuenta está desactivada. Contacta al administrador.")
-        return render(request, "principal/login.html")
+        return _render_login(request, form_data)
 
     login(request, user)
-    messages.success(request, "Inicio de sesión exitoso.")
     return _redirect_por_rol(user)
 
 
 def registrar_view(request):
-    """
-    Registro real:
-    - valida campos requeridos
-    - valida contraseñas
-    - evita email duplicado
-    - genera username desde email
-    - asigna rol (si existe campo rol)
-    - ADMIN requiere código maestro (admin_code)
-    - ✅ COOR también requiere código maestro (admin_code)
-    """
     if request.method == "GET":
-        return render(request, "principal/registrar.html")
+        return _render_registrar(request)
 
-    fullname = (request.POST.get("fullname") or "").strip()
+    nombres = (request.POST.get("nombres") or "").strip()
+    apellido_paterno = (request.POST.get("apellido_paterno") or "").strip()
+    apellido_materno = (request.POST.get("apellido_materno") or "").strip()
     email = (request.POST.get("email") or "").strip().lower()
-
     rol = (request.POST.get("rol") or "PART").strip().upper()
-    admin_code = (request.POST.get("admin_code") or "").strip()  # lo reutilizamos
-
+    admin_code = (request.POST.get("admin_code") or "").strip()
     password = request.POST.get("password") or ""
     confirm = request.POST.get("confirm_password") or ""
 
-    # Validaciones
-    if not fullname or not email or not password or not confirm or not rol:
-        messages.error(request, "Completa todos los campos requeridos.")
-        return render(request, "principal/registrar.html")
+    form_data = {
+        "nombres": nombres,
+        "apellido_paterno": apellido_paterno,
+        "apellido_materno": apellido_materno,
+        "email": email,
+        "rol": rol,
+        "admin_code": admin_code,
+    }
+
+    if not nombres or not apellido_paterno or not email or not password or not confirm or not rol:
+        messages.error(request, "Completa todos los campos obligatorios.")
+        return _render_registrar(request, form_data)
 
     if "@" not in email:
         messages.error(request, "Ingresa un correo electrónico válido.")
-        return render(request, "principal/registrar.html")
+        return _render_registrar(request, form_data)
 
     if password != confirm:
         messages.error(request, "Las contraseñas no coinciden.")
-        return render(request, "principal/registrar.html")
+        return _render_registrar(request, form_data)
 
-    # ✅ ADMIN: exigir código maestro
+    valid_roles = {value for value, _ in _role_options()}
+    if rol not in valid_roles:
+        messages.error(request, "Selecciona un rol válido.")
+        return _render_registrar(request, form_data)
+
     if rol == "ADMIN" and admin_code != ADMIN_CODE:
         messages.error(request, "Código de administrador inválido. No tienes autorización.")
-        return render(request, "principal/registrar.html")
+        return _render_registrar(request, form_data)
 
-    # ✅ COOR: exigir código maestro (mismo input)
     if rol == "COOR" and admin_code != COOR_CODE:
         messages.error(request, "Código de coordinador inválido. No tienes autorización.")
-        return render(request, "principal/registrar.html")
+        return _render_registrar(request, form_data)
 
-    # Evitar duplicado por correo
     if User.objects.filter(email__iexact=email).exists():
         messages.error(request, "Ese correo ya está registrado. Intenta iniciar sesión.")
-        return render(request, "principal/registrar.html")
+        return _render_registrar(request, form_data)
 
-    # Crear username único desde correo
     username = _generate_unique_username(email)
 
-    # Crear usuario
     user = User.objects.create_user(
         username=username,
         email=email,
-        password=password
+        password=password,
     )
 
-    # Guardar nombre completo en first_name
-    user.first_name = fullname
+    # Compatibilidad con modelo antiguo y nuevo
+    if hasattr(user, "nombres"):
+        user.nombres = nombres
+    if hasattr(user, "apellido_paterno"):
+        user.apellido_paterno = apellido_paterno
+    if hasattr(user, "apellido_materno"):
+        user.apellido_materno = apellido_materno
 
-    # Guardar rol si existe el campo
+    user.first_name = nombres
+    user.last_name = " ".join(part for part in [apellido_paterno, apellido_materno] if part).strip()
+
     if hasattr(user, "rol"):
         user.rol = rol
 
@@ -205,41 +216,40 @@ def registrar_view(request):
 
 
 def recuperar_cuenta_view(request):
-    """
-    Recuperación:
-    - pide email
-    - mensaje neutro por seguridad (no revela si existe)
-    - si existe y tienes el modelo, crea solicitud con expiración
-    """
     if request.method == "GET":
-        return render(request, "principal/recuperar_cuenta.html")
+        return _render_recuperar(request)
 
     email = (request.POST.get("email") or "").strip().lower()
+    form_data = {"email": email}
+
     if not email:
         messages.error(request, "Ingresa tu correo electrónico.")
-        return render(request, "principal/recuperar_cuenta.html")
+        return _render_recuperar(request, form_data)
 
     ok_msg = "Si el correo está registrado, recibirás instrucciones para recuperar tu cuenta."
 
     user = User.objects.filter(email__iexact=email).first()
     if not user:
         messages.success(request, ok_msg)
-        return render(request, "principal/recuperar_cuenta.html")
+        return _render_recuperar(request, form_data)
 
-    # Si tienes el modelo de recuperación, genera token (30 min)
     if SolicitudRecuperacionCuenta is not None:
         expira_en = timezone.now() + timedelta(minutes=30)
+        defaults = {
+            "expira_en": expira_en,
+            "ip_origen": request.META.get("REMOTE_ADDR"),
+            "user_agent": (request.META.get("HTTP_USER_AGENT") or "")[:255],
+        }
         try:
             SolicitudRecuperacionCuenta.objects.create(
                 usuario=user,
-                expira_en=expira_en
+                **defaults,
             )
         except TypeError:
-            SolicitudRecuperacionCuenta.objects.create(usuario=user)
+            SolicitudRecuperacionCuenta.objects.create(usuario=user, expira_en=expira_en)
 
-    # En producción enviarías el correo aquí
     messages.success(request, ok_msg)
-    return render(request, "principal/recuperar_cuenta.html")
+    return _render_recuperar(request, form_data)
 
 
 @login_required
@@ -249,9 +259,6 @@ def salir(request):
     return redirect("principal:login")
 
 
-# -----------------------------
-# ✅ Set Password (para enlace desde Admin)
-# -----------------------------
 def set_password(request, uidb64, token):
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))

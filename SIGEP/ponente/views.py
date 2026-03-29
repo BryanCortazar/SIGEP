@@ -209,6 +209,52 @@ def _decorar_ponencia_horario(item: Ponencia) -> Ponencia:
     return item
 
 
+
+
+def _build_constancia_state_ponencia(request_user, ponencia: Ponencia | None) -> dict:
+    resumen = _resumen_evaluacion_ponencia(ponencia)
+    evento = getattr(ponencia, "evento", None) if ponencia else None
+    evento_nombre = _nombre_evento_seguro(evento) if evento else "Evento"
+    fecha_evento = getattr(evento, "fecha", None) if evento else None
+    nombre_ponente = (
+        request_user.get_full_name().strip()
+        if hasattr(request_user, "get_full_name")
+        else ""
+    ) or getattr(request_user, "username", "") or "Ponente"
+
+    if ponencia:
+        try:
+            tipo_ponencia = ponencia.get_tipo_display()
+        except Exception:
+            tipo_ponencia = getattr(ponencia, "tipo", "") or "Ponencia"
+    else:
+        tipo_ponencia = "Ponencia"
+
+    return {
+        "ponencia": ponencia,
+        "nombre_ponente": nombre_ponente,
+        "correo_contacto": getattr(request_user, "email", "") or "",
+        "evento_nombre": evento_nombre,
+        "fecha_evento": fecha_evento,
+        "promedio": resumen.get("promedio_general"),
+        "total_evaluadores": resumen.get("evaluaciones_asignadas", 0),
+        "evaluaciones_enviadas": resumen.get("total_evaluaciones", 0),
+        "evaluacion_concluida": resumen.get("evaluacion_completa", False),
+        "porcentaje_evaluacion": resumen.get("avance_porcentaje", 0),
+        "titulo_ponencia": getattr(ponencia, "titulo", "") if ponencia else "",
+        "tipo_ponencia": tipo_ponencia,
+        "area_tematica": getattr(ponencia, "area_tematica", "") if ponencia else "",
+        "autores": getattr(ponencia, "autores", "") if ponencia else "",
+        "resumen_ponencia": getattr(ponencia, "resumen", "") if ponencia else "",
+        "fecha_programada": getattr(ponencia, "fecha_programada", None) if ponencia else None,
+        "hora_inicio": getattr(ponencia, "hora_inicio", None) if ponencia else None,
+        "hora_fin": getattr(ponencia, "hora_fin", None) if ponencia else None,
+        "espacio_asignado": getattr(ponencia, "espacio_asignado", "") if ponencia else "",
+        "folio_constancia": getattr(ponencia, "folio_constancia", "") if ponencia else "",
+        "constancia_emitida": bool((getattr(ponencia, "folio_constancia", "") or "").strip()) if ponencia else False,
+        "estado_resultado": resumen.get("estado_resultado", "Sin evaluación"),
+    }
+
 def _asegurar_inscripcion_ponente(evento: Evento, usuario) -> Inscripcion:
     """
     Garantiza que el usuario quede inscrito en el evento como PONENTE
@@ -632,6 +678,7 @@ def generar_constancia(request):
         ponencia.evaluaciones_asignadas = resumen["evaluaciones_asignadas"]
         ponencia.evaluaciones_enviadas = resumen["total_evaluaciones"]
         ponencia.promedio_general = resumen["promedio_general"]
+        ponencia.constancia_emitida = bool((ponencia.folio_constancia or "").strip())
         ponencia.constancia_disponible = _constancia_disponible_para_ponencia(ponencia, resumen)
         if not ponencia.constancia_disponible:
             continue
@@ -658,19 +705,22 @@ def generar_constancia(request):
         ponencia_sel.evaluaciones_asignadas = resumen_sel["evaluaciones_asignadas"]
         ponencia_sel.evaluaciones_enviadas = resumen_sel["total_evaluaciones"]
         ponencia_sel.promedio_general = resumen_sel["promedio_general"]
+        ponencia_sel.constancia_emitida = bool((ponencia_sel.folio_constancia or "").strip())
         if not _constancia_disponible_para_ponencia(ponencia_sel, resumen_sel):
             messages.error(request, "Esta constancia aún no está disponible. Deben concluirse todas las evaluaciones asignadas.")
             return redirect("ponente:constancia")
     elif ponencias_disponibles:
         ponencia_sel = ponencias_disponibles[0]
 
-    return render(request, "ponente/constancia/constancia.html", {
+    contexto_constancia = _build_constancia_state_ponencia(request.user, ponencia_sel)
+    contexto_constancia.update({
         "active": "constancia",
         "ponencias_disponibles": ponencias_disponibles,
         "ponencia_sel": ponencia_sel,
         "fecha_emision": timezone.localdate(),
         "search_q": request.GET.get("q", ""),
     })
+    return render(request, "ponente/constancia/constancia.html", contexto_constancia)
 
 
 @login_required
@@ -686,25 +736,33 @@ def descargar_constancia_pdf(request, ponencia_id):
         messages.error(request, "La constancia no está habilitada para esta participación.")
         return redirect("ponente:constancia")
 
-    if not ponencia.folio_constancia:
-        ponencia.folio_constancia = _generar_folio_constancia(ponencia)
-        ponencia.constancia_generada_en = timezone.now()
-        ponencia.constancia_habilitada = True
-        ponencia.save(update_fields=["folio_constancia", "constancia_generada_en", "constancia_habilitada"])
+    if (ponencia.folio_constancia or "").strip():
+        messages.error(request, "La constancia ya fue emitida y solo puede descargarse una vez.")
+        return redirect(f"/ponente/constancia/?ponencia={ponencia.id}")
+
+    ponencia.folio_constancia = _generar_folio_constancia(ponencia)
+    ponencia.constancia_generada_en = timezone.now()
+    ponencia.constancia_habilitada = True
+    ponencia.save(update_fields=["folio_constancia", "constancia_generada_en", "constancia_habilitada"])
 
     template = get_template("ponente/constancia/constancia_pdf.html")
-    html = template.render({
-        "ponencia": ponencia,
+    contexto_pdf = _build_constancia_state_ponencia(request.user, ponencia)
+    contexto_pdf.update({
         "usuario": request.user,
         "fecha_emision": timezone.localdate(),
     })
+    html = template.render(contexto_pdf)
 
     response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="constancia_{ponencia.id}.pdf"'
+    response["Content-Disposition"] = f'attachment; filename="constancia_ponente_{ponencia.id}.pdf"'
 
     pisa_status = pisa.CreatePDF(src=html, dest=response, encoding="utf-8")
 
     if pisa_status.err:
+        ponencia.folio_constancia = ""
+        ponencia.constancia_generada_en = None
+        ponencia.constancia_habilitada = False
+        ponencia.save(update_fields=["folio_constancia", "constancia_generada_en", "constancia_habilitada"])
         return HttpResponse("No fue posible generar la constancia PDF.", status=500)
 
     return response

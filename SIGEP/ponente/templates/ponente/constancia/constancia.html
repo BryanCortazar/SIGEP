@@ -17,13 +17,13 @@
             name="q"
             value="{{ search_q }}"
             class="w-full bg-transparent border-none text-slate-700 placeholder:text-slate-400 focus:ring-0 text-sm h-full"
-            placeholder="Buscar evento..."
+            placeholder="Buscar evento o ponencia..."
           />
         </div>
       </form>
 
       <div class="flex items-center justify-between mb-2 px-1">
-        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Eventos recientes</span>
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Constancias disponibles</span>
         <span class="text-xs font-medium text-primary">{{ ponencias_disponibles|length }} disponibles</span>
       </div>
     </div>
@@ -41,28 +41,36 @@
 
             <div class="relative z-10 flex justify-between items-start">
               <span class="bg-blue-50 text-primary text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-blue-100">
-                {% if ponencia_sel and item.id == ponencia_sel.id %}Seleccionado{% else %}Completado{% endif %}
+                {% if item.constancia_emitida %}Emitida{% else %}Disponible{% endif %}
               </span>
               <span class="text-slate-500 text-xs flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">calendar_today</span>
-                {{ item.fecha_programada|date:"d M Y" }}
+                {% if item.fecha_programada %}{{ item.fecha_programada|date:"d M Y" }}{% else %}Por definir{% endif %}
               </span>
             </div>
 
             <div class="relative z-10">
-              <h3 class="text-slate-800 font-bold text-base leading-snug mb-1">{{ item.nombre_evento }}</h3>
-              <p class="text-slate-500 text-xs">Rol: <span class="text-slate-700 font-bold">{{ item.tipo|default:"Ponente" }}</span></p>
-              <p class="text-slate-500 text-xs mt-1">
-                Evaluaciones concluidas: <span class="text-slate-700 font-bold">{{ item.evaluaciones_enviadas }}/{{ item.evaluaciones_asignadas }}</span>
-              </p>
+              <h3 class="text-slate-800 font-bold text-base leading-snug mb-1">{{ item.titulo }}</h3>
+              <p class="text-slate-500 text-xs">{{ item.nombre_evento }}</p>
+              <p class="text-slate-500 text-xs mt-1">Tipo: <span class="text-slate-700 font-bold">{{ item.tipo|default:"Ponencia" }}</span></p>
+              <p class="text-slate-500 text-xs mt-1">Evaluaciones: <span class="text-slate-700 font-bold">{{ item.evaluaciones_enviadas }}/{{ item.evaluaciones_asignadas }}</span></p>
             </div>
 
             <div class="relative z-10 mt-1 flex gap-2">
-              <a href="{% url 'ponente:descargar_constancia_pdf' item.id %}"
-                 class="flex-1 bg-primary hover:bg-blue-600 text-white h-9 rounded-md text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-sm shadow-primary/30">
-                <span class="material-symbols-outlined text-[16px]">download</span>
-                Descargar PDF
-              </a>
+              {% if item.constancia_emitida %}
+                <button type="button"
+                        disabled
+                        class="flex-1 bg-slate-100 text-slate-400 h-9 rounded-md text-xs font-bold flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200">
+                  <span class="material-symbols-outlined text-[16px]">lock</span>
+                  Ya emitida
+                </button>
+              {% else %}
+                <a href="{% url 'ponente:descargar_constancia_pdf' item.id %}"
+                   class="flex-1 bg-primary hover:bg-blue-600 text-white h-9 rounded-md text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-sm shadow-primary/30">
+                  <span class="material-symbols-outlined text-[16px]">download</span>
+                  Descargar PDF
+                </a>
+              {% endif %}
             </div>
           </div>
         {% endfor %}
@@ -105,7 +113,7 @@
     <div class="flex-1 overflow-auto p-8 flex items-center justify-center bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
       {% if ponencia_sel %}
         <div id="previewWrapper" class="origin-top transition-transform duration-200">
-          <div class="relative w-full max-w-[800px] aspect-[1.414/1] bg-white shadow-2xl rounded-sm flex flex-col overflow-hidden ring-1 ring-black/5">
+          <div class="relative w-full max-w-[900px] bg-white shadow-2xl rounded-sm flex flex-col overflow-hidden ring-1 ring-black/5">
             <div class="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-bl-[100px] -mr-10 -mt-10"></div>
             <div class="absolute bottom-0 left-0 w-60 h-60 bg-primary/5 rounded-tr-[200px] -ml-20 -mb-20"></div>
 
@@ -135,26 +143,46 @@
               <h1 class="font-serif text-4xl text-slate-800 font-bold tracking-widest mb-2">CONSTANCIA</h1>
               <p class="text-primary text-xs font-bold uppercase tracking-[0.2em] mb-10">De Participación</p>
 
-              <p class="text-slate-500 italic font-serif mb-4">Se otorga la presente a:</p>
-              <h2 class="text-3xl font-bold text-slate-900 mb-2 font-display">
-                {{ request.user.get_full_name|default:request.user.username }}
-              </h2>
+              <p class="text-slate-500 italic font-serif mb-4">Se hace constar que</p>
+              <h2 class="text-3xl font-bold text-slate-900 mb-2 font-display">{{ nombre_ponente }}</h2>
               <div class="w-32 h-1 bg-primary mb-6"></div>
 
-              <p class="text-slate-600 max-w-lg leading-relaxed mb-5">
-                Por su valiosa participación y destacada ponencia titulada
-                <span class="font-bold text-slate-800">"{{ ponencia_sel.titulo }}"</span>
-                durante el
-                <span class="font-bold text-slate-800">{{ ponencia_sel.nombre_evento }}</span>.
+              <p class="text-slate-600 max-w-3xl leading-relaxed mb-5">
+                participó en el evento <span class="font-bold text-slate-800">{{ evento_nombre }}</span> con la ponencia
+                <span class="font-bold text-slate-800">"{{ titulo_ponencia }}"</span>,
+                en la modalidad <span class="font-bold text-slate-800">{{ tipo_ponencia }}</span>,
+                habiendo concluido satisfactoriamente el proceso de evaluación correspondiente.
               </p>
 
-              <div class="inline-flex items-center gap-4 px-4 py-2 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600 mb-6">
-                <span>Evaluaciones: <strong class="text-slate-800">{{ ponencia_sel.evaluaciones_enviadas }}/{{ ponencia_sel.evaluaciones_asignadas }}</strong></span>
-                <span>Promedio: <strong class="text-slate-800">{{ ponencia_sel.promedio_general|default:"0.0" }}</strong></span>
+              <div class="grid grid-cols-2 gap-3 w-full max-w-3xl mt-2">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left">
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">Área temática</p>
+                  <p class="mt-1 text-sm font-semibold text-slate-900">{{ area_tematica|default:"No especificada" }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left">
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">Autores</p>
+                  <p class="mt-1 text-sm font-semibold text-slate-900">{{ autores|default:nombre_ponente }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left">
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">Evaluaciones</p>
+                  <p class="mt-1 text-sm font-semibold text-slate-900">{{ evaluaciones_enviadas }}/{{ total_evaluadores }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left">
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">Promedio final</p>
+                  <p class="mt-1 text-sm font-semibold text-slate-900">{% if promedio %}{{ promedio }}{% else %}No disponible{% endif %}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left">
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">Fecha programada</p>
+                  <p class="mt-1 text-sm font-semibold text-slate-900">{% if fecha_programada %}{{ fecha_programada|date:"d/m/Y" }}{% else %}Por definir{% endif %}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left">
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">Espacio asignado</p>
+                  <p class="mt-1 text-sm font-semibold text-slate-900">{{ espacio_asignado|default:"Por definir" }}</p>
+                </div>
               </div>
 
-              <p class="text-slate-400 text-xs mt-auto">
-                Emitida en Ciudad de México, a {{ fecha_emision|date:"d \\d\\e F \\d\\e Y" }}
+              <p class="text-slate-400 text-xs mt-8">
+                Emitida en Ciudad de México, a {{ fecha_emision|date:"d \d\e F \d\e Y" }}
               </p>
 
               <div class="flex justify-center gap-16 mt-12 w-full">
@@ -195,33 +223,15 @@
 {% block extra_js %}
 <script>
   let previewZoom = 1;
-
   function applyPreviewZoom() {
     const wrapper = document.getElementById('previewWrapper');
     const label = document.getElementById('previewZoomValue');
-    if (wrapper) {
-      wrapper.style.transform = `scale(${previewZoom})`;
-    }
-    if (label) {
-      label.textContent = `${Math.round(previewZoom * 100)}%`;
-    }
+    if (wrapper) wrapper.style.transform = `scale(${previewZoom})`;
+    if (label) label.textContent = `${Math.round(previewZoom * 100)}%`;
   }
-
-  function zoomInPreview() {
-    previewZoom = Math.min(previewZoom + 0.1, 1.5);
-    applyPreviewZoom();
-  }
-
-  function zoomOutPreview() {
-    previewZoom = Math.max(previewZoom - 0.1, 0.6);
-    applyPreviewZoom();
-  }
-
-  function resetPreviewZoom() {
-    previewZoom = 1;
-    applyPreviewZoom();
-  }
-
+  function zoomInPreview() { previewZoom = Math.min(previewZoom + 0.1, 1.5); applyPreviewZoom(); }
+  function zoomOutPreview() { previewZoom = Math.max(previewZoom - 0.1, 0.6); applyPreviewZoom(); }
+  function resetPreviewZoom() { previewZoom = 1; applyPreviewZoom(); }
   applyPreviewZoom();
 </script>
 {% endblock %}

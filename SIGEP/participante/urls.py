@@ -1,5 +1,4 @@
 from django.urls import path
-
 from . import views
 
 app_name = "participante"
@@ -15,5 +14,6 @@ urlpatterns = [
     path("pase/validar/<uuid:token>/", views.validar_pase_qr, name="validar_pase_qr"),
     path("constancia/", views.constancia, name="constancia"),
     path("constancia/previsualizar/", views.constancia_previa, name="constancia_previa"),
+    path("constancia/pdf/", views.descargar_constancia_pdf, name="descargar_constancia_pdf"),
     path("configuracion/", views.configuracion, name="configuracion"),
 ]

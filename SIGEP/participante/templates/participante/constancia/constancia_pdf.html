@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Constancia de participación</title>
+  <style>
+    @page { size: A4 landscape; margin: 18mm; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 12px; margin: 0; padding: 0; }
+    .page { border: 2px solid #dbeafe; padding: 28px; min-height: 520px; position: relative; }
+    .header { text-align: center; margin-bottom: 24px; }
+    .mini { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin: 0; }
+    .title { font-size: 34px; font-weight: bold; letter-spacing: 4px; margin: 10px 0 4px 0; color: #0f172a; }
+    .subtitle { font-size: 11px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase; color: #137fec; margin: 0 0 28px 0; }
+    .intro { text-align: center; font-style: italic; color: #64748b; margin-bottom: 10px; }
+    .name { text-align: center; font-size: 30px; font-weight: bold; margin: 8px 0 18px 0; color: #0f172a; }
+    .body { text-align: center; font-size: 18px; line-height: 1.8; color: #334155; }
+    .hl { color: #137fec; font-weight: bold; }
+    .grid { margin-top: 34px; width: 100%; }
+    .card { width: 46%; display: inline-block; vertical-align: top; margin: 0 2% 14px 2%; border: 1px solid #dbeafe; background: #f8fbff; border-radius: 12px; padding: 14px; }
+    .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: #64748b; margin-bottom: 6px; }
+    .value { font-size: 16px; font-weight: bold; color: #0f172a; line-height: 1.5; }
+    .footer { margin-top: 34px; width: 100%; }
+    .sign { width: 45%; display: inline-block; vertical-align: bottom; text-align: center; margin-right: 5%; padding-top: 44px; }
+    .sign-line { border-top: 2px solid #94a3b8; padding-top: 8px; font-size: 13px; color: #475569; font-weight: bold; }
+    .details { width: 45%; display: inline-block; vertical-align: bottom; font-size: 13px; color: #475569; }
+    .folio { position: absolute; bottom: 24px; right: 28px; font-size: 11px; color: #475569; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <p class="mini">Sistema Integral de Gestión y Evaluación</p>
+      <div class="title">CONSTANCIA</div>
+      <div class="subtitle">Participación en proyecto</div>
+    </div>
+
+    <div class="intro">Se hace constar que</div>
+    <div class="name">{{ nombre_participante }}</div>
+
+    <div class="body">
+      participó en el evento <span class="hl">{{ evento_nombre }}</span> con el proyecto
+      <span class="hl">{{ proyecto.nombre_proyecto }}</span>, habiendo concluido satisfactoriamente
+      el proceso de evaluación correspondiente.
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Institución / empresa</div>
+        <div class="value">{{ institucion|default:"No especificada" }}</div>
+      </div>
+      <div class="card">
+        <div class="label">Promedio final</div>
+        <div class="value">{% if promedio %}{{ promedio }}{% else %}No disponible{% endif %}</div>
+      </div>
+      <div class="card">
+        <div class="label">Evaluaciones concluidas</div>
+        <div class="value">{{ evaluaciones_enviadas }} de {{ total_evaluadores }}</div>
+      </div>
+      <div class="card">
+        <div class="label">Fecha de emisión</div>
+        <div class="value">{{ constancia.emitida_en|date:"d/m/Y H:i" }}</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="sign">
+        <div class="sign-line">Coordinación general del evento</div>
+      </div>
+      <div class="details">
+        <div><strong>Proyecto:</strong> {{ proyecto.nombre_proyecto }}</div>
+        <div><strong>Evento:</strong> {{ evento_nombre }}</div>
+        {% if fecha_evento %}<div><strong>Fecha del evento:</strong> {{ fecha_evento|date:"d/m/Y" }}</div>{% endif %}
+        <div><strong>Correo de contacto:</strong> {{ correo_contacto|default:"—" }}</div>
+      </div>
+    </div>
+
+    <div class="folio">Folio: {{ constancia.folio }}</div>
+  </div>
+</body>
+</html>
