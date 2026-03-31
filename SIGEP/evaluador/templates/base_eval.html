@@ -81,16 +81,69 @@
     </header>
 
     <div class="flex-1 overflow-y-auto p-8 md:p-10 pt-6">
-      {% if messages %}
-        <div class="mb-6 space-y-3">
-          {% for m in messages %}
-            <div class="rounded-xl border px-4 py-3 text-sm {% if m.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% elif m.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-slate-200 bg-white text-slate-700{% endif %}">{{ m }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
       {% block content %}{% endblock %}
     </div>
   </main>
+
+  {% if messages %}
+  <div id="modalMessagesEval" class="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/55 px-4">
+    <div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div class="flex items-start gap-3">
+          <div class="mt-0.5 flex size-11 items-center justify-center rounded-2xl
+            {% for m in messages %}
+              {% if forloop.first %}
+                {% if m.tags == 'error' %}bg-rose-100 text-rose-600{% elif m.tags == 'success' %}bg-emerald-100 text-emerald-600{% else %}bg-blue-100 text-primary{% endif %}
+              {% endif %}
+            {% endfor %}">
+            <span class="material-symbols-outlined text-[22px]">
+              {% for m in messages %}
+                {% if forloop.first %}
+                  {% if m.tags == 'error' %}error{% elif m.tags == 'success' %}check_circle{% else %}info{% endif %}
+                {% endif %}
+              {% endfor %}
+            </span>
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-primary">SIGEP</p>
+            <h3 class="mt-1 text-lg font-bold text-slate-900">
+              {% for m in messages %}
+                {% if forloop.first %}
+                  {% if m.tags == 'error' %}Ocurrió un error{% elif m.tags == 'success' %}Operación exitosa{% else %}Información{% endif %}
+                {% endif %}
+              {% endfor %}
+            </h3>
+          </div>
+        </div>
+
+        <button type="button" onclick="closeMessagesModalEval()" class="inline-flex size-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-3 px-5 py-4">
+        {% for m in messages %}
+          <div class="rounded-xl border px-4 py-3 text-sm
+            {% if m.tags == 'error' %}
+              border-rose-200 bg-rose-50 text-rose-700
+            {% elif m.tags == 'success' %}
+              border-emerald-200 bg-emerald-50 text-emerald-700
+            {% else %}
+              border-blue-200 bg-blue-50 text-blue-700
+            {% endif %}">
+            {{ m }}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="flex justify-end bg-slate-50 px-5 py-4">
+        <button type="button" onclick="closeMessagesModalEval()" class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark transition">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {% block modals %}{% endblock %}
   <script>
@@ -106,10 +159,25 @@
       el.classList.add('hidden');
       document.body.classList.remove('overflow-hidden');
     }
+
+    function closeMessagesModalEval() {
+      const el = document.getElementById('modalMessagesEval');
+      if (!el) return;
+      el.remove();
+    }
+
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         document.querySelectorAll('[id^="modal"]').forEach(el => el.classList.add('hidden'));
         document.body.classList.remove('overflow-hidden');
+        closeMessagesModalEval();
+      }
+    });
+
+    window.addEventListener('load', function () {
+      const el = document.getElementById('modalMessagesEval');
+      if (el) {
+        setTimeout(closeMessagesModalEval, 5000);
       }
     });
   </script>
