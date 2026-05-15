@@ -8,6 +8,7 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Avg, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -400,12 +401,33 @@ def _build_schedule_row(asignacion, *, rubrica=None, ponencia=None, entrega=None
     }
 
 
-def _get_assignment_or_404(user, proyecto_id):
-    return get_object_or_404(
-        EvaluacionAsignacion.objects.select_related("proyecto", "evaluador"),
-        proyecto_id=proyecto_id,
-        evaluador=user,
+def _get_assignment_or_redirect(request, proyecto_id):
+    """
+    Resuelve la asignación del evaluador autenticado de forma controlada.
+    Si el registro no pertenece al evaluador, no muestra 404 técnico:
+    redirige a proyectos asignados con mensaje en modal.
+    """
+    try:
+        proyecto_id = int(proyecto_id)
+    except (TypeError, ValueError):
+        messages.error(request, "La evaluación solicitada no es válida.")
+        return None, redirect("evaluador:proyectos")
+
+    asignacion = (
+        EvaluacionAsignacion.objects
+        .select_related("proyecto", "evaluador")
+        .filter(proyecto_id=proyecto_id, evaluador=request.user)
+        .first()
     )
+
+    if asignacion is None:
+        messages.error(
+            request,
+            "No tienes permisos para acceder a esta evaluación o el registro no está asignado a tu cuenta."
+        )
+        return None, redirect("evaluador:proyectos")
+
+    return asignacion, None
 
 
 @login_required
@@ -507,10 +529,46 @@ def proyectos_asignados(request):
     )
 
 
+def _criterio_label(criterio) -> str:
+    return (
+        getattr(criterio, "nombre", None)
+        or getattr(criterio, "titulo", None)
+        or f"Criterio {getattr(criterio, 'id', '')}".strip()
+        or "Criterio"
+    )
+
+
+def _formulario_context(asignacion, proyecto, entrega, rubrica, ponencia, criterios):
+    return {
+        "active": "formulario",
+        "asignacion": asignacion,
+        "proyecto": _decorar_proyecto_para_vista(proyecto, entrega=entrega, rubrica=rubrica, ponencia=ponencia),
+        "ponencia": ponencia,
+        "rubrica": rubrica,
+        "criterios": criterios,
+        "entrega": entrega,
+        "responsable": _responsable_display(proyecto, ponencia),
+        "evento_nombre": _evento_display(proyecto, ponencia),
+        "titulo_registro": _titulo_display(proyecto, ponencia),
+        "codigo_registro": _codigo_display(proyecto, ponencia),
+        "fecha_registro": _fecha_para_asignacion(proyecto, ponencia),
+        "hora_inicio": getattr(ponencia, "hora_inicio", None) or getattr(proyecto, "hora_inicio", None) or getattr(proyecto, "inicio", None),
+        "hora_fin": getattr(ponencia, "hora_fin", None) or getattr(proyecto, "hora_fin", None) or getattr(proyecto, "fin", None),
+        "espacio": _display_space(
+            getattr(ponencia, "espacio_asignado", None)
+            or getattr(proyecto, "espacio_asignado", None)
+            or getattr(proyecto, "lugar", None)
+        ),
+    }
+
+
 @login_required
 @transaction.atomic
 def formulario(request, proyecto_id):
-    asignacion = _get_assignment_or_404(request.user, proyecto_id)
+    asignacion, redireccion = _get_assignment_or_redirect(request, proyecto_id)
+    if redireccion:
+        return redireccion
+
     proyecto = asignacion.proyecto
     rubrica, ponencia = _rubrica_para_proyecto(proyecto)
     criterios = _criterios_para_rubrica(rubrica)
@@ -521,51 +579,113 @@ def formulario(request, proyecto_id):
 
     if request.method == "POST":
         accion = request.POST.get("accion", "guardar")
+        envio_final = accion == "enviar"
+
+        if entrega.estado == EvaluacionEntrega.ESTADO_ENVIADA:
+            messages.error(request, "La evaluación ya fue enviada y no puede modificarse.")
+            return redirect("evaluador:proyectos")
+
+        if not rubrica or not criterios:
+            messages.error(request, "No es posible guardar la evaluación porque no existe una rúbrica activa con criterios asignados.")
+            return render(
+                request,
+                "evaluacion/formulario.html",
+                _formulario_context(asignacion, proyecto, entrega, rubrica, ponencia, criterios),
+            )
+
+        errores: list[str] = []
+        respuestas_payload: list[dict] = []
         valores_numericos: list[int] = []
-        incompletos = []
+        observaciones_generales = (request.POST.get("observaciones_generales") or "").strip()
 
         for criterio in criterios:
-            valor_raw = (request.POST.get(f"valor_{criterio.id}") or "").strip()
-            observacion = (request.POST.get(f"observacion_{criterio.id}") or "").strip()
+            criterio_id = getattr(criterio, "id", None)
+            etiqueta = _criterio_label(criterio)
+            valor_raw = (request.POST.get(f"valor_{criterio_id}") or "").strip()
+            observacion = (request.POST.get(f"observacion_{criterio_id}") or "").strip()
 
-            if accion == "enviar" and not valor_raw:
-                incompletos.append(
-                    getattr(criterio, "nombre", None)
-                    or getattr(criterio, "titulo", None)
-                    or f"Criterio {criterio.id}"
-                )
+            # Conserva en pantalla lo capturado por el evaluador si el envío se bloquea.
+            criterio.valor_actual = valor_raw
+            criterio.observacion_actual = observacion
+
+            if not valor_raw:
+                if envio_final:
+                    errores.append(f"Selecciona una calificación para «{etiqueta}».")
                 continue
 
-            if valor_raw:
-                try:
-                    valor_int = int(valor_raw)
-                except ValueError:
-                    valor_int = 0
-                valores_numericos.append(valor_int)
-                EvaluacionRespuestaCriterio.objects.update_or_create(
-                    entrega=entrega,
-                    criterio=criterio,
-                    defaults={"valor": valor_int, "observacion": observacion},
-                )
-            else:
-                EvaluacionRespuestaCriterio.objects.filter(entrega=entrega, criterio=criterio).delete()
+            try:
+                valor_int = int(valor_raw)
+            except (TypeError, ValueError):
+                errores.append(f"La calificación de «{etiqueta}» debe ser numérica.")
+                continue
 
-        if accion == "enviar" and incompletos:
-            messages.error(request, "Debes capturar todos los criterios antes de enviar la evaluación.")
-            valores_map, observ_map = _respuestas_maps(entrega)
-            _inyectar_respuestas_en_criterios(criterios, valores_map, observ_map)
+            if valor_int < 1 or valor_int > 5:
+                errores.append(f"La calificación de «{etiqueta}» debe estar entre 1 y 5.")
+                continue
+
+            if envio_final and not observacion:
+                errores.append(f"Captura una observación para «{etiqueta}».")
+
+            respuestas_payload.append({
+                "criterio": criterio,
+                "valor": valor_int,
+                "observacion": observacion,
+            })
+            valores_numericos.append(valor_int)
+
+        if envio_final and not observaciones_generales:
+            errores.append("Captura las observaciones generales antes de enviar la evaluación.")
+
+        if envio_final and len(respuestas_payload) != len(criterios):
+            # Evita que una evaluación parcial sea marcada como enviada.
+            if not any("todos los criterios" in err.lower() for err in errores):
+                errores.append("Debes capturar todos los criterios de la rúbrica antes de enviar la evaluación.")
+
+        if errores:
+            messages.error(request, "No se puede enviar la evaluación. " + " ".join(errores[:4]))
+            entrega.observaciones_generales = observaciones_generales
+            return render(
+                request,
+                "evaluacion/formulario.html",
+                _formulario_context(asignacion, proyecto, entrega, rubrica, ponencia, criterios),
+            )
+
+        # Solo se guardan respuestas después de validar todo el formulario.
+        criterios_con_respuesta = [item["criterio"].id for item in respuestas_payload]
+        EvaluacionRespuestaCriterio.objects.filter(entrega=entrega).exclude(criterio_id__in=criterios_con_respuesta).delete()
+
+        for item in respuestas_payload:
+            respuesta, _ = EvaluacionRespuestaCriterio.objects.get_or_create(
+                entrega=entrega,
+                criterio=item["criterio"],
+            )
+            respuesta.valor = item["valor"]
+            respuesta.observacion = item["observacion"]
+            try:
+                respuesta.full_clean()
+            except ValidationError as exc:
+                messages.error(request, "No fue posible guardar la evaluación. " + "; ".join(exc.messages))
+                return render(
+                    request,
+                    "evaluacion/formulario.html",
+                    _formulario_context(asignacion, proyecto, entrega, rubrica, ponencia, criterios),
+                )
+            respuesta.save()
+
+        entrega.observaciones_generales = observaciones_generales
+        entrega.calificacion = _calcular_total(valores_numericos)
+
+        if envio_final:
+            entrega.estado = EvaluacionEntrega.ESTADO_ENVIADA
+            entrega.fecha_envio = timezone.now()
+            messages.success(request, "La evaluación fue enviada correctamente.")
         else:
-            entrega.observaciones_generales = (request.POST.get("observaciones_generales") or "").strip()
-            entrega.calificacion = _calcular_total(valores_numericos)
-            if accion == "enviar":
-                entrega.estado = EvaluacionEntrega.ESTADO_ENVIADA
-                entrega.fecha_envio = timezone.now()
-                messages.success(request, "La evaluación fue enviada correctamente.")
-            else:
-                entrega.estado = EvaluacionEntrega.ESTADO_BORRADOR
-                messages.success(request, "Se guardó el borrador de la evaluación.")
-            entrega.save()
-            return redirect("evaluador:proyectos")
+            entrega.estado = EvaluacionEntrega.ESTADO_BORRADOR
+            entrega.fecha_envio = None
+            messages.success(request, "Se guardó el borrador de la evaluación.")
+
+        entrega.save()
+        return redirect("evaluador:proyectos")
 
     valores_map, observ_map = _respuestas_maps(entrega)
     _inyectar_respuestas_en_criterios(criterios, valores_map, observ_map)
@@ -573,27 +693,7 @@ def formulario(request, proyecto_id):
     return render(
         request,
         "evaluacion/formulario.html",
-        {
-            "active": "formulario",
-            "asignacion": asignacion,
-            "proyecto": _decorar_proyecto_para_vista(proyecto, entrega=entrega, rubrica=rubrica, ponencia=ponencia),
-            "ponencia": ponencia,
-            "rubrica": rubrica,
-            "criterios": criterios,
-            "entrega": entrega,
-            "responsable": _responsable_display(proyecto, ponencia),
-            "evento_nombre": _evento_display(proyecto, ponencia),
-            "titulo_registro": _titulo_display(proyecto, ponencia),
-            "codigo_registro": _codigo_display(proyecto, ponencia),
-            "fecha_registro": _fecha_para_asignacion(proyecto, ponencia),
-            "hora_inicio": getattr(ponencia, "hora_inicio", None) or getattr(proyecto, "hora_inicio", None) or getattr(proyecto, "inicio", None),
-            "hora_fin": getattr(ponencia, "hora_fin", None) or getattr(proyecto, "hora_fin", None) or getattr(proyecto, "fin", None),
-            "espacio": _display_space(
-                getattr(ponencia, "espacio_asignado", None)
-                or getattr(proyecto, "espacio_asignado", None)
-                or getattr(proyecto, "lugar", None)
-            ),
-        },
+        _formulario_context(asignacion, proyecto, entrega, rubrica, ponencia, criterios),
     )
 
 

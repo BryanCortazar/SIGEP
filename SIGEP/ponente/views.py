@@ -287,6 +287,77 @@ def _limpiar_inscripcion_ponente_si_corresponde(evento: Evento, usuario) -> None
     ).delete()
 
 
+
+def _validar_datos_basicos_ponencia(post_data) -> list[str]:
+    """
+    Valida los datos académicos mínimos del registro inicial de ponencia.
+    Los archivos y la presentación se cargan después en Gestión de Participación.
+    """
+    campos = {
+        "titulo": "Título",
+        "tipo": "Tipo",
+        "area_tematica": "Área temática",
+        "resumen": "Resumen",
+        "autores": "Autores",
+    }
+    errores = []
+    for campo, etiqueta in campos.items():
+        if not (post_data.get(campo) or "").strip():
+            errores.append(f"{etiqueta} es obligatorio.")
+    return errores
+
+
+def _validar_documentacion_participacion(ponencia: Ponencia, post_data, files) -> list[str]:
+    """
+    Valida que la gestión de participación cuente con la documentación mínima
+    requerida antes de permitir guardar cambios.
+    """
+    errores = []
+
+    tiene_cv = bool(files.get("cv_documento") or getattr(ponencia, "cv_documento", None))
+    tiene_resena = bool(files.get("resena_biografica") or getattr(ponencia, "resena_biografica", None))
+    tiene_diapositivas = bool(files.get("diapositivas_presentacion") or getattr(ponencia, "diapositivas_presentacion", None))
+    req_tecnicos = (post_data.get("requerimientos_tecnicos") or "").strip()
+
+    if not tiene_cv:
+        errores.append("Debes cargar el Curriculum Vitae en formato PDF.")
+    if not tiene_resena:
+        errores.append("Debes cargar la reseña biográfica en formato PDF.")
+    if not tiene_diapositivas:
+        errores.append("Debes cargar las diapositivas o presentación en formato PDF, PPT o PPTX.")
+    if not req_tecnicos:
+        errores.append("Debes capturar los requerimientos técnicos de la presentación.")
+
+    return errores
+
+
+
+def _get_ponencia_propietaria_or_redirect(request, ponencia_id, redirect_name: str = "ponente:dashboard"):
+    """
+    Resuelve una ponencia verificando que pertenezca al usuario autenticado.
+    Si el ID no existe o pertenece a otro ponente, no expone información técnica:
+    muestra un mensaje por modal y redirige de forma controlada.
+    """
+    try:
+        ponencia_id_int = int(ponencia_id)
+    except (TypeError, ValueError):
+        messages.error(request, "La ponencia solicitada no es válida.")
+        return None, redirect(redirect_name)
+
+    ponencia = (
+        Ponencia.objects
+        .select_related("evento", "evaluacion_proyecto")
+        .filter(pk=ponencia_id_int, ponente=request.user)
+        .first()
+    )
+
+    if ponencia is None:
+        messages.error(request, "No tienes permisos para acceder a esta ponencia o el registro no existe.")
+        return None, redirect(redirect_name)
+
+    return ponencia, None
+
+
 @login_required
 def panel(request):
     qs = Ponencia.objects.select_related("evento", "evaluacion_proyecto").filter(ponente=request.user)
@@ -384,12 +455,38 @@ def inscripcion(request):
                 messages.error(request, "Solo puedes registrar una ponencia por evento.")
                 return redirect(f"{request.path}?evento={evento_sel.id}")
 
-            form = PonenciaForm(request.POST, request.FILES)
+            errores_basicos = _validar_datos_basicos_ponencia(request.POST)
+            form = PonenciaForm(request.POST)
+
+            if errores_basicos:
+                for error in errores_basicos:
+                    messages.error(request, error)
+
+                ponencias = Ponencia.objects.filter(
+                    evento=evento_sel,
+                    ponente=request.user
+                ).order_by("-actualizado_en")
+
+                return render(request, "ponente/inscripcion/inscripcion.html", {
+                    "active": "inscripcion",
+                    "eventos": eventos,
+                    "evento_sel": evento_sel,
+                    "ponencias": ponencias,
+                    "puede_registrar": True,
+                    "form_registrar": form,
+                    "abrir_modal_registro": True,
+                    "errores_registro": errores_basicos,
+                })
+
             if form.is_valid():
                 ponencia = form.save(commit=False)
                 ponencia.evento = evento_sel
                 ponencia.ponente = request.user
                 ponencia.estado = Ponencia.ESTADO_REGISTRADA
+
+                # Los documentos y la presentación se cargan después en Gestión de Participación.
+                ponencia.archivo_resumen = None
+                ponencia.presentacion = None
 
                 try:
                     with transaction.atomic():
@@ -408,15 +505,30 @@ def inscripcion(request):
                     )
                     messages.success(
                         request,
-                        "La ponencia fue registrada correctamente y tu inscripción al evento quedó vinculada como ponente.",
+                        "La ponencia fue registrada correctamente. Ahora puedes completar la documentación desde Gestión de Participación.",
                     )
                 except IntegrityError:
                     messages.error(request, "Ya tienes una ponencia registrada en este evento.")
 
                 return redirect(f"{request.path}?evento={evento_sel.id}")
 
-            messages.error(request, "No fue posible registrar la ponencia. Verifica la información.")
-            return redirect(f"{request.path}?evento={evento_sel.id}")
+            messages.error(request, "No fue posible registrar la ponencia. Verifica los datos obligatorios.")
+
+            ponencias = Ponencia.objects.filter(
+                evento=evento_sel,
+                ponente=request.user
+            ).order_by("-actualizado_en")
+
+            return render(request, "ponente/inscripcion/inscripcion.html", {
+                "active": "inscripcion",
+                "eventos": eventos,
+                "evento_sel": evento_sel,
+                "ponencias": ponencias,
+                "puede_registrar": True,
+                "form_registrar": form,
+                "abrir_modal_registro": True,
+                "errores_registro": [],
+            })
 
         if action == "editar":
             if not evento_sel:
@@ -424,18 +536,18 @@ def inscripcion(request):
                 return redirect(request.path)
 
             ponencia_id = request.POST.get("ponencia_id")
-            ponencia = get_object_or_404(
-                Ponencia,
-                pk=ponencia_id,
-                evento=evento_sel,
-                ponente=request.user,
-            )
+            ponencia, redir = _get_ponencia_propietaria_or_redirect(request, ponencia_id, "ponente:inscripcion")
+            if redir:
+                return redir
+            if ponencia.evento_id != evento_sel.id:
+                messages.error(request, "La ponencia seleccionada no pertenece al evento activo.")
+                return redirect(f"{request.path}?evento={evento_sel.id}")
 
             if not ponencia.puede_editar():
                 messages.error(request, "Esta ponencia ya no permite edición.")
                 return redirect(f"{request.path}?evento={evento_sel.id}")
 
-            form = PonenciaForm(request.POST, request.FILES, instance=ponencia)
+            form = PonenciaForm(request.POST, instance=ponencia)
             if form.is_valid():
                 try:
                     with transaction.atomic():
@@ -466,12 +578,12 @@ def inscripcion(request):
                 return redirect(request.path)
 
             ponencia_id = request.POST.get("ponencia_id")
-            ponencia = get_object_or_404(
-                Ponencia,
-                pk=ponencia_id,
-                evento=evento_sel,
-                ponente=request.user,
-            )
+            ponencia, redir = _get_ponencia_propietaria_or_redirect(request, ponencia_id, "ponente:inscripcion")
+            if redir:
+                return redir
+            if ponencia.evento_id != evento_sel.id:
+                messages.error(request, "La ponencia seleccionada no pertenece al evento activo.")
+                return redirect(f"{request.path}?evento={evento_sel.id}")
 
             if not ponencia.puede_editar():
                 messages.error(request, "Esta ponencia ya no permite eliminación.")
@@ -522,7 +634,9 @@ def gestionar_participacion(request):
 
     ponencia_sel = None
     if ponencia_id:
-        ponencia_sel = get_object_or_404(Ponencia, pk=ponencia_id, ponente=request.user)
+        ponencia_sel, redir = _get_ponencia_propietaria_or_redirect(request, ponencia_id, "ponente:participacion")
+        if redir:
+            return redir
     else:
         ponencia_sel = ponencias.first()
 
@@ -532,6 +646,20 @@ def gestionar_participacion(request):
             return redirect("ponente:inscripcion")
 
         form = GestionParticipacionForm(request.POST, request.FILES, instance=ponencia_sel)
+        errores_documentacion = _validar_documentacion_participacion(ponencia_sel, request.POST, request.FILES)
+
+        if errores_documentacion:
+            for error in errores_documentacion:
+                messages.error(request, error)
+
+            return render(request, "ponente/participacion/gestionar.html", {
+                "active": "participacion",
+                "ponencias": ponencias,
+                "ponencia_sel": ponencia_sel,
+                "form": form,
+                "errores_documentacion": errores_documentacion,
+            })
+
         if form.is_valid():
             registro = form.save(commit=False)
 
@@ -601,11 +729,9 @@ def mis_resultados(request):
 
     ponencia_id = request.GET.get("ponencia")
     if ponencia_id:
-        ponencia_sel = get_object_or_404(
-            Ponencia.objects.select_related("evento", "evaluacion_proyecto"),
-            pk=ponencia_id,
-            ponente=request.user,
-        )
+        ponencia_sel, redir = _get_ponencia_propietaria_or_redirect(request, ponencia_id, "ponente:resultados")
+        if redir:
+            return redir
     else:
         ponencia_sel = ponencias.first()
 
@@ -696,11 +822,9 @@ def generar_constancia(request):
     ponencia_sel = None
 
     if ponencia_id:
-        ponencia_sel = get_object_or_404(
-            Ponencia.objects.select_related("evento", "evaluacion_proyecto"),
-            pk=ponencia_id,
-            ponente=request.user
-        )
+        ponencia_sel, redir = _get_ponencia_propietaria_or_redirect(request, ponencia_id, "ponente:constancia")
+        if redir:
+            return redir
         resumen_sel = _resumen_evaluacion_ponencia(ponencia_sel)
         ponencia_sel.evaluaciones_asignadas = resumen_sel["evaluaciones_asignadas"]
         ponencia_sel.evaluaciones_enviadas = resumen_sel["total_evaluaciones"]
@@ -725,11 +849,9 @@ def generar_constancia(request):
 
 @login_required
 def descargar_constancia_pdf(request, ponencia_id):
-    ponencia = get_object_or_404(
-        Ponencia.objects.select_related("evento", "evaluacion_proyecto"),
-        pk=ponencia_id,
-        ponente=request.user
-    )
+    ponencia, redir = _get_ponencia_propietaria_or_redirect(request, ponencia_id, "ponente:constancia")
+    if redir:
+        return redir
 
     resumen = _resumen_evaluacion_ponencia(ponencia)
     if not _constancia_disponible_para_ponencia(ponencia, resumen):

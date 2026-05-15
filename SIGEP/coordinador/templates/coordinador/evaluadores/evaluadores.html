@@ -8,7 +8,7 @@
     <div class="space-y-2">
       <h2 class="text-3xl font-bold text-[#0B1221] dark:text-white">Asignación de Evaluadores</h2>
       <p class="text-slate-500 dark:text-gray-400">
-        El coordinador asigna evaluadores a las ponencias y proyectos del evento activo, respetando la disponibilidad de horario.
+        El coordinador puede asignar evaluadores a proyectos o ponencias del evento activo en cualquier momento. Si todavía no existe horario o espacio, la asignación se guardará como pendiente de programación.
       </p>
       {% if evento %}
         <p class="text-sm text-slate-500 dark:text-gray-400">Evento seleccionado: <b>{{ evento.titulo }}</b></p>
@@ -156,9 +156,9 @@
 
 <div id="modalGestionar" class="fixed inset-0 z-50 hidden">
   <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalGestionar')"></div>
-  <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-4">
+  <div class="absolute inset-0 flex items-start sm:items-center justify-center p-3 sm:p-4">
+    <div class="w-full max-w-5xl max-h-[92vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
+      <div class="shrink-0 p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-4">
         <div class="space-y-1 min-w-0">
           <h3 class="text-lg font-bold text-slate-900 dark:text-white">Asignar evaluadores</h3>
           <p id="gestionarTitulo" class="text-sm text-slate-500 dark:text-gray-400 break-words"></p>
@@ -168,11 +168,12 @@
         </button>
       </div>
 
-      <form method="POST" action="{% url 'coordinador:eval_gestionar_guardar' %}" class="p-5 space-y-5" autocomplete="off">
+      <form method="POST" action="{% url 'coordinador:eval_gestionar_guardar' %}" class="flex min-h-0 flex-1 flex-col" autocomplete="off" id="formGestionarEvaluadores">
         {% csrf_token %}
         <input type="hidden" name="source_type" id="gestionar_source_type" value="">
         <input type="hidden" name="source_id" id="gestionar_source_id" value="">
 
+        <div class="flex-1 overflow-y-auto p-5 space-y-5">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Evento seleccionado</label>
@@ -197,26 +198,28 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora inicio</label>
-            <input type="time" name="inicio" id="gestionar_inicio" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" required>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora inicio <span class="normal-case font-semibold text-slate-400">(opcional)</span></label>
+            <input type="time" name="inicio" id="gestionar_inicio" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora fin</label>
-            <input type="time" name="fin" id="gestionar_fin" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" required>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora fin <span class="normal-case font-semibold text-slate-400">(opcional)</span></label>
+            <input type="time" name="fin" id="gestionar_fin" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lugar <span class="normal-case font-semibold text-slate-400">(opcional)</span></label>
             <input type="text" name="lugar" id="gestionar_lugar" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" placeholder="Ej. Sala A / Auditorio">
           </div>
         </div>
 
         <div class="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/20 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
-          El coordinador puede asignar uno o varios evaluadores al mismo registro, pero el sistema bloquea automáticamente cualquier traslape de horario.
+          Puedes asignar evaluadores aunque el espacio todavía no esté definido. Si capturas hora de inicio y hora fin, el sistema validará traslapes de horario; si no capturas horario, la asignación quedará guardada y pendiente de programación.
         </div>
 
+        <div id="evaluadorClientErrors" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Evaluadores disponibles</label>
-          <div class="max-h-72 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Evaluadores disponibles <span class="text-red-500">*</span></label>
+          <div class="max-h-52 sm:max-h-60 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
             {% for card in evaluadores_cards %}
               <label class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40">
                 <input type="checkbox" name="evaluadores" value="{{ card.id }}" class="mt-1 rounded border-slate-300 dark:border-slate-700">
@@ -234,7 +237,9 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2">
+        </div>
+
+        <div class="shrink-0 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-4">
           <button type="button" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold" onclick="closeModal('modalGestionar')">
             Cancelar
           </button>
@@ -257,6 +262,27 @@
     });
   }
 
+  function validarAsignacionEvaluadores(e) {
+    const errorBox = document.getElementById("evaluadorClientErrors");
+    const sourceId = document.getElementById("gestionar_source_id")?.value || "";
+    const selected = document.querySelectorAll("#modalGestionar input[type='checkbox'][name='evaluadores']:checked");
+    const errors = [];
+
+    if (!sourceId) errors.push("Selecciona un proyecto o ponencia válido del evento activo.");
+    if (!selected.length) errors.push("Selecciona al menos un evaluador para guardar la asignación.");
+
+    if (errors.length) {
+      e.preventDefault();
+      errorBox.innerHTML = "<strong>No se puede guardar la asignación:</strong><ul class='list-disc pl-5 mt-2 space-y-1'>" + errors.map(x => `<li>${x}</li>`).join("") + "</ul>";
+      errorBox.classList.remove("hidden");
+      return false;
+    }
+    errorBox.classList.add("hidden");
+    return true;
+  }
+
+  document.getElementById("formGestionarEvaluadores")?.addEventListener("submit", validarAsignacionEvaluadores);
+
   function openGestionarModal(sourceType, sourceId, tipoLabel, titulo, responsable, inicio, fin, lugar, assignedCsv) {
     document.getElementById("gestionar_source_type").value = sourceType || "";
     document.getElementById("gestionar_source_id").value = sourceId || "";
@@ -274,6 +300,7 @@
       if (assigned.has(String(cb.value))) cb.checked = true;
     });
 
+    document.getElementById("evaluadorClientErrors")?.classList.add("hidden");
     openModal("modalGestionar");
   }
 </script>

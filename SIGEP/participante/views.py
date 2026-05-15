@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from django.conf import settings
 from io import BytesIO
 from types import SimpleNamespace
 
@@ -153,6 +154,73 @@ def _build_qr_svg(data: str) -> str:
     return output.getvalue().decode("utf-8")
 
 
+
+def _build_pase_validacion_url(request, pase: PaseAccesoParticipante) -> str:
+    """
+    Construye la URL pública de validación del QR.
+
+    En desarrollo puede usar request.build_absolute_uri().
+    Para pruebas con celular o producción, se puede definir en settings.py:
+        PASE_QR_BASE_URL = "http://192.168.1.20:8000"
+    o:
+        SITE_URL = "https://tudominio.edu.mx"
+    """
+    path = pase.url_validacion()
+    base_url = (
+        getattr(settings, "PASE_QR_BASE_URL", "")
+        or getattr(settings, "SITE_URL", "")
+        or ""
+    ).strip().rstrip("/")
+
+    if base_url:
+        return f"{base_url}{path}"
+
+    return request.build_absolute_uri(path)
+
+
+def _build_pase_context(pase: PaseAccesoParticipante | None, proyecto: ProyectoParticipante | None, *, es_valido: bool, motivo: str = "") -> dict:
+    """
+    Contexto enriquecido para el pase y para la página pública de validación.
+    """
+    evento = getattr(proyecto, "evento", None) if proyecto else None
+    participante = getattr(proyecto, "participante", None) if proyecto else None
+
+    nombre_participante = ""
+    if proyecto:
+        nombre_participante = (proyecto.nombre_participante or "").strip()
+    if not nombre_participante and participante:
+        nombre_participante = participante.get_full_name().strip() or getattr(participante, "username", "")
+
+    horario = "Pendiente"
+    if proyecto and proyecto.hora_inicio and proyecto.hora_fin:
+        horario = f"{proyecto.hora_inicio.strftime('%H:%M')} - {proyecto.hora_fin.strftime('%H:%M')}"
+
+    return {
+        "pase": pase,
+        "proyecto": proyecto,
+        "evento": evento,
+        "participante": participante,
+        "es_valido": es_valido,
+        "motivo": motivo,
+        "nombre_participante": nombre_participante or "Participante",
+        "correo_participante": getattr(proyecto, "correo", "") if proyecto else "",
+        "telefono_participante": getattr(proyecto, "telefono", "") if proyecto else "",
+        "institucion": getattr(proyecto, "institucion_empresa", "") if proyecto else "",
+        "evento_nombre": proyecto.nombre_evento() if proyecto else "Evento no disponible",
+        "proyecto_nombre": getattr(proyecto, "nombre_proyecto", "") if proyecto else "Proyecto no disponible",
+        "categoria": proyecto.get_categoria_display() if proyecto else "",
+        "estado_proyecto": proyecto.get_estado_display() if proyecto else "No disponible",
+        "estado_programacion": proyecto.get_estado_programacion_display() if proyecto else "No disponible",
+        "fecha_programada": getattr(proyecto, "fecha_programada", None) if proyecto else None,
+        "horario": horario,
+        "espacio": getattr(proyecto, "espacio_asignado", "") if proyecto else "",
+        "numero_integrantes": getattr(proyecto, "numero_integrantes", None) if proyecto else None,
+        "total_escaneos": getattr(pase, "total_escaneos", 0) if pase else 0,
+        "ultimo_escaneo": getattr(pase, "ultimo_escaneo", None) if pase else None,
+        "pase_activo": bool(getattr(pase, "activo", False)) if pase else False,
+        "token": str(getattr(pase, "token", "")) if pase else "",
+    }
+
 def _resolve_constancia_project(user):
     return (
         ProyectoParticipante.objects.filter(participante=user)
@@ -224,6 +292,51 @@ def _build_constancia_state(user, proyecto: ProyectoParticipante | None):
         "porcentaje_evaluacion": int((evaluaciones_enviadas / total_evaluadores) * 100) if total_evaluadores else 0,
     })
     return data
+
+
+
+def _validar_gestion_documental_participante(proyecto: ProyectoParticipante, post_data, files) -> list[str]:
+    """
+    Valida que la gestión de participación del participante no se guarde incompleta.
+    La información básica del proyecto se registra en "Elegir evento"; esta sección
+    se enfoca en documentos y requerimientos técnicos.
+    """
+    errores = []
+
+    limpiar_presentacion = post_data.get("presentacion-clear") in {"on", "true", "1"}
+    limpiar_informe = post_data.get("informe-clear") in {"on", "true", "1"}
+
+    tiene_presentacion = bool(files.get("presentacion") or (getattr(proyecto, "presentacion", None) and not limpiar_presentacion))
+    tiene_informe = bool(files.get("informe") or (getattr(proyecto, "informe", None) and not limpiar_informe))
+    requerimientos = (post_data.get("requerimientos_tecnicos") or "").strip()
+
+    if not tiene_presentacion:
+        errores.append("Debes cargar la presentación del proyecto en formato PDF, PPT o PPTX.")
+    if not tiene_informe:
+        errores.append("Debes cargar el informe o documentación del proyecto en formato PDF, DOC o DOCX.")
+    if not requerimientos:
+        errores.append("Debes capturar los requerimientos técnicos del proyecto.")
+
+    return errores
+
+
+def _build_resumen_gestion_participante(proyecto: ProyectoParticipante | None):
+    if proyecto is None:
+        return None
+
+    return {
+        "evento": proyecto.nombre_evento(),
+        "proyecto": proyecto.nombre_proyecto,
+        "categoria": proyecto.get_categoria_display(),
+        "estado": proyecto.get_estado_display(),
+        "programacion": proyecto.get_estado_programacion_display(),
+        "avance": proyecto.porcentaje_documentacion(),
+        "presentacion_cargada": bool(proyecto.presentacion),
+        "informe_cargado": bool(proyecto.informe),
+        "requiere_apoyo": bool((proyecto.requerimientos_tecnicos or "").strip()),
+        "edicion_habilitada": proyecto.puede_editar(),
+    }
+
 
 
 @login_required
@@ -427,11 +540,28 @@ def gestionar_participacion(request):
     if proyecto_sel is None:
         proyecto_sel = proyectos.first()
 
+    errores_documentacion = []
+
     if request.method == "POST" and proyecto_sel is not None:
         form = GestionParticipacionForm(request.POST, request.FILES, instance=proyecto_sel)
+
         if not proyecto_sel.puede_editar():
             messages.error(request, "Este proyecto ya no permite actualizar documentación desde esta opción.")
             return redirect(f"{request.path}?proyecto={proyecto_sel.id}")
+
+        errores_documentacion = _validar_gestion_documental_participante(proyecto_sel, request.POST, request.FILES)
+        if errores_documentacion:
+            for error in errores_documentacion:
+                messages.error(request, error)
+
+            return render(request, "participante/gestion/gestionar_participacion.html", {
+                "active": "gestionar_participacion",
+                "proyectos": proyectos,
+                "proyecto_sel": proyecto_sel,
+                "form": form,
+                "resumen": _build_resumen_gestion_participante(proyecto_sel),
+                "errores_documentacion": errores_documentacion,
+            })
 
         if form.is_valid():
             proyecto_actualizado = form.save()
@@ -451,20 +581,7 @@ def gestionar_participacion(request):
     else:
         form = GestionParticipacionForm(instance=proyecto_sel) if proyecto_sel is not None else None
 
-    resumen = None
-    if proyecto_sel is not None:
-        resumen = {
-            "evento": proyecto_sel.nombre_evento(),
-            "proyecto": proyecto_sel.nombre_proyecto,
-            "categoria": proyecto_sel.get_categoria_display(),
-            "estado": proyecto_sel.get_estado_display(),
-            "programacion": proyecto_sel.get_estado_programacion_display(),
-            "avance": proyecto_sel.porcentaje_documentacion(),
-            "presentacion_cargada": bool(proyecto_sel.presentacion),
-            "informe_cargado": bool(proyecto_sel.informe),
-            "requiere_apoyo": bool((proyecto_sel.requerimientos_tecnicos or "").strip()),
-            "edicion_habilitada": proyecto_sel.puede_editar(),
-        }
+    resumen = _build_resumen_gestion_participante(proyecto_sel)
 
     return render(request, "participante/gestion/gestionar_participacion.html", {
         "active": "gestionar_participacion",
@@ -472,6 +589,7 @@ def gestionar_participacion(request):
         "proyecto_sel": proyecto_sel,
         "form": form,
         "resumen": resumen,
+        "errores_documentacion": errores_documentacion,
     })
 
 
@@ -489,7 +607,7 @@ def mi_pase(request):
     proyecto = (
         ProyectoParticipante.objects.filter(participante=request.user)
         .exclude(estado=ProyectoParticipante.ESTADO_RECHAZADO)
-        .select_related("evento")
+        .select_related("evento", "participante")
         .order_by("-actualizado_en")
         .first()
     )
@@ -499,34 +617,61 @@ def mi_pase(request):
     validacion_url = ""
 
     if pase is not None:
-        validacion_url = request.build_absolute_uri(pase.url_validacion())
+        validacion_url = _build_pase_validacion_url(request, pase)
         qr_svg = _build_qr_svg(validacion_url)
 
-    return render(request, "participante/pase/pase.html", {
+    contexto = _build_pase_context(
+        pase,
+        proyecto,
+        es_valido=bool(pase and pase.activo and proyecto and proyecto.estado != ProyectoParticipante.ESTADO_RECHAZADO),
+        motivo="" if pase else "Aún no existe un proyecto activo para generar el pase.",
+    )
+    contexto.update({
         "active": "mi_pase",
-        "proyecto": proyecto,
-        "pase": pase,
         "qr_svg": qr_svg,
         "validacion_url": validacion_url,
         "qr_disponible": bool(qr_svg),
     })
 
+    return render(request, "participante/pase/pase.html", contexto)
+
 
 def validar_pase_qr(request, token):
-    pase = get_object_or_404(
-        PaseAccesoParticipante.objects.select_related("proyecto", "proyecto__evento", "proyecto__participante"),
-        token=token,
+    pase = (
+        PaseAccesoParticipante.objects
+        .select_related("proyecto", "proyecto__evento", "proyecto__participante")
+        .filter(token=token)
+        .first()
     )
 
-    if pase.activo:
-        pase.registrar_escaneo()
+    if pase is None:
+        return render(request, "participante/pase/validacion_qr.html", _build_pase_context(
+            None,
+            None,
+            es_valido=False,
+            motivo="El código QR no corresponde a un pase registrado en SIGEP.",
+        ))
 
     proyecto = pase.proyecto
-    return render(request, "participante/pase/validacion_qr.html", {
-        "pase": pase,
-        "proyecto": proyecto,
-        "es_valido": pase.activo and proyecto.estado != ProyectoParticipante.ESTADO_RECHAZADO,
-    })
+    es_valido = bool(pase.activo and proyecto.estado != ProyectoParticipante.ESTADO_RECHAZADO)
+    motivo = ""
+
+    if not pase.activo:
+        motivo = "El pase se encuentra inactivo."
+    elif proyecto.estado == ProyectoParticipante.ESTADO_RECHAZADO:
+        motivo = "El proyecto asociado al pase fue rechazado."
+
+    if es_valido:
+        pase.registrar_escaneo()
+        # Recargar datos para mostrar total_escaneos y ultimo_escaneo actualizados.
+        pase.refresh_from_db()
+
+    return render(request, "participante/pase/validacion_qr.html", _build_pase_context(
+        pase,
+        proyecto,
+        es_valido=es_valido,
+        motivo=motivo,
+    ))
 
 
 @login_required

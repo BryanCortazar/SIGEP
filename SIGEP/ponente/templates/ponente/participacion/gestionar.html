@@ -22,19 +22,6 @@
     </div>
   </div>
 
-  {% if messages %}
-    <div class="space-y-3">
-      {% for message in messages %}
-        <div class="rounded-2xl border px-4 py-3 text-sm font-medium
-          {% if message.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700
-          {% elif message.tags == 'error' %}border-red-200 bg-red-50 text-red-700
-          {% else %}border-blue-200 bg-blue-50 text-blue-700{% endif %}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-
   {% if ponencias %}
     <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
       <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
@@ -71,6 +58,21 @@
       {% csrf_token %}
 
       <section class="xl:col-span-2 space-y-6">
+        {% if errores_documentacion %}
+          <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p class="font-semibold mb-2">No se puede guardar la gestión de participación porque faltan documentos obligatorios:</p>
+            <ul class="list-disc pl-5 space-y-1">
+              {% for error in errores_documentacion %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          Para cumplir con la gestión de participación, debes cargar CV, reseña biográfica, diapositivas o presentación, y capturar los requerimientos técnicos. El sistema no permitirá guardar información incompleta.
+        </div>
+
         {% if form.errors %}
           <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <p class="font-semibold mb-2">Corrige los siguientes campos:</p>
@@ -112,7 +114,7 @@
                     <p class="text-sm text-slate-500">
                       {% if ponencia_sel.cv_documento %}
                         <a href="{{ ponencia_sel.cv_documento.url }}" target="_blank" class="hover:text-primary">
-                          {{ ponencia_sel.cv_documento.name|cut:"ponente/cv/" }}
+                          Ver CV cargado
                         </a>
                       {% else %}
                         Sin archivo cargado.
@@ -130,8 +132,30 @@
               </div>
 
               <div class="mt-4">
-                <label class="block text-sm font-medium text-slate-700 mb-2">Subir CV en PDF</label>
-                {{ form.cv_documento }}
+                <label class="block text-sm font-medium text-slate-700 mb-2">Subir CV en PDF <span class="text-red-500">*</span></label>
+                
+                {% if ponencia_sel.cv_documento %}
+                  <div class="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span class="font-semibold">CV cargado correctamente</span>
+                      <a href="{{ ponencia_sel.cv_documento.url }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:text-primary-dark">
+                        Ver archivo
+                      </a>
+                    </div>
+                    <label class="mt-3 inline-flex items-center gap-2 text-xs text-slate-600">
+                      <input type="checkbox" name="cv_documento-clear" id="cv_documento-clear_id" class="rounded border-slate-300 text-primary focus:ring-primary">
+                      Eliminar CV actual
+                    </label>
+                  </div>
+                {% else %}
+                  <p class="mb-3 text-xs text-slate-500">Aún no se ha cargado el CV.</p>
+                {% endif %}
+                <input type="file"
+                       name="cv_documento"
+                       id="id_cv_documento"
+                       accept=".pdf,application/pdf"
+                       class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200">
+
               </div>
             </div>
 
@@ -146,7 +170,7 @@
                     <p class="text-sm text-slate-500">
                       {% if ponencia_sel.resena_biografica %}
                         <a href="{{ ponencia_sel.resena_biografica.url }}" target="_blank" class="hover:text-primary">
-                          {{ ponencia_sel.resena_biografica.name|cut:"ponente/resenas/" }}
+                          Ver reseña cargada
                         </a>
                       {% else %}
                         Sin archivo cargado.
@@ -164,8 +188,30 @@
               </div>
 
               <div class="mt-4">
-                <label class="block text-sm font-medium text-slate-700 mb-2">Subir reseña en PDF</label>
-                {{ form.resena_biografica }}
+                <label class="block text-sm font-medium text-slate-700 mb-2">Subir reseña en PDF <span class="text-red-500">*</span></label>
+                
+                {% if ponencia_sel.resena_biografica %}
+                  <div class="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span class="font-semibold">Reseña cargada correctamente</span>
+                      <a href="{{ ponencia_sel.resena_biografica.url }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:text-primary-dark">
+                        Ver archivo
+                      </a>
+                    </div>
+                    <label class="mt-3 inline-flex items-center gap-2 text-xs text-slate-600">
+                      <input type="checkbox" name="resena_biografica-clear" id="resena_biografica-clear_id" class="rounded border-slate-300 text-primary focus:ring-primary">
+                      Eliminar reseña actual
+                    </label>
+                  </div>
+                {% else %}
+                  <p class="mb-3 text-xs text-slate-500">Aún no se ha cargado la reseña biográfica.</p>
+                {% endif %}
+                <input type="file"
+                       name="resena_biografica"
+                       id="id_resena_biografica"
+                       accept=".pdf,application/pdf"
+                       class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200">
+
               </div>
             </div>
 
@@ -180,7 +226,7 @@
                     <p class="text-sm text-slate-500">
                       {% if ponencia_sel.diapositivas_presentacion %}
                         <a href="{{ ponencia_sel.diapositivas_presentacion.url }}" target="_blank" class="hover:text-primary">
-                          {{ ponencia_sel.diapositivas_presentacion.name|cut:"ponente/diapositivas/" }}
+                          Ver presentación cargada
                         </a>
                       {% else %}
                         Sin archivo cargado.
@@ -198,8 +244,30 @@
               </div>
 
               <div class="mt-4">
-                <label class="block text-sm font-medium text-slate-700 mb-2">Subir presentación (PDF, PPT o PPTX)</label>
-                {{ form.diapositivas_presentacion }}
+                <label class="block text-sm font-medium text-slate-700 mb-2">Subir presentación (PDF, PPT o PPTX) <span class="text-red-500">*</span></label>
+                
+                {% if ponencia_sel.diapositivas_presentacion %}
+                  <div class="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span class="font-semibold">Presentación cargada correctamente</span>
+                      <a href="{{ ponencia_sel.diapositivas_presentacion.url }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:text-primary-dark">
+                        Ver archivo
+                      </a>
+                    </div>
+                    <label class="mt-3 inline-flex items-center gap-2 text-xs text-slate-600">
+                      <input type="checkbox" name="diapositivas_presentacion-clear" id="diapositivas_presentacion-clear_id" class="rounded border-slate-300 text-primary focus:ring-primary">
+                      Eliminar presentación actual
+                    </label>
+                  </div>
+                {% else %}
+                  <p class="mb-3 text-xs text-slate-500">Aún no se ha cargado la presentación.</p>
+                {% endif %}
+                <input type="file"
+                       name="diapositivas_presentacion"
+                       id="id_diapositivas_presentacion"
+                       accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                       class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200">
+
               </div>
             </div>
           </div>
@@ -219,7 +287,7 @@
           </div>
 
           <div class="p-6">
-            <label class="block text-sm font-medium text-slate-700 mb-2">Detalle de requerimientos</label>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Detalle de requerimientos <span class="text-red-500">*</span></label>
             {{ form.requerimientos_tecnicos }}
           </div>
         </div>
@@ -228,7 +296,7 @@
           <button type="submit"
                   class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white hover:bg-blue-700 text-sm font-semibold">
             <span class="material-symbols-outlined text-[20px]">save</span>
-            Guardar documentación
+            Guardar documentación completa
           </button>
         </div>
       </section>

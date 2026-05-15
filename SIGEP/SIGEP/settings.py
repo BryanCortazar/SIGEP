@@ -57,6 +57,14 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = "principal.Usuario"
 
+# ==============================
+# CONFIGURACIÓN DE AUTENTICACIÓN
+# ==============================
+
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -65,6 +73,9 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    
+    'principal.middleware.RoleAccessMiddleware',
+    
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 

@@ -1,11 +1,218 @@
 {% extends "base_eval.html" %}
 {% block title %}Evaluador: Configuración - SIGEP{% endblock %}
+
 {% block content %}
 <div class="max-w-6xl mx-auto">
-  <div class="mb-8"><h1 class="text-2xl font-bold text-gray-900 mb-2">Configuración del Perfil</h1><p class="text-gray-500">Gestione sus datos personales y preferencias de la cuenta.</p></div>
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Configuración del Perfil</h1>
+    <p class="text-gray-500">Gestione sus datos personales y preferencias de la cuenta.</p>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-    <div class="lg:col-span-4"><div class="bg-white rounded-xl shadow-card p-8 flex flex-col items-center text-center h-full border border-gray-100">{% if perfil.avatar %}<img src="{{ perfil.avatar.url }}" class="w-32 h-32 rounded-full object-cover mb-6 shadow-md ring-2 ring-white" alt="Avatar"/>{% else %}<div class="w-32 h-32 rounded-full bg-primary text-white flex items-center justify-center text-3xl font-black mb-6">{{ request.user.first_name|default:'U'|slice:':1' }}{{ request.user.last_name|default:''|slice:':1' }}</div>{% endif %}<h2 class="text-xl font-bold text-gray-900">{{ request.user.get_full_name|default:request.user.username }}</h2><p class="text-sm text-gray-500 mt-1">Evaluador</p><div class="w-full space-y-3 text-left mt-6"><div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3"><p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Correo</p><p class="mt-1 text-sm font-medium text-slate-800 break-all">{{ request.user.email|default:'No capturado' }}</p></div><div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3"><p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Puesto</p><p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.puesto|default:'No capturado' }}</p></div><div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3"><p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Institución</p><p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.institucion|default:'No capturada' }}</p></div><div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3"><p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Teléfono</p><p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.telefono|default:'No capturado' }}</p></div>{% if perfil.cv %}<a href="{{ perfil.cv.url }}" target="_blank" rel="noopener" class="block text-center text-sm font-medium text-primary hover:text-blue-700 transition-colors pt-2">Ver CV actual (PDF)</a>{% else %}<p class="text-xs text-gray-500 text-center pt-2">Sin CV cargado</p>{% endif %}</div></div></div>
-    <div class="lg:col-span-8"><div class="bg-white rounded-xl shadow-sm p-8 h-full flex flex-col border border-gray-100"><div class="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100"><span class="material-symbols-outlined text-primary">person</span><h3 class="text-lg font-bold text-gray-900">Información General</h3></div><form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">{% csrf_token %}<div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nombres</label>{{ cuenta_form.nombres }}{% for e in cuenta_form.nombres.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Apellidos</label>{{ cuenta_form.apellidos }}{% for e in cuenta_form.apellidos.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2 md:col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Correo</label>{{ cuenta_form.correo }}{% for e in cuenta_form.correo.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Puesto</label>{{ perfil_form.puesto }}{% for e in perfil_form.puesto.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Institución</label>{{ perfil_form.institucion }}{% for e in perfil_form.institucion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Teléfono</label>{{ perfil_form.telefono }}{% for e in perfil_form.telefono.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="md:col-span-2 space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Bio / Descripción</label>{{ perfil_form.bio }}{% for e in perfil_form.bio.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Foto (JPG/PNG/WebP, máx 5MB)</label>{{ perfil_form.avatar }}{% for e in perfil_form.avatar.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">CV (PDF, máx 15MB)</label>{{ perfil_form.cv }}{% for e in perfil_form.cv.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="md:col-span-2 pt-4 border-t border-gray-100"><h4 class="font-bold text-gray-900 mb-3">Cambiar contraseña (opcional)</h4><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Contraseña actual</label>{{ cuenta_form.password_actual }}{% for e in cuenta_form.password_actual.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nueva contraseña</label>{{ cuenta_form.password_nueva }}{% for e in cuenta_form.password_nueva.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div><div class="space-y-2"><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confirmación</label>{{ cuenta_form.password_confirmacion }}{% for e in cuenta_form.password_confirmacion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}</div></div></div>{% if cuenta_form.non_field_errors %}<div class="md:col-span-2 mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3">{% for e in cuenta_form.non_field_errors %}<p class="text-sm text-red-700">{{ e }}</p>{% endfor %}</div>{% endif %}<div class="md:col-span-2 flex justify-end"><button type="submit" class="px-5 py-3 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-semibold">Guardar cambios</button></div></form></div></div>
+    <aside class="lg:col-span-4">
+      <div class="bg-white rounded-xl shadow-card p-8 flex flex-col items-center text-center h-full border border-gray-100">
+        {% if perfil.avatar %}
+          <img src="{{ perfil.avatar.url }}" class="w-32 h-32 rounded-full object-cover mb-6 shadow-md ring-2 ring-white" alt="Avatar"/>
+        {% else %}
+          <div class="w-32 h-32 rounded-full bg-primary text-white flex items-center justify-center text-3xl font-black mb-6">
+            {{ request.user.first_name|default:'U'|slice:':1' }}{{ request.user.last_name|default:''|slice:':1' }}
+          </div>
+        {% endif %}
+
+        <h2 class="text-xl font-bold text-gray-900">{{ request.user.get_full_name|default:request.user.username }}</h2>
+        <p class="text-sm text-gray-500 mt-1">Evaluador</p>
+
+        <div class="w-full space-y-3 text-left mt-6">
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Correo</p>
+            <p class="mt-1 text-sm font-medium text-slate-800 break-all">{{ request.user.email|default:'No capturado' }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Puesto</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.puesto|default:'No capturado' }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Institución</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.institucion|default:'No capturada' }}</p>
+          </div>
+
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Teléfono</p>
+            <p class="mt-1 text-sm font-medium text-slate-800">{{ perfil.telefono|default:'No capturado' }}</p>
+          </div>
+
+          {% if perfil.cv %}
+            <a href="{{ perfil.cv.url }}" target="_blank" rel="noopener" class="block text-center text-sm font-medium text-primary hover:text-blue-700 transition-colors pt-2">
+              Ver CV actual (PDF)
+            </a>
+          {% else %}
+            <p class="text-xs text-gray-500 text-center pt-2">Sin CV cargado</p>
+          {% endif %}
+        </div>
+      </div>
+    </aside>
+
+    <section class="lg:col-span-8">
+      <div class="bg-white rounded-xl shadow-sm p-8 h-full flex flex-col border border-gray-100">
+        <div class="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
+          <span class="material-symbols-outlined text-primary">person</span>
+          <h3 class="text-lg font-bold text-gray-900">Información General</h3>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+          {% csrf_token %}
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nombres</label>
+            {{ cuenta_form.nombres }}
+            {% for e in cuenta_form.nombres.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Apellidos</label>
+            {{ cuenta_form.apellidos }}
+            {% for e in cuenta_form.apellidos.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="space-y-2 md:col-span-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Correo</label>
+            {{ cuenta_form.correo }}
+            {% for e in cuenta_form.correo.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Puesto</label>
+            {{ perfil_form.puesto }}
+            {% for e in perfil_form.puesto.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Institución</label>
+            {{ perfil_form.institucion }}
+            {% for e in perfil_form.institucion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Teléfono</label>
+            {{ perfil_form.telefono }}
+            {% for e in perfil_form.telefono.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="md:col-span-2 space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Bio / Descripción</label>
+            {{ perfil_form.bio }}
+            {% for e in perfil_form.bio.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="space-y-3">
+            <label for="id_avatar" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">
+              Foto (JPG/PNG/WebP, máx 5MB)
+            </label>
+
+            {% if perfil.avatar %}
+              <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="font-medium">Foto actual cargada</span>
+                  <a href="{{ perfil.avatar.url }}" target="_blank" rel="noopener" class="text-primary hover:text-primary-dark font-semibold">
+                    Ver imagen
+                  </a>
+                </div>
+                <label class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                  <input type="checkbox" name="avatar-clear" id="avatar-clear_id" class="rounded border-slate-300 text-primary focus:ring-primary">
+                  Eliminar foto actual
+                </label>
+              </div>
+            {% else %}
+              <p class="text-xs text-slate-500">Sin foto cargada actualmente.</p>
+            {% endif %}
+
+            <input
+              type="file"
+              name="avatar"
+              id="id_avatar"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
+            >
+            {% for e in perfil_form.avatar.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="space-y-3">
+            <label for="id_cv" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">
+              CV (PDF, máx 15MB)
+            </label>
+
+            {% if perfil.cv %}
+              <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="font-medium">CV actual cargado</span>
+                  <a href="{{ perfil.cv.url }}" target="_blank" rel="noopener" class="text-primary hover:text-primary-dark font-semibold">
+                    Ver PDF
+                  </a>
+                </div>
+                <label class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                  <input type="checkbox" name="cv-clear" id="cv-clear_id" class="rounded border-slate-300 text-primary focus:ring-primary">
+                  Eliminar CV actual
+                </label>
+              </div>
+            {% else %}
+              <p class="text-xs text-slate-500">Sin CV cargado actualmente.</p>
+            {% endif %}
+
+            <input
+              type="file"
+              name="cv"
+              id="id_cv"
+              accept=".pdf,application/pdf"
+              class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
+            >
+            {% for e in perfil_form.cv.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+          </div>
+
+          <div class="md:col-span-2 pt-4 border-t border-gray-100">
+            <h4 class="font-bold text-gray-900 mb-3">Cambiar contraseña (opcional)</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Contraseña actual</label>
+                {{ cuenta_form.password_actual }}
+                {% for e in cuenta_form.password_actual.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Nueva contraseña</label>
+                {{ cuenta_form.password_nueva }}
+                {% for e in cuenta_form.password_nueva.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confirmación</label>
+                {{ cuenta_form.password_confirmacion }}
+                {% for e in cuenta_form.password_confirmacion.errors %}<p class="text-xs text-red-500">{{ e }}</p>{% endfor %}
+              </div>
+            </div>
+          </div>
+
+          {% if cuenta_form.non_field_errors %}
+            <div class="md:col-span-2 mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+              {% for e in cuenta_form.non_field_errors %}<p class="text-sm text-red-700">{{ e }}</p>{% endfor %}
+            </div>
+          {% endif %}
+
+          {% if perfil_form.non_field_errors %}
+            <div class="md:col-span-2 mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+              {% for e in perfil_form.non_field_errors %}<p class="text-sm text-red-700">{{ e }}</p>{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="md:col-span-2 flex justify-end">
+            <button type="submit" class="px-5 py-3 rounded-xl bg-primary text-white hover:bg-primary-dark text-sm font-semibold">
+              Guardar cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
   </div>
 </div>
 {% endblock %}

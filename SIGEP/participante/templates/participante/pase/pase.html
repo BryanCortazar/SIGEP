@@ -10,7 +10,9 @@
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h3 class="text-lg font-bold text-slate-900">Pase del participante</h3>
-        <p class="mt-1 text-sm text-slate-500">Este pase genera un código QR único para validar el acceso y consultar los datos del participante y su proyecto.</p>
+        <p class="mt-1 text-sm text-slate-500">
+          Este pase genera un código QR único para validar el acceso y consultar los datos del participante, evento y proyecto.
+        </p>
       </div>
       {% if pase %}
       <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {% if pase.activo %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}">
@@ -23,8 +25,8 @@
     <div class="mt-6 rounded-2xl border border-slate-200 overflow-hidden">
       <div class="bg-primary px-6 py-5 text-white">
         <p class="text-sm opacity-90">SIGEP · Pase de acceso</p>
-        <h4 class="mt-2 text-2xl font-bold">{{ proyecto.nombre_participante }}</h4>
-        <p class="mt-1 text-sm opacity-90">{{ proyecto.nombre_proyecto }}</p>
+        <h4 class="mt-2 text-2xl font-bold">{{ nombre_participante }}</h4>
+        <p class="mt-1 text-sm opacity-90">{{ proyecto_nombre }}</p>
       </div>
 
       <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -32,35 +34,43 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <p class="text-slate-500">Evento</p>
-              <p class="font-semibold text-slate-900 mt-1">{{ proyecto.nombre_evento }}</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ evento_nombre }}</p>
             </div>
             <div>
               <p class="text-slate-500">Categoría</p>
-              <p class="font-semibold text-slate-900 mt-1">{{ proyecto.get_categoria_display }}</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ categoria }}</p>
             </div>
             <div>
               <p class="text-slate-500">Fecha</p>
-              <p class="font-semibold text-slate-900 mt-1">{{ proyecto.fecha_programada|date:"d/m/Y"|default:"Pendiente" }}</p>
+              <p class="font-semibold text-slate-900 mt-1">{% if fecha_programada %}{{ fecha_programada|date:"d/m/Y" }}{% else %}Pendiente{% endif %}</p>
+            </div>
+            <div>
+              <p class="text-slate-500">Horario</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ horario }}</p>
             </div>
             <div>
               <p class="text-slate-500">Espacio</p>
-              <p class="font-semibold text-slate-900 mt-1">{{ proyecto.espacio_asignado|default:"Por definir" }}</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ espacio|default:"Por definir" }}</p>
+            </div>
+            <div>
+              <p class="text-slate-500">Programación</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ estado_programacion }}</p>
             </div>
             <div>
               <p class="text-slate-500">Correo</p>
-              <p class="font-semibold text-slate-900 mt-1 break-all">{{ proyecto.correo }}</p>
+              <p class="font-semibold text-slate-900 mt-1 break-all">{{ correo_participante }}</p>
             </div>
             <div>
               <p class="text-slate-500">Teléfono</p>
-              <p class="font-semibold text-slate-900 mt-1">{{ proyecto.telefono }}</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ telefono_participante }}</p>
             </div>
             <div>
               <p class="text-slate-500">Institución / empresa</p>
-              <p class="font-semibold text-slate-900 mt-1">{{ proyecto.institucion_empresa }}</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ institucion }}</p>
             </div>
             <div>
               <p class="text-slate-500">Integrantes</p>
-              <p class="font-semibold text-slate-900 mt-1">{{ proyecto.numero_integrantes }}</p>
+              <p class="font-semibold text-slate-900 mt-1">{{ numero_integrantes }}</p>
             </div>
           </div>
 
@@ -70,11 +80,11 @@
             <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <p class="text-slate-500">Escaneos registrados</p>
-                <p class="font-semibold text-slate-900 mt-1">{{ pase.total_escaneos }}</p>
+                <p class="font-semibold text-slate-900 mt-1">{{ total_escaneos }}</p>
               </div>
               <div>
                 <p class="text-slate-500">Último escaneo</p>
-                <p class="font-semibold text-slate-900 mt-1">{{ pase.ultimo_escaneo|date:"d/m/Y H:i"|default:"Sin registros" }}</p>
+                <p class="font-semibold text-slate-900 mt-1">{% if ultimo_escaneo %}{{ ultimo_escaneo|date:"d/m/Y H:i" }}{% else %}Sin registros{% endif %}</p>
               </div>
             </div>
           </div>
@@ -89,10 +99,15 @@
             </div>
           </div>
           <p class="mt-4 text-sm font-medium text-slate-900">QR único de acceso</p>
-          <p class="mt-1 text-xs text-slate-500">Al escanearlo se mostrará la ficha de validación del participante y su proyecto.</p>
+          <p class="mt-1 text-xs text-slate-500">Al escanearlo se mostrará la ficha oficial de validación.</p>
           <div class="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-500 break-all">
             {{ validacion_url }}
           </div>
+          {% if "127.0.0.1" in validacion_url or "localhost" in validacion_url %}
+            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 text-left">
+              Si escaneas desde un teléfono, usa la IP local de tu equipo o configura <strong>PASE_QR_BASE_URL</strong> en settings.py.
+            </div>
+          {% endif %}
           {% else %}
           <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             No fue posible generar el QR porque falta la librería requerida en el entorno.
@@ -112,8 +127,8 @@
     <ul class="mt-4 space-y-3 text-sm text-slate-600 list-disc pl-5">
       <li>Presenta este pase al ingresar al evento.</li>
       <li>El código QR es único por proyecto y permite validar el acceso.</li>
-      <li>Verifica tu horario y espacio asignados antes del día del evento.</li>
-      <li>Mantén tus archivos del proyecto actualizados.</li>
+      <li>Al escanearlo se mostrarán los datos del participante, evento y proyecto.</li>
+      <li>Si pruebas con celular, el servidor debe estar disponible desde la red local.</li>
     </ul>
   </aside>
 </div>

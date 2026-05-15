@@ -169,7 +169,7 @@
       <div class="px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-200 flex items-center justify-between gap-4 shrink-0">
         <div>
           <h3 class="text-lg font-bold text-slate-900">Registrar ponencia</h3>
-          <p class="text-sm text-slate-500 mt-1">Captura los datos de tu propuesta. El formulario se adapta a pantalla y mantiene visibles las acciones principales.</p>
+          <p class="text-sm text-slate-500 mt-1">Captura únicamente los datos académicos de la ponencia. La presentación se cargará después en Gestión de Participación.</p>
         </div>
         <button type="button" onclick="closeModal('modalRegistrarPonencia')" class="text-slate-400 hover:text-slate-700">
           <span class="material-symbols-outlined">close</span>
@@ -180,41 +180,60 @@
         <div class="px-5 sm:px-6 py-5 sm:py-6 space-y-5 overflow-y-auto">
         {% csrf_token %}
         <input type="hidden" name="action" value="registrar">
+        {% if errores_registro or form_registrar.errors %}
+          <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p class="font-semibold mb-2">Faltan datos obligatorios para registrar la ponencia:</p>
+            <ul class="list-disc pl-5 space-y-1">
+              {% for error in errores_registro %}
+                <li>{{ error }}</li>
+              {% endfor %}
+              {% for field in form_registrar %}
+                {% for error in field.errors %}
+                  <li><span class="font-semibold">{{ field.label }}:</span> {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+              {% for error in form_registrar.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          En esta sección solo se registra la información académica de la ponencia.
+          La presentación y los documentos complementarios se cargan posteriormente en
+          <strong>Gestionar participación</strong>.
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 mb-2">Título</label>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Título <span class="text-red-500">*</span></label>
             {{ form_registrar.titulo }}
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Tipo <span class="text-red-500">*</span></label>
             {{ form_registrar.tipo }}
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Área temática</label>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Área temática <span class="text-red-500">*</span></label>
             {{ form_registrar.area_tematica }}
           </div>
 
           <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 mb-2">Resumen</label>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Resumen <span class="text-red-500">*</span></label>
             {{ form_registrar.resumen }}
           </div>
 
           <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 mb-2">Autores</label>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Autores <span class="text-red-500">*</span></label>
             {{ form_registrar.autores }}
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Archivo de resumen (PDF)</label>
-            {{ form_registrar.archivo_resumen }}
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Presentación (PDF, PPT, PPTX)</label>
-            {{ form_registrar.presentacion }}
+          <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            La carga de presentación, CV, reseña y demás documentos se realiza desde el apartado
+            <strong>Gestionar participación</strong> después de registrar la ponencia.
           </div>
         </div>
 
@@ -279,14 +298,8 @@
             <textarea name="autores" id="edit_autores" rows="3" class="w-full rounded-xl border-slate-300 focus:border-primary focus:ring-primary text-sm"></textarea>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Reemplazar resumen</label>
-            <input type="file" name="archivo_resumen" accept=".pdf" class="w-full text-sm">
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">Reemplazar presentación</label>
-            <input type="file" name="presentacion" accept=".pdf,.ppt,.pptx" class="w-full text-sm">
+          <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Para actualizar archivos o presentación utiliza el apartado <strong>Gestionar participación</strong>.
           </div>
         </div>
 
@@ -359,5 +372,11 @@
     document.getElementById('delete_ponencia_titulo').textContent = titulo;
     openModal('modalEliminarPonencia');
   }
+
+  {% if abrir_modal_registro %}
+    document.addEventListener('DOMContentLoaded', function () {
+      openModal('modalRegistrarPonencia');
+    });
+  {% endif %}
 </script>
 {% endblock %}

@@ -156,30 +156,80 @@
           </div>
 
           <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Foto de perfil</label>
-              {{ perfil_form.avatar }}
+            <div class="space-y-3">
+              <label for="id_avatar" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">
+                Foto de perfil
+              </label>
+
+              {% if perfil.avatar %}
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span class="font-semibold">Foto actual cargada</span>
+                    <a href="{{ perfil.avatar.url }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:text-blue-700">
+                      Ver imagen
+                    </a>
+                  </div>
+                  <label class="mt-3 inline-flex items-center gap-2 text-xs text-slate-600">
+                    <input type="checkbox" name="avatar-clear" id="avatar-clear_id" class="rounded border-slate-300 text-primary focus:ring-primary">
+                    Eliminar foto actual
+                  </label>
+                </div>
+              {% else %}
+                <p class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                  Aún no has cargado una foto de perfil.
+                </p>
+              {% endif %}
+
+              <input
+                type="file"
+                name="avatar"
+                id="id_avatar"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
+              >
+
               {% for e in perfil_form.avatar.errors %}
                 <p class="text-xs text-red-500">{{ e }}</p>
               {% endfor %}
               <p class="text-xs text-slate-500">Formatos sugeridos: JPG, PNG o WebP.</p>
             </div>
 
-            <div class="space-y-2">
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Currículum vitae (CV)</label>
-              {{ perfil_form.cv }}
+            <div class="space-y-3">
+              <label for="id_cv" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">
+                Currículum vitae (CV)
+              </label>
+
+              {% if perfil.cv %}
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span class="font-semibold">CV actual cargado</span>
+                    <a href="{{ perfil.cv.url }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:text-blue-700">
+                      Ver CV
+                    </a>
+                  </div>
+                  <label class="mt-3 inline-flex items-center gap-2 text-xs text-slate-600">
+                    <input type="checkbox" name="cv-clear" id="cv-clear_id" class="rounded border-slate-300 text-primary focus:ring-primary">
+                    Eliminar CV actual
+                  </label>
+                </div>
+              {% else %}
+                <p class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                  Aún no has cargado un CV.
+                </p>
+              {% endif %}
+
+              <input
+                type="file"
+                name="cv"
+                id="id_cv"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
+              >
+
               {% for e in perfil_form.cv.errors %}
                 <p class="text-xs text-red-500">{{ e }}</p>
               {% endfor %}
               <p class="text-xs text-slate-500">Formatos permitidos: PDF, DOC o DOCX. Tamaño máximo: 10 MB.</p>
-              {% if perfil.cv %}
-                <a href="{{ perfil.cv.url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
-                  <i class="fa-solid fa-file-lines"></i>
-                  Ver CV actual
-                </a>
-              {% else %}
-                <p class="text-xs text-slate-400">Aún no has cargado un CV.</p>
-              {% endif %}
             </div>
           </div>
 

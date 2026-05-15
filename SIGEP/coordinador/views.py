@@ -782,7 +782,7 @@ def inscripciones(request: HttpRequest) -> HttpResponse:
     elif activo in {"0", "false", "FALSE"}:
         qs = qs.filter(usuario__is_active=False)
 
-    return render(request, "coordinador/inscripciones/inscripcion.html", {
+    return render(request, "coordinador/inscripciones/inscripciones.html", {
         "active": "inscripciones",
         "evento": evento,
         "inscripciones": qs.order_by("-id"),
@@ -915,25 +915,86 @@ def _get_ponencias_evento_qs(evento):
         return Ponencia.objects.filter(evento=evento).order_by("-id")
 
 
-def _match_eval_record_for_ponencia(evento, ponencia):
+def _norm_lookup(value) -> str:
+    """Normaliza cadenas para comparar títulos/responsables sin depender de mayúsculas o espacios."""
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def _eval_records_for_ponencia(evento, ponencia):
+    """
+    Devuelve los registros coordinador.EvaluacionProyecto que representan
+    operativamente a una ponencia.
+
+    No se usa directamente ponencia.evaluacion_proyecto_id salvo que el campo
+    apunte al modelo coordinador.EvaluacionProyecto. En este proyecto ese campo
+    suele apuntar al modelo evaluador.EvaluacionProyecto, por lo que usar ese ID
+    como si fuera coordinador puede provocar cruces y duplicidad visual.
+    """
     if ponencia is None:
-        return None
-    if getattr(ponencia, "evaluacion_proyecto_id", None):
-        try:
-            return EvaluacionProyecto.objects.filter(pk=ponencia.evaluacion_proyecto_id, evento=evento).first()
-        except Exception:
-            pass
+        return EvaluacionProyecto.objects.none()
+
     titulo = (getattr(ponencia, "titulo", "") or "").strip()
     if not titulo:
-        return None
-    return EvaluacionProyecto.objects.filter(evento=evento, titulo__iexact=titulo).order_by("id").first()
+        return EvaluacionProyecto.objects.none()
+
+    qs = EvaluacionProyecto.objects.filter(evento=evento, titulo__iexact=titulo).order_by("id")
+    responsable = _norm_lookup(_ponencia_responsable(ponencia))
+
+    if responsable:
+        ids_responsable = [
+            registro.id
+            for registro in qs
+            if _norm_lookup(getattr(registro, "ponente", "")) == responsable
+        ]
+        if ids_responsable:
+            return EvaluacionProyecto.objects.filter(id__in=ids_responsable).order_by("id")
+
+    # Si solamente existe un registro con ese título, se considera puente operativo.
+    if qs.count() == 1:
+        return qs
+
+    return EvaluacionProyecto.objects.none()
+
+
+def _match_eval_record_for_ponencia(evento, ponencia):
+    """
+    Resuelve el registro operativo coordinador.EvaluacionProyecto asociado
+    a una ponencia, sin crear registros nuevos.
+    """
+    registros = _eval_records_for_ponencia(evento, ponencia)
+    return registros.order_by("id").first()
+
+
+def _eval_record_ids_for_ponencias(evento) -> set[int]:
+    """
+    Obtiene todos los IDs de EvaluacionProyecto que ya representan ponencias.
+    Estos registros no deben mostrarse como PROYECTO en espacios, evaluadores
+    ni selectores, porque su representación visible correcta es PONENCIA.
+    """
+    ids: set[int] = set()
+    for ponencia in _get_ponencias_evento_qs(evento):
+        for registro_id in _eval_records_for_ponencia(evento, ponencia).values_list("id", flat=True):
+            if registro_id:
+                ids.add(int(registro_id))
+    return ids
+
+
 
 
 def _resolve_programacion_estado(instance, programado: bool) -> str:
     Model = instance.__class__
     if programado:
-        return getattr(Model, "PROG_PROGRAMADO", getattr(Model, "ESTADO_PROGRAMADO", "PROGRAMADO"))
-    return getattr(Model, "PROG_PENDIENTE", getattr(Model, "ESTADO_PENDIENTE", "PENDIENTE"))
+        return (
+            getattr(Model, "PROG_CONFIRMADO", None)
+            or getattr(Model, "PROG_PROGRAMADO", None)
+            or getattr(Model, "ESTADO_PROGRAMADO", None)
+            or "PROGRAMADO"
+        )
+    return (
+        getattr(Model, "PROG_PENDIENTE", None)
+        or getattr(Model, "ESTADO_PENDIENTE", None)
+        or "PENDIENTE"
+    )
 
 
 def _save_changed_fields(instance, payload: dict) -> None:
@@ -951,7 +1012,15 @@ def _save_changed_fields(instance, payload: dict) -> None:
 
 
 def _propagate_visible_schedule_to_origin_models(evento, coord_proyecto, eval_proy=None) -> None:
+    """
+    Refleja en Ponencia y ProyectoParticipante la programación visible cuando
+    existe un espacio real. Si solo se asignaron evaluadores sin espacio, no se
+    copian horas técnicas/default al usuario final.
+    """
     titulo = (getattr(coord_proyecto, "titulo", "") or "").strip()
+    if not titulo:
+        return
+
     fecha_programada = getattr(evento, "fecha", None)
     hora_inicio = getattr(coord_proyecto, "inicio", None)
     hora_fin = getattr(coord_proyecto, "fin", None)
@@ -959,47 +1028,99 @@ def _propagate_visible_schedule_to_origin_models(evento, coord_proyecto, eval_pr
     programado = bool(fecha_programada and hora_inicio and hora_fin and espacio)
     eval_pk = getattr(eval_proy, "pk", None)
 
+    # Ponencia
     try:
         Ponencia = apps.get_model("ponente", "Ponencia")
         filtros = Q(titulo__iexact=titulo)
         if eval_pk:
             filtros |= Q(evaluacion_proyecto_id=eval_pk)
-        ponencia = Ponencia.objects.filter(evento_id=coord_proyecto.evento_id).filter(filtros).order_by("id").first()
+        ponencia = (
+            Ponencia.objects.filter(evento_id=getattr(coord_proyecto, "evento_id", None))
+            .filter(filtros)
+            .order_by("id")
+            .first()
+        )
         if ponencia is not None:
-            payload = {
-                "fecha_programada": fecha_programada,
-                "hora_inicio": hora_inicio,
-                "hora_fin": hora_fin,
-                "espacio_asignado": espacio,
-                "estado_programacion": _resolve_programacion_estado(ponencia, programado),
-            }
+            payload = {}
             if eval_pk:
                 payload["evaluacion_proyecto_id"] = eval_pk
+            if programado:
+                payload.update({
+                    "fecha_programada": fecha_programada,
+                    "hora_inicio": hora_inicio,
+                    "hora_fin": hora_fin,
+                    "espacio_asignado": espacio,
+                    "estado_programacion": _resolve_programacion_estado(ponencia, True),
+                })
             _save_changed_fields(ponencia, payload)
     except Exception:
         pass
 
+    # Proyecto participante
     try:
         ProyectoParticipante = apps.get_model("participante", "ProyectoParticipante")
         filtros = Q(nombre_proyecto__iexact=titulo)
         if eval_pk:
             filtros |= Q(evaluacion_proyecto_id=eval_pk)
-        proyecto = ProyectoParticipante.objects.filter(evento_id=coord_proyecto.evento_id).filter(filtros).order_by("id").first()
+        proyecto = (
+            ProyectoParticipante.objects.filter(evento_id=getattr(coord_proyecto, "evento_id", None))
+            .filter(filtros)
+            .order_by("id")
+            .first()
+        )
         if proyecto is not None:
-            payload = {
-                "fecha_programada": fecha_programada,
-                "hora_inicio": hora_inicio,
-                "hora_fin": hora_fin,
-                "espacio_asignado": espacio,
-                "estado_programacion": _resolve_programacion_estado(proyecto, programado),
-            }
+            payload = {}
             if eval_pk:
                 payload["evaluacion_proyecto_id"] = eval_pk
+            if programado:
+                payload.update({
+                    "fecha_programada": fecha_programada,
+                    "hora_inicio": hora_inicio,
+                    "hora_fin": hora_fin,
+                    "espacio_asignado": espacio,
+                    "estado_programacion": _resolve_programacion_estado(proyecto, True),
+                })
             _save_changed_fields(proyecto, payload)
     except Exception:
         pass
 
 
+def _coor_parse_time(value: str):
+    value = (value or "").strip()
+    if not value:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(value, fmt).time()
+        except ValueError:
+            continue
+    return None
+
+
+def _coor_validation_error_text(exc, default="No se pudo completar la operación.") -> str:
+    if hasattr(exc, "message_dict") and exc.message_dict:
+        errores = []
+        for campo, mensajes in exc.message_dict.items():
+            etiqueta = str(campo).replace("_", " ").capitalize()
+            for msg in mensajes:
+                errores.append(f"{etiqueta}: {msg}")
+        return " | ".join(errores) or default
+    mensajes = getattr(exc, "messages", None)
+    if mensajes:
+        return "; ".join(mensajes)
+    return str(exc) or default
+
+
+def _coor_default_inicio():
+    return datetime.strptime("08:00", "%H:%M").time()
+
+
+def _coor_default_fin():
+    return datetime.strptime("08:30", "%H:%M").time()
+
+
+def _coor_has_real_schedule(inicio_raw: str, fin_raw: str) -> bool:
+    return bool((inicio_raw or "").strip() and (fin_raw or "").strip())
 def _sync_to_evaluador_tables(evento, coord_proyecto, evaluador_ids):
     """
     Mantiene sincronizadas las tablas del módulo evaluador con las del coordinador
@@ -1185,13 +1306,70 @@ def _build_evaluadores_cards(evento):
 
 
 def _build_eval_items(evento):
+    """
+    Construye la lista visible de registros evaluables sin duplicar ponencias.
+
+    Los registros coordinador.EvaluacionProyecto que representan a una ponencia
+    se ocultan como PROYECTO y se muestran únicamente como PONENCIA.
+    """
     items = []
-    proyectos = list(EvaluacionProyecto.objects.filter(evento=evento).prefetch_related("asignaciones__evaluador").order_by("inicio", "fin", "id"))
-    for proyecto in proyectos:
+    used_eval_record_ids: set[int] = set()
+    seen_display_keys: set[tuple] = set()
+
+    def append_item(item: dict) -> None:
+        key = (
+            item.get("source_type"),
+            _norm_lookup(item.get("titulo")),
+            _norm_lookup(item.get("responsable")),
+        )
+        if key in seen_display_keys:
+            return
+        seen_display_keys.add(key)
+        items.append(item)
+
+    # Primero se muestran las ponencias reales.
+    for ponencia in _get_ponencias_evento_qs(evento):
+        registros_ponencia = list(_eval_records_for_ponencia(evento, ponencia))
+        for registro_tmp in registros_ponencia:
+            if getattr(registro_tmp, "id", None):
+                used_eval_record_ids.add(int(registro_tmp.id))
+
+        registro = registros_ponencia[0] if registros_ponencia else None
+        asignaciones = list(registro.asignaciones.select_related("evaluador")) if registro else []
+        assigned_names = [_safe_user_display(a.evaluador) for a in asignaciones]
+        assigned_ids = [str(a.evaluador_id) for a in asignaciones if a.evaluador_id]
+
+        append_item({
+            "source_type": "PONENCIA",
+            "source_id": getattr(ponencia, "id", ""),
+            "tipo_label": "Ponencia",
+            "titulo": (getattr(ponencia, "titulo", "Ponencia") or "Ponencia").strip(),
+            "responsable": _ponencia_responsable(ponencia),
+            "inicio": getattr(registro, "inicio", None),
+            "fin": getattr(registro, "fin", None),
+            "lugar": getattr(registro, "lugar", "") if registro else "",
+            "assigned_names": assigned_names,
+            "assigned_ids_csv": ",".join(assigned_ids),
+            "asignados_count": len(assigned_ids),
+            "estado": "Evaluadores asignados" if assigned_ids else "Pendiente",
+        })
+
+    # Después se muestran solo proyectos reales; se excluyen los puentes de ponencia.
+    proyectos_qs = (
+        EvaluacionProyecto.objects
+        .filter(evento=evento)
+        .prefetch_related("asignaciones__evaluador")
+        .order_by("inicio", "fin", "id")
+    )
+    if used_eval_record_ids:
+        proyectos_qs = proyectos_qs.exclude(id__in=used_eval_record_ids)
+
+    for proyecto in proyectos_qs:
         asignaciones = list(proyecto.asignaciones.select_related("evaluador"))
         assigned_names = [_safe_user_display(a.evaluador) for a in asignaciones]
         assigned_ids = [str(a.evaluador_id) for a in asignaciones if a.evaluador_id]
-        items.append({
+
+        append_item({
             "source_type": "PROYECTO",
             "source_id": proyecto.id,
             "tipo_label": "Proyecto",
@@ -1206,35 +1384,62 @@ def _build_eval_items(evento):
             "estado": "Evaluadores asignados" if assigned_ids else "Pendiente",
         })
 
-    for ponencia in _get_ponencias_evento_qs(evento):
-        registro = _match_eval_record_for_ponencia(evento, ponencia)
-        asignaciones = list(registro.asignaciones.select_related("evaluador")) if registro else []
-        assigned_names = [_safe_user_display(a.evaluador) for a in asignaciones]
-        assigned_ids = [str(a.evaluador_id) for a in asignaciones if a.evaluador_id]
-        items.append({
-            "source_type": "PONENCIA",
-            "source_id": getattr(ponencia, "id", ""),
-            "tipo_label": "Ponencia",
-            "titulo": (getattr(ponencia, "titulo", "Ponencia") or "Ponencia").strip(),
-            "responsable": _ponencia_responsable(ponencia),
-            "inicio": getattr(registro, "inicio", None),
-            "fin": getattr(registro, "fin", None),
-            "lugar": getattr(registro, "lugar", "") if registro else "",
-            "assigned_names": assigned_names,
-            "assigned_ids_csv": ",".join(assigned_ids),
-            "asignados_count": len(assigned_ids),
-            "estado": "Evaluadores asignados" if assigned_ids else "Pendiente",
-        })
     items.sort(key=lambda x: ((x.get("inicio") is None), x.get("inicio") or _time_sort_default(), x.get("titulo") or ""))
     return items
 
 
 def _build_space_rows(evento):
     rows = []
-    espacios_by_project = {e.proyecto_id: e for e in Espacio.objects.filter(evento=evento, proyecto_id__isnull=False).order_by("-id")}
-    espacios_by_ponencia = {e.ponencia_id: e for e in Espacio.objects.filter(evento=evento, ponencia_id__isnull=False).order_by("-id")}
+    espacios_by_project = {
+        e.proyecto_id: e
+        for e in Espacio.objects.filter(evento=evento, proyecto_id__isnull=False).order_by("-id")
+    }
+    espacios_by_ponencia = {
+        e.ponencia_id: e
+        for e in Espacio.objects.filter(evento=evento, ponencia_id__isnull=False).order_by("-id")
+    }
 
-    for proyecto in EvaluacionProyecto.objects.filter(evento=evento).order_by("inicio", "fin", "id"):
+    used_eval_record_ids = _eval_record_ids_for_ponencias(evento)
+
+    # Primero se muestran las ponencias reales.
+    for ponencia in _get_ponencias_evento_qs(evento):
+        registros_ponencia = list(_eval_records_for_ponencia(evento, ponencia))
+        registro = registros_ponencia[0] if registros_ponencia else None
+
+        # Si el espacio fue guardado sobre el puente EvaluacionProyecto en una versión anterior,
+        # se reutiliza para no perder la programación, pero se presenta visualmente como PONENCIA.
+        espacio = espacios_by_ponencia.get(getattr(ponencia, "id", None))
+        if espacio is None and registro is not None:
+            espacio = espacios_by_project.get(getattr(registro, "id", None))
+
+        inicio = getattr(espacio, "inicio", None) or getattr(registro, "inicio", None)
+        fin = getattr(espacio, "fin", None) or getattr(registro, "fin", None)
+
+        rows.append({
+            "source_type": "PONENCIA",
+            "source_id": getattr(ponencia, "id", ""),
+            "tipo_label": "Ponencia",
+            "titulo": (getattr(ponencia, "titulo", "Ponencia") or "Ponencia").strip(),
+            "responsable": _ponencia_responsable(ponencia),
+            "space_id": getattr(espacio, "id", None),
+            "asignada": bool(espacio),
+            "nombre": getattr(espacio, "nombre", "") or getattr(registro, "lugar", ""),
+            "tipo": getattr(espacio, "tipo", "") or "",
+            "capacidad": getattr(espacio, "capacidad", "") or "",
+            "ubicacion": getattr(espacio, "ubicacion", "") or "",
+            "inicio": inicio,
+            "fin": fin,
+            "duracion": _minutes_between(inicio, fin),
+            "estado": getattr(espacio, "estado", "") or ("OCUPADO" if espacio else "PENDIENTE"),
+            "tags": getattr(espacio, "tags", "") or "",
+        })
+
+    # Después se muestran solo proyectos reales; los puentes de ponencia se excluyen.
+    proyectos_qs = EvaluacionProyecto.objects.filter(evento=evento).order_by("inicio", "fin", "id")
+    if used_eval_record_ids:
+        proyectos_qs = proyectos_qs.exclude(id__in=used_eval_record_ids)
+
+    for proyecto in proyectos_qs:
         espacio = espacios_by_project.get(proyecto.id)
         inicio = getattr(espacio, "inicio", None) or getattr(proyecto, "inicio", None)
         fin = getattr(espacio, "fin", None) or getattr(proyecto, "fin", None)
@@ -1247,30 +1452,6 @@ def _build_space_rows(evento):
             "space_id": getattr(espacio, "id", None),
             "asignada": bool(espacio),
             "nombre": getattr(espacio, "nombre", "") or getattr(proyecto, "lugar", ""),
-            "tipo": getattr(espacio, "tipo", "") or "",
-            "capacidad": getattr(espacio, "capacidad", "") or "",
-            "ubicacion": getattr(espacio, "ubicacion", "") or "",
-            "inicio": inicio,
-            "fin": fin,
-            "duracion": _minutes_between(inicio, fin),
-            "estado": getattr(espacio, "estado", "") or ("OCUPADO" if espacio else "PENDIENTE"),
-            "tags": getattr(espacio, "tags", "") or "",
-        })
-
-    for ponencia in _get_ponencias_evento_qs(evento):
-        espacio = espacios_by_ponencia.get(getattr(ponencia, "id", None))
-        registro = _match_eval_record_for_ponencia(evento, ponencia)
-        inicio = getattr(espacio, "inicio", None) or getattr(registro, "inicio", None)
-        fin = getattr(espacio, "fin", None) or getattr(registro, "fin", None)
-        rows.append({
-            "source_type": "PONENCIA",
-            "source_id": getattr(ponencia, "id", ""),
-            "tipo_label": "Ponencia",
-            "titulo": (getattr(ponencia, "titulo", "Ponencia") or "Ponencia").strip(),
-            "responsable": _ponencia_responsable(ponencia),
-            "space_id": getattr(espacio, "id", None),
-            "asignada": bool(espacio),
-            "nombre": getattr(espacio, "nombre", "") or getattr(registro, "lugar", ""),
             "tipo": getattr(espacio, "tipo", "") or "",
             "capacidad": getattr(espacio, "capacidad", "") or "",
             "ubicacion": getattr(espacio, "ubicacion", "") or "",
@@ -1344,7 +1525,10 @@ def evaluadores(request: HttpRequest) -> HttpResponse:
         "proyectos_total": sum(1 for item in items if item.get("source_type") == "PROYECTO"),
     }
 
+    used_eval_record_ids = _eval_record_ids_for_ponencias(evento)
     proyectos_qs = EvaluacionProyecto.objects.filter(evento=evento).order_by("inicio", "fin", "id")
+    if used_eval_record_ids:
+        proyectos_qs = proyectos_qs.exclude(id__in=used_eval_record_ids)
     ponencias_qs = _get_ponencias_evento_qs(evento)
 
     return render(request, "coordinador/evaluadores/evaluadores.html", {
@@ -1409,73 +1593,163 @@ def eval_proyecto_eliminar(request: HttpRequest, pk: int) -> HttpResponse:
 @require_POST
 @transaction.atomic
 def eval_gestionar_guardar(request: HttpRequest) -> HttpResponse:
+    """
+    Asigna evaluadores a una ponencia o proyecto del evento activo.
+
+    Reglas reforzadas:
+    - No depende de que previamente exista espacio asignado.
+    - Requiere un registro evaluable válido.
+    - Requiere al menos un evaluador seleccionado.
+    - Si existe horario real capturado, valida traslapes.
+    - Si todavía no hay horario real, permite guardar la asignación y deja
+      la programación pendiente para la opción de espacios.
+    - Todo error se responde mediante messages/modal, nunca con pantalla técnica.
+    """
     evento, redir = _require_evento_or_redirect(request)
     if redir:
         return redir
 
     source_type = (request.POST.get("source_type") or "PROYECTO").strip().upper()
-    source_id = (request.POST.get("source_id") or "").strip()
-    inicio = _first_post_value(request, "inicio", "hora_inicio")
-    fin = _first_post_value(request, "fin", "hora_fin")
+    source_id = (request.POST.get("source_id") or request.POST.get("proyecto_id") or "").strip()
+
+    inicio_raw = _first_post_value(request, "inicio", "hora_inicio")
+    fin_raw = _first_post_value(request, "fin", "hora_fin")
     lugar = _first_post_value(request, "lugar", "ubicacion")
-    seleccionados = [int(x) for x in request.POST.getlist("evaluadores") if str(x).isdigit()]
+
+    seleccionados = []
+    for raw_id in request.POST.getlist("evaluadores"):
+        if str(raw_id).isdigit():
+            uid = int(raw_id)
+            if uid not in seleccionados:
+                seleccionados.append(uid)
+
+    evaluadores_validos = set(_event_evaluadores_qs(evento).values_list("id", flat=True))
+    seleccionados = [uid for uid in seleccionados if uid in evaluadores_validos]
+
+    if not seleccionados:
+        messages.error(request, "Selecciona al menos un evaluador para guardar la asignación.")
+        return redirect("coordinador:evaluadores")
 
     Ponencia = _get_ponencia_model()
+    ponencia = None
+
     if source_type == "PONENCIA":
         if Ponencia is None or not source_id.isdigit():
-            messages.error(request, "La ponencia seleccionada no es válida.")
+            messages.error(request, "Selecciona una ponencia válida del evento activo.")
             return redirect("coordinador:evaluadores")
-        ponencia = get_object_or_404(Ponencia, pk=int(source_id), evento=evento)
+
+        ponencia = Ponencia.objects.filter(pk=int(source_id), evento=evento).first()
+        if ponencia is None:
+            messages.error(request, "La ponencia seleccionada no pertenece al evento activo.")
+            return redirect("coordinador:evaluadores")
+
         proyecto = _match_eval_record_for_ponencia(evento, ponencia)
-        titulo = str(getattr(ponencia, "titulo", "Ponencia")).strip() or "Ponencia"
+        titulo = str(getattr(ponencia, "titulo", "Ponencia") or "Ponencia").strip()
         responsable = _ponencia_responsable(ponencia)
         if proyecto is None:
             proyecto = EvaluacionProyecto(evento=evento, titulo=titulo, ponente=responsable)
     else:
-        proyecto = get_object_or_404(EvaluacionProyecto, pk=int(source_id), evento=evento)
-        titulo = proyecto.titulo
-        responsable = proyecto.ponente
+        if not source_id.isdigit():
+            messages.error(request, "Selecciona un proyecto válido del evento activo.")
+            return redirect("coordinador:evaluadores")
+        proyecto = EvaluacionProyecto.objects.filter(pk=int(source_id), evento=evento).first()
+        if proyecto is None:
+            messages.error(request, "El proyecto seleccionado no pertenece al evento activo.")
+            return redirect("coordinador:evaluadores")
+        titulo = (getattr(proyecto, "titulo", "") or "").strip()
+        responsable = (getattr(proyecto, "ponente", "") or "").strip()
 
-    form = EvaluacionProyectoForm({"titulo": titulo, "ponente": responsable, "inicio": inicio, "fin": fin, "lugar": lugar}, instance=proyecto)
-    if not form.is_valid():
-        messages.error(request, _flatten_form_errors(form) or "Horario o lugar inválidos.")
+    if not titulo:
+        messages.error(request, "No se puede guardar la asignación porque el registro no tiene título.")
         return redirect("coordinador:evaluadores")
 
-    obj = form.save(commit=False)
-    obj.evento = evento
+    real_schedule = _coor_has_real_schedule(inicio_raw, fin_raw)
+    inicio_parsed = _coor_parse_time(inicio_raw)
+    fin_parsed = _coor_parse_time(fin_raw)
+
+    proyecto.evento = evento
+    proyecto.titulo = titulo
+    proyecto.ponente = responsable
+    proyecto.inicio = inicio_parsed or getattr(proyecto, "inicio", None) or _coor_default_inicio()
+    proyecto.fin = fin_parsed or getattr(proyecto, "fin", None) or _coor_default_fin()
+    proyecto.lugar = lugar if lugar else (getattr(proyecto, "lugar", "") or "")
+
+    if proyecto.fin <= proyecto.inicio:
+        messages.error(request, "La hora fin debe ser mayor que la hora inicio.")
+        return redirect("coordinador:evaluadores")
+
     try:
-        obj.full_clean()
-    except ValidationError as e:
-        messages.error(request, "; ".join(e.messages))
+        proyecto.full_clean()
+        proyecto.save()
+    except ValidationError as exc:
+        messages.error(request, _coor_validation_error_text(exc, "No se pudo validar el registro evaluable."))
+        return redirect("coordinador:evaluadores")
+    except Exception:
+        messages.error(request, "No fue posible guardar el registro evaluable. Verifica los datos capturados.")
         return redirect("coordinador:evaluadores")
 
-    conflictos = []
+    if real_schedule:
+        conflictos = []
+        for uid in seleccionados:
+            conflicto_qs = (
+                EvaluacionAsignacion.objects
+                .select_related("proyecto", "evaluador")
+                .filter(evaluador_id=uid, proyecto__evento=evento)
+                .filter(proyecto__inicio__lt=proyecto.fin, proyecto__fin__gt=proyecto.inicio)
+                .exclude(proyecto_id=proyecto.pk)
+            )
+            conflict = conflicto_qs.first()
+            if conflict:
+                conflictos.append(
+                    f"{_safe_user_display(conflict.evaluador)} ({conflict.proyecto.titulo}: "
+                    f"{conflict.proyecto.inicio.strftime('%H:%M')} - {conflict.proyecto.fin.strftime('%H:%M')})"
+                )
+        if conflictos:
+            messages.error(
+                request,
+                "No se guardó la asignación porque existe conflicto de horario para: "
+                + ", ".join(dict.fromkeys(conflictos))
+                + ".",
+            )
+            return redirect("coordinador:evaluadores")
+
     for uid in seleccionados:
-        conflict = (
-            EvaluacionAsignacion.objects.select_related("proyecto", "evaluador")
-            .filter(evaluador_id=uid, proyecto__evento=evento)
-            .exclude(proyecto=obj)
-            .filter(proyecto__inicio__lt=obj.fin, proyecto__fin__gt=obj.inicio)
-            .first()
+        Inscripcion.objects.get_or_create(
+            evento=evento,
+            usuario_id=uid,
+            defaults={"rol": Inscripcion.ROL_EVALUADOR},
         )
-        if conflict:
-            conflictos.append(_safe_user_display(conflict.evaluador))
-    if conflictos:
-        messages.error(request, "No se guardó la asignación porque estos evaluadores ya tienen otro proyecto o ponencia en horario traslapado: " + ", ".join(dict.fromkeys(conflictos)) + ".")
-        return redirect("coordinador:evaluadores")
 
-    obj.save()
-    for uid in seleccionados:
-        Inscripcion.objects.get_or_create(evento=evento, usuario_id=uid, defaults={"rol": Inscripcion.ROL_EVALUADOR})
-    EvaluacionAsignacion.objects.filter(proyecto=obj).exclude(evaluador_id__in=seleccionados).delete()
-    actuales = set(EvaluacionAsignacion.objects.filter(proyecto=obj).values_list("evaluador_id", flat=True))
-    for uid in seleccionados:
-        if uid not in actuales:
-            EvaluacionAsignacion.objects.create(proyecto=obj, evaluador_id=uid)
+    EvaluacionAsignacion.objects.filter(proyecto=proyecto).exclude(evaluador_id__in=seleccionados).delete()
+    actuales = set(EvaluacionAsignacion.objects.filter(proyecto=proyecto).values_list("evaluador_id", flat=True))
 
-    _sync_to_evaluador_tables(evento, obj, seleccionados)
-    messages.success(request, "Programación guardada sin evaluadores asignados todavía." if not seleccionados else "Asignación de evaluadores guardada correctamente.")
+    for uid in seleccionados:
+        if uid in actuales:
+            continue
+        asignacion = EvaluacionAsignacion(proyecto=proyecto, evaluador_id=uid)
+        try:
+            if real_schedule:
+                asignacion.full_clean()
+            asignacion.save()
+        except ValidationError as exc:
+            messages.error(request, _coor_validation_error_text(exc, "No se pudo guardar la asignación."))
+            return redirect("coordinador:evaluadores")
+        except Exception:
+            messages.error(request, "No fue posible guardar una de las asignaciones de evaluador.")
+            return redirect("coordinador:evaluadores")
+
+    _sync_to_evaluador_tables(evento, proyecto, seleccionados)
+
+    if real_schedule:
+        messages.success(request, "Asignación de evaluadores guardada correctamente.")
+    else:
+        messages.warning(
+            request,
+            "Evaluadores asignados correctamente. Aún falta asignar espacio y horario para completar la programación del registro."
+        )
+
     return redirect("coordinador:evaluadores")
+
 
 
 # =========================================================
@@ -1489,7 +1763,10 @@ def espacios(request: HttpRequest) -> HttpResponse:
 
     _ensure_event_project_records_integrated(evento)
     q = (request.GET.get("q") or "").strip()
+    used_eval_record_ids = _eval_record_ids_for_ponencias(evento)
     proyectos = EvaluacionProyecto.objects.filter(evento=evento).order_by("inicio", "fin", "id")
+    if used_eval_record_ids:
+        proyectos = proyectos.exclude(id__in=used_eval_record_ids)
     ponencias_qs = _get_ponencias_evento_qs(evento)
     espacios_qs = Espacio.objects.filter(evento=evento).select_related("proyecto", "ponencia").order_by("inicio", "fin", "id")
     if q:
@@ -1543,7 +1820,10 @@ def espacio_guardar(request: HttpRequest) -> HttpResponse:
         return redir
     espacio_id = (request.POST.get("espacio_id") or "").strip()
     instance = get_object_or_404(Espacio, pk=espacio_id, evento=evento) if espacio_id else Espacio(evento=evento)
+    used_eval_record_ids = _eval_record_ids_for_ponencias(evento)
     proyectos = EvaluacionProyecto.objects.filter(evento=evento).order_by("inicio", "fin", "id")
+    if used_eval_record_ids:
+        proyectos = proyectos.exclude(id__in=used_eval_record_ids)
     ponencias_qs = _get_ponencias_evento_qs(evento)
     form = EspacioForm(request.POST, instance=instance, proyectos_qs=proyectos, ponencias_qs=ponencias_qs)
     form.instance.evento = evento
@@ -1555,6 +1835,10 @@ def espacio_guardar(request: HttpRequest) -> HttpResponse:
     obj.evento = evento
     obj.proyecto = form.cleaned_data.get("proyecto")
     obj.ponencia = form.cleaned_data.get("ponencia")
+    if obj.ponencia_id:
+        obj.proyecto = None
+    elif obj.proyecto_id:
+        obj.ponencia = None
     obj.inicio = form.cleaned_data.get("inicio")
     obj.fin = form.cleaned_data.get("fin_calculado")
     obj.estado = form.cleaned_data.get("estado") or Espacio.ESTADO_OCUPADO

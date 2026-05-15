@@ -128,9 +128,9 @@
                 {% if row.asignada %}Editar espacio{% else %}Asignar espacio{% endif %}
               </button>
               {% if row.space_id %}
-                <form method="POST" action="{% url 'coordinador:espacio_eliminar' row.space_id %}" onsubmit="return confirm('¿Eliminar esta asignación de espacio?');">
+                <form method="POST" action="{% url 'coordinador:espacio_eliminar' row.space_id %}" class="js-delete-space-form">
                   {% csrf_token %}
-                  <button class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold">Eliminar</button>
+                  <button type="button" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold" onclick="openDeleteSpaceModal(this.closest('form'))">Eliminar</button>
                 </form>
               {% endif %}
             </div>
@@ -159,9 +159,11 @@
         </button>
       </div>
 
-      <form method="POST" action="{% url 'coordinador:espacio_guardar' %}" class="p-5 space-y-5 overflow-y-auto" autocomplete="off">
+      <form method="POST" action="{% url 'coordinador:espacio_guardar' %}" class="flex min-h-0 flex-1 flex-col" autocomplete="off" id="formEspacio">
         {% csrf_token %}
         <input type="hidden" name="espacio_id" id="espacio_id" value="">
+        <div class="flex-1 overflow-y-auto p-5 space-y-5">
+        <div id="espacioClientErrors" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -169,7 +171,7 @@
             <input type="text" value="{{ evento.titulo|default:'Sin evento activo' }}" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" readonly>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de registro</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de registro <span class="text-red-500">*</span></label>
             <select name="target_type" id="target_type" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" onchange="toggleSpaceTargetType()" required>
               <option value="PONENCIA">Ponencia</option>
               <option value="PROYECTO">Proyecto</option>
@@ -179,7 +181,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div id="group_ponencia">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ponencia</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ponencia <span class="text-red-500">*</span></label>
             <select name="ponencia" id="ponencia" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800">
               <option value="">Selecciona una ponencia</option>
               {% for item in ponencias %}
@@ -188,7 +190,7 @@
             </select>
           </div>
           <div id="group_proyecto" class="hidden">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Proyecto</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Proyecto <span class="text-red-500">*</span></label>
             <select name="proyecto" id="proyecto" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800">
               <option value="">Selecciona un proyecto</option>
               {% for item in proyectos %}
@@ -204,7 +206,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div class="md:col-span-2">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre del área</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre del área <span class="text-red-500">*</span></label>
             <input type="text" name="nombre" id="nombre" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" placeholder="Ej. Sala A / Auditorio principal" required>
           </div>
           <div>
@@ -227,11 +229,11 @@
             <input type="text" name="ubicacion" id="ubicacion" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" placeholder="Edificio / piso / referencia">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora inicio</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora inicio <span class="text-red-500">*</span></label>
             <input type="time" name="inicio" id="inicio" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" required>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Duración (min)</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Duración (min) <span class="text-red-500">*</span></label>
             <input type="number" name="duracion_minutos" id="duracion_minutos" min="5" max="480" step="5" class="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800" value="30" required>
           </div>
         </div>
@@ -251,7 +253,8 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        </div>
+        <div class="shrink-0 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-4">
           <button type="button" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold" onclick="closeModalEspacio()">
             Cancelar
           </button>
@@ -264,7 +267,75 @@
   </div>
 </div>
 
+
+<div id="modalEliminarEspacio" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeDeleteSpaceModal()"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Eliminar asignación de espacio</h3>
+        <button type="button" onclick="closeDeleteSpaceModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="px-5 py-4">
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          Esta acción eliminará la asignación de espacio seleccionada. El registro quedará pendiente de programación.
+        </div>
+      </div>
+      <div class="px-5 py-4 bg-slate-50 dark:bg-slate-800 flex justify-end gap-3">
+        <button type="button" onclick="closeDeleteSpaceModal()" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 font-semibold">Cancelar</button>
+        <button type="button" onclick="submitDeleteSpaceForm()" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+  let pendingDeleteSpaceForm = null;
+
+  function openDeleteSpaceModal(form) {
+    pendingDeleteSpaceForm = form;
+    document.getElementById('modalEliminarEspacio').classList.remove('hidden');
+  }
+
+  function closeDeleteSpaceModal() {
+    document.getElementById('modalEliminarEspacio').classList.add('hidden');
+    pendingDeleteSpaceForm = null;
+  }
+
+  function submitDeleteSpaceForm() {
+    if (pendingDeleteSpaceForm) pendingDeleteSpaceForm.submit();
+  }
+
+  function validarEspacio(e) {
+    const errors = [];
+    const type = document.getElementById('target_type')?.value;
+    const ponencia = document.getElementById('ponencia')?.value;
+    const proyecto = document.getElementById('proyecto')?.value;
+    const nombre = document.getElementById('nombre')?.value.trim();
+    const inicio = document.getElementById('inicio')?.value;
+    const duracion = document.getElementById('duracion_minutos')?.value;
+    const errorBox = document.getElementById('espacioClientErrors');
+
+    if (type === 'PONENCIA' && !ponencia) errors.push('Selecciona una ponencia del evento activo.');
+    if (type === 'PROYECTO' && !proyecto) errors.push('Selecciona un proyecto del evento activo.');
+    if (!nombre) errors.push('Indica el nombre del área o espacio.');
+    if (!inicio) errors.push('Indica la hora de inicio.');
+    if (!duracion || Number(duracion) < 5) errors.push('Indica una duración válida, mínimo 5 minutos.');
+
+    if (errors.length) {
+      e.preventDefault();
+      errorBox.innerHTML = "<strong>No se puede guardar la asignación:</strong><ul class='list-disc pl-5 mt-2 space-y-1'>" + errors.map(x => `<li>${x}</li>`).join("") + "</ul>";
+      errorBox.classList.remove('hidden');
+      return false;
+    }
+    errorBox.classList.add('hidden');
+    return true;
+  }
+
+  document.getElementById('formEspacio')?.addEventListener('submit', validarEspacio);
+
   function closeModalEspacio() {
     document.getElementById('modalEspacio').classList.add('hidden');
   }
@@ -307,6 +378,7 @@
       : 'Configura el área, horario y duración para la evaluación.';
 
     toggleSpaceTargetType();
+    document.getElementById('espacioClientErrors')?.classList.add('hidden');
     document.getElementById('modalEspacio').classList.remove('hidden');
   }
 
