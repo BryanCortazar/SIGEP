@@ -1,5 +1,8 @@
 from django.contrib import admin
 
+# from .models import participante
+#admin.site.register(participante)
+
 from .models import PerfilParticipante, ProyectoParticipante
 
 

@@ -8,3 +8,5 @@ class EvaluacionEntregaAdmin(admin.ModelAdmin):
     list_display = ("id", "asignacion", "estado", "calificacion", "fecha_envio", "creado_en")
     list_filter = ("estado",)
     search_fields = ("asignacion__evaluador__email", "asignacion__proyecto__titulo")
+    
+    
